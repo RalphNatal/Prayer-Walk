@@ -7,6 +7,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
+import '../data/location_service.dart';
 import '../data/mock_activity_repository.dart';
 import '../data/recording_controller.dart';
 import '../domain/activity.dart';
@@ -33,8 +34,15 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
   Future<void> _start() async {
     setState(() => _starting = true);
     try {
-      await ref.read(recordingControllerProvider.notifier).start();
-      if (mounted) context.goNamed(Routes.liveTracking);
+      // Runs the OS permission gate. A denial is an ordinary answer, not an
+      // error — it comes back as a [LocationAccess] the panel explains.
+      final access = await ref
+          .read(recordingControllerProvider.notifier)
+          .start();
+      if (!mounted) return;
+      if (access == LocationAccess.granted) {
+        context.goNamed(Routes.liveTracking);
+      }
     } catch (_) {
       if (mounted) {
         showAppSnackBar(
@@ -44,6 +52,22 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
       }
     } finally {
       if (mounted) setState(() => _starting = false);
+    }
+  }
+
+  /// The action that actually fixes each blocked case.
+  Future<void> _resolveAccess(LocationAccess access) async {
+    final service = ref.read(locationServiceProvider);
+    switch (access) {
+      case LocationAccess.serviceDisabled:
+        await service.openLocationSettings();
+      case LocationAccess.deniedForever:
+        await service.openAppSettings();
+      case LocationAccess.denied:
+        // Still askable — go straight back through the prompt.
+        await _start();
+      case LocationAccess.granted:
+        break;
     }
   }
 
@@ -80,6 +104,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
             onDropDevotional: () =>
                 ref.read(recordingControllerProvider.notifier).dropDevotional(),
             onStart: _start,
+            onResolveAccess: _resolveAccess,
           ),
         ],
       ),
@@ -96,6 +121,7 @@ class _RecordPanel extends StatelessWidget {
     required this.onEditIntentions,
     required this.onDropDevotional,
     required this.onStart,
+    required this.onResolveAccess,
   });
 
   final RecordingState state;
@@ -104,6 +130,7 @@ class _RecordPanel extends StatelessWidget {
   final VoidCallback onEditIntentions;
   final VoidCallback onDropDevotional;
   final VoidCallback onStart;
+  final ValueChanged<LocationAccess> onResolveAccess;
 
   @override
   Widget build(BuildContext context) {
@@ -207,6 +234,14 @@ class _RecordPanel extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
 
+              if (state.access != null) ...[
+                _AccessNotice(
+                  access: state.access!,
+                  onResolve: () => onResolveAccess(state.access!),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+
               PrimaryButton(
                 label: 'Start ${state.type.label.toLowerCase()}',
                 icon: ActivityTypeVisuals.icon(state.type),
@@ -217,14 +252,86 @@ class _RecordPanel extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Preview build — the recording is simulated. Real tracking '
-                'arrives in the next phase.',
+                'Your route is recorded while the app is open. Locked-screen '
+                'tracking comes later.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Why recording can't start, and the one thing that fixes it.
+///
+/// Each case gets its own action because they are genuinely different problems:
+/// a fresh denial can just be asked again, a permanent one needs app settings,
+/// and location being switched off isn't a permission matter at all.
+class _AccessNotice extends StatelessWidget {
+  const _AccessNotice({required this.access, required this.onResolve});
+
+  final LocationAccess access;
+  final VoidCallback onResolve;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final (message, action) = switch (access) {
+      LocationAccess.serviceDisabled => (
+        'Location is switched off on this device, so there is no route to '
+            'record.',
+        'Turn on location',
+      ),
+      LocationAccess.deniedForever => (
+        'Prayer Walk cannot see your location. Allow it in Settings to record '
+            'a route.',
+        'Open settings',
+      ),
+      LocationAccess.denied => (
+        'Prayer Walk needs your location to trace the route you walk.',
+        'Allow location',
+      ),
+      LocationAccess.granted => ('', ''),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: AppRadius.control,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.location_off_outlined,
+                size: 18,
+                color: theme.colorScheme.onErrorContainer,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppTextButton(label: action, onPressed: onResolve),
+          ),
+        ],
       ),
     );
   }

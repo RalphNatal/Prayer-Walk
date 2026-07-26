@@ -6,8 +6,6 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../feed/data/mock_feed_repository.dart';
-import '../../profile/data/mock_profile_repository.dart';
 import '../data/mock_activity_repository.dart';
 import '../data/recording_controller.dart';
 import '../domain/activity.dart';
@@ -49,10 +47,11 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
     controller.editDraft(title: _title.text, note: _note.text);
     try {
       final id = await controller.save();
+      // History and the profile's recent-walks strip both read the real rows.
+      // The feed is still mock and unaffected by a real save.
       ref
         ..invalidate(historyProvider)
-        ..invalidate(feedProvider)
-        ..invalidate(currentProfileProvider);
+        ..invalidate(activitiesForUserProvider);
       if (!mounted) return;
       showAppSnackBar(context, 'Walk saved.');
       context.goNamed(
@@ -81,7 +80,7 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
       destructive: true,
     );
     if (!confirmed || !mounted) return;
-    ref.read(recordingControllerProvider.notifier).reset();
+    ref.read(recordingControllerProvider.notifier).discard();
     if (mounted) context.goNamed(Routes.record);
   }
 

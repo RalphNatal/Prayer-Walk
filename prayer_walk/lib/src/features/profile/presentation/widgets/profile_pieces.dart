@@ -212,15 +212,24 @@ class RecentActivitiesStrip extends ConsumerWidget {
       value: activities,
       onRetry: () => ref.invalidate(activitiesForUserProvider(userId)),
       isEmpty: (items) => items.isEmpty,
+      // Same 178 height and the same horizontally-scrolling shape as the data
+      // state below, so there is no jump between them — and, because the Row
+      // sits in a scroll view, no RenderFlex overflow on a narrow phone. Two
+      // 200px cards plus their gap is 412px, which is wider than a 360dp
+      // screen. Not draggable: it is a placeholder, not content.
       loading: const SizedBox(
-        height: 168,
+        height: 178,
         child: ShimmerScope(
-          child: Row(
-            children: [
-              SizedBox(width: 200, child: SkeletonBox(height: 168)),
-              SizedBox(width: AppSpacing.md),
-              SizedBox(width: 200, child: SkeletonBox(height: 168)),
-            ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: NeverScrollableScrollPhysics(),
+            child: Row(
+              children: [
+                SizedBox(width: 200, child: SkeletonBox(height: 168)),
+                SizedBox(width: AppSpacing.md),
+                SizedBox(width: 200, child: SkeletonBox(height: 168)),
+              ],
+            ),
           ),
         ),
       ),

@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Foreground route recording only. No NSLocationAlwaysAndWhenInUse key
+	     this phase — the app does not track with the screen locked. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Prayer Walk records your route while you walk so you can see and reflect on it afterward.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

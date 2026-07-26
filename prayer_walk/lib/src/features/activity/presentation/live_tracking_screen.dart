@@ -11,26 +11,34 @@ import '../data/recording_controller.dart';
 import '../domain/activity.dart';
 import 'trail_mapping.dart';
 
-/// MOCK — real tracking arrives in Phase 3.
+/// The walk as it happens: the trail drawing itself, the numbers moving.
 ///
-/// Nothing here is recording. The layout, the readouts and the controls are
-/// the real thing so the flow can be walked end to end, but the route and the
-/// numbers come from a pre-traced fixture handed over by the repository. The
-/// banner says so on screen; when the location stream lands, this file changes
-/// and the flow around it does not.
+/// Everything here reads [RecordingController]'s live state — the route, the
+/// distance and the clock are the real ones being accumulated from the device's
+/// position stream. The screen owns no recording logic of its own.
 class LiveTrackingScreen extends ConsumerWidget {
   const LiveTrackingScreen({super.key});
 
-  /// How much of the mock recording to show as "already walked".
-  static const _progress = 0.62;
+  Future<void> _confirmDiscard(BuildContext context, WidgetRef ref) async {
+    final discard = await showConfirmDialog(
+      context,
+      title: 'Discard this walk?',
+      message: 'Nothing has been saved yet. The route and the time go with it.',
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep walking',
+      destructive: true,
+    );
+    if (!discard || !context.mounted) return;
+    ref.read(recordingControllerProvider.notifier).discard();
+    context.goNamed(Routes.record);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(recordingControllerProvider);
-    final full = state.draft;
 
-    if (full == null) {
-      // Reached by deep link without a recording in flight.
+    if (!state.isLive) {
+      // Reached by deep link, or after the recording was finished elsewhere.
       return Scaffold(
         appBar: AppBar(title: const Text('Live')),
         body: Center(
@@ -45,54 +53,44 @@ class LiveTrackingScreen extends ConsumerWidget {
       );
     }
 
-    final live = full.sliced(_progress);
-
     return PopScope(
       // Leaving mid-walk should be deliberate.
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        final discard = await showConfirmDialog(
-          context,
-          title: 'Discard this walk?',
-          message: 'Nothing has been saved yet. The route and the time go with it.',
-          confirmLabel: 'Discard',
-          cancelLabel: 'Keep walking',
-          destructive: true,
-        );
-        if (!discard || !context.mounted) return;
-        ref.read(recordingControllerProvider.notifier).reset();
-        context.goNamed(Routes.record);
+        await _confirmDiscard(context, ref);
       },
       child: Scaffold(
         backgroundColor: AppColors.pine,
         body: Column(
           children: [
-            const _MockBanner(),
             Expanded(
               flex: 5,
               child: RouteMapView(
-                points: live.route,
-                waypoints: live.waypoints.toTrailWaypoints(),
-                pulsePoint: live.route.last,
+                points: state.route,
+                waypoints: state.waypoints.toTrailWaypoints(),
+                pulsePoint: state.lastPoint,
+                // Keeps the camera on the walker as the route grows.
+                followPoint: state.lastPoint,
                 showEndpoints: false,
                 showAttribution: false,
                 interactive: false,
                 semanticLabel:
                     'Map showing the route so far, '
-                    '${Fmt.distance(live.distanceMeters)}',
+                    '${Fmt.distance(state.distanceMeters)}',
               ),
             ),
             Expanded(
               flex: 4,
               child: _LivePanel(
-                live: live,
-                type: state.type,
-                isPaused: state.isPaused,
-                intentions: state.intentions,
+                state: state,
                 onTogglePause: () =>
                     ref.read(recordingControllerProvider.notifier).togglePause(),
-                onFinish: () => context.goNamed(Routes.activitySummary),
+                onDropWaypoint: () => _openWaypointSheet(context, ref),
+                onFinish: () {
+                  ref.read(recordingControllerProvider.notifier).finish();
+                  context.goNamed(Routes.activitySummary);
+                },
               ),
             ),
           ],
@@ -100,61 +98,62 @@ class LiveTrackingScreen extends ConsumerWidget {
       ),
     );
   }
-}
 
-class _MockBanner extends StatelessWidget {
-  const _MockBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.amber,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
+  Future<void> _openWaypointSheet(BuildContext context, WidgetRef ref) async {
+    final kind = await showModalBottomSheet<WaypointKind>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.construction_rounded,
-                size: 18,
-                color: AppColors.ink,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  0,
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                ),
                 child: Text(
-                  'Simulated recording — no GPS is being read.',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppColors.ink,
-                  ),
+                  'Mark this spot',
+                  style: theme.textTheme.titleMedium,
                 ),
               ),
+              for (final option in WaypointKind.values)
+                ListTile(
+                  leading: Icon(
+                    Icons.local_fire_department_rounded,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  title: Text(option.label),
+                  onTap: () => Navigator.of(sheetContext).pop(option),
+                ),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
+    if (kind == null || !context.mounted) return;
+    ref.read(recordingControllerProvider.notifier).dropWaypoint(kind);
+    showAppSnackBar(context, '${kind.label} — marked on your trail.');
   }
 }
 
 class _LivePanel extends StatelessWidget {
   const _LivePanel({
-    required this.live,
-    required this.type,
-    required this.isPaused,
-    required this.intentions,
+    required this.state,
     required this.onTogglePause,
+    required this.onDropWaypoint,
     required this.onFinish,
   });
 
-  final ActivityDraft live;
-  final ActivityType type;
-  final bool isPaused;
-  final List<PrayerIntention> intentions;
+  final RecordingState state;
   final VoidCallback onTogglePause;
+  final VoidCallback onDropWaypoint;
   final VoidCallback onFinish;
 
   @override
@@ -162,10 +161,12 @@ class _LivePanel extends StatelessWidget {
     final theme = Theme.of(context);
     const onDark = AppColors.parchment;
     final muted = onDark.withValues(alpha: 0.72);
+    final type = state.type;
+    final isPaused = state.isPaused;
 
     final paceValue = type.usesSpeed
-        ? Fmt.speed(live.distanceMeters, live.duration)
-        : Fmt.pace(live.distanceMeters, live.duration);
+        ? Fmt.speed(state.distanceMeters, state.elapsed)
+        : Fmt.pace(state.distanceMeters, state.elapsed);
     final paceLabel = type.usesSpeed ? 'km/h' : 'min/km';
 
     return Container(
@@ -193,13 +194,24 @@ class _LivePanel extends StatelessWidget {
                       letterSpacing: 2,
                     ),
                   ),
+                )
+              else if (state.route.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text(
+                    'FINDING YOU…',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.amber,
+                      letterSpacing: 2,
+                    ),
+                  ),
                 ),
               Text(
-                Fmt.distanceValue(live.distanceMeters),
+                Fmt.distanceValue(state.distanceMeters),
                 style: AppTypography.statDisplay(onDark, size: 64),
               ),
               Text(
-                '${Fmt.distanceUnit(live.distanceMeters)}  ·  ${type.label.toLowerCase()}',
+                '${Fmt.distanceUnit(state.distanceMeters)}  ·  ${type.label.toLowerCase()}',
                 style: theme.textTheme.labelMedium?.copyWith(color: muted),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -209,7 +221,7 @@ class _LivePanel extends StatelessWidget {
                 children: [
                   _LiveStat(
                     label: 'Time',
-                    value: Fmt.duration(live.duration),
+                    value: Fmt.duration(state.elapsed),
                     onDark: onDark,
                     muted: muted,
                   ),
@@ -221,14 +233,14 @@ class _LivePanel extends StatelessWidget {
                   ),
                   _LiveStat(
                     label: 'Elevation',
-                    value: live.elevationGainMeters.round().toString(),
+                    value: state.elevationGainMeters.round().toString(),
                     unit: 'm',
                     onDark: onDark,
                     muted: muted,
                   ),
                 ],
               ),
-              if (intentions.isNotEmpty) ...[
+              if (state.intentions.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.lg),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -241,7 +253,7 @@ class _LivePanel extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Flexible(
                       child: Text(
-                        intentions.first.text,
+                        state.intentions.first.text,
                         style: theme.textTheme.bodyMedium?.copyWith(color: muted),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -250,7 +262,23 @@ class _LivePanel extends StatelessWidget {
                   ],
                 ),
               ],
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.lg),
+              OutlinedButton.icon(
+                // Needs a position to pin the marker to.
+                onPressed: state.lastPoint == null ? null : onDropWaypoint,
+                icon: const Icon(Icons.add_location_alt_outlined),
+                label: Text(
+                  state.waypoints.isEmpty
+                      ? 'Mark a prayer'
+                      : '${Fmt.plural(state.waypoints.length, 'mark')} on this walk',
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  foregroundColor: AppColors.amber,
+                  side: BorderSide(color: AppColors.amber.withValues(alpha: 0.5)),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
                   Expanded(
@@ -281,6 +309,12 @@ class _LivePanel extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Keep the app open — recording stops if you lock the screen.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
               ),
             ],
           ),

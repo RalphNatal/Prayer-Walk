@@ -1,7 +1,7 @@
 /// Which experience a signed-in person lands in.
 ///
-/// In this phase the value is set by the dev role switcher. Phase 2 reads it
-/// from `profile.role` in Supabase.
+/// Read from the `role` column of the Supabase `profiles` row. The app only
+/// ever reads it — RLS and the self-promotion trigger are what enforce it.
 enum UserRole {
   member('Member'),
   admin('Admin');

@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/data/auth_providers.dart';
-import '../../feed/data/mock_feed_repository.dart';
 import '../data/mock_profile_repository.dart';
+import '../data/supabase_profile_repository.dart';
 import '../domain/profile_repository.dart';
 import '../domain/user_profile.dart';
 
@@ -38,7 +38,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final userId = ref.read(currentUserIdProvider);
+    final userId = ref.read(currentAuthUserIdProvider);
     if (userId == null) return;
 
     setState(() => _saving = true);
@@ -52,13 +52,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           parish: _parish.text,
         ),
       );
-      ref
-        ..invalidate(currentProfileProvider)
-        ..invalidate(profileProvider(userId))
-        ..invalidate(feedProvider);
+      ref.invalidate(currentProfileProvider);
       if (!mounted) return;
       showAppSnackBar(context, 'Profile updated.');
       context.pop();
+    } on ProfileFailure catch (failure) {
+      // Already phrased for the person — a taken handle, most often.
+      if (mounted) showAppSnackBar(context, failure.message);
     } catch (_) {
       if (mounted) {
         showAppSnackBar(
@@ -98,7 +98,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           if (!_seeded) {
             _seeded = true;
             _name.text = item.displayName;
-            _handle.text = item.handle;
+            // Stored with the leading '@'; the field draws its own prefix.
+            _handle.text = item.handle.replaceFirst('@', '');
             _bio.text = item.bio;
             _parish.text = item.parish;
           }

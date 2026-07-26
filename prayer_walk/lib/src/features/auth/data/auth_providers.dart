@@ -5,24 +5,13 @@ import '../../../core/mock_backend/seed_data.dart';
 import '../domain/profile.dart';
 import 'auth_repository.dart';
 
-/// Where the person stands with auth, reduced to the three cases the router
-/// cares about. Kept as a small enum (rather than the raw [Session]) so tests
-/// can override it without fabricating a Supabase session.
+
 enum AuthPhase { loading, signedOut, signedIn }
 
-/// The live Supabase auth stream. `supabase_flutter` restores the persisted
-/// session before this replays `initialSession`, so a returning user is never
-/// shown the sign-in screen on a cold start.
 final authStateProvider = StreamProvider<AuthState>(
   (ref) => ref.watch(authRepositoryProvider).authStateChanges(),
 );
 
-/// Signed in, signed out, or still resolving — the thing the redirect reads.
-///
-/// While the stream is warming up we fall back to the client's synchronously
-/// restored `currentSession`, which is already populated by the time
-/// `Supabase.initialize` returns. That closes the one-frame gap that would
-/// otherwise flash the login screen before the stream's first event.
 final authPhaseProvider = Provider<AuthPhase>((ref) {
   final state = ref.watch(authStateProvider);
   return state.when(
@@ -35,11 +24,6 @@ final authPhaseProvider = Provider<AuthPhase>((ref) {
   );
 });
 
-/// The signed-in person's `profiles` row — identity and, crucially, role.
-///
-/// `null` while signed out. Loading/error surface through the [AsyncValue] so
-/// the router can hold on a splash until the role is known, and the profile
-/// screen can show a proper loading/error state.
 final authProfileProvider = FutureProvider<Profile?>((ref) async {
   if (ref.watch(authPhaseProvider) != AuthPhase.signedIn) return null;
   final repo = ref.read(authRepositoryProvider);
@@ -51,6 +35,16 @@ final authProfileProvider = FutureProvider<Profile?>((ref) async {
 /// The signed-in person's role, or null until the profile resolves.
 final currentRoleProvider = Provider((ref) {
   return ref.watch(authProfileProvider).value?.role;
+});
+
+/// The real signed-in user id, or null while signed out.
+///
+/// This is the id every de-mocked feature keys off. Profile uses it today;
+/// [currentUserIdProvider] below is what everything still on mock data uses.
+final currentAuthUserIdProvider = Provider<String?>((ref) {
+  return ref.watch(authPhaseProvider) == AuthPhase.signedIn
+      ? ref.watch(authRepositoryProvider).currentUser?.id
+      : null;
 });
 
 /// The id the mock content layer (feed, activities, social) is keyed to.

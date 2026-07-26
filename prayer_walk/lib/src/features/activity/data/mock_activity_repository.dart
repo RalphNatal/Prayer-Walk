@@ -2,12 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/mock_backend/mock_backend.dart';
-import '../../../core/mock_backend/route_shapes.dart';
 import '../../../core/mock_backend/seed_data.dart';
 import '../../auth/data/auth_providers.dart';
 import '../../profile/domain/user_profile.dart';
 import '../domain/activity.dart';
 import '../domain/activity_repository.dart';
+import 'location_service.dart';
+import 'supabase_activity_repository.dart';
 
 class MockActivityRepository implements ActivityRepository {
   MockActivityRepository(this._backend, this._viewerId);
@@ -37,8 +38,6 @@ class MockActivityRepository implements ActivityRepository {
 
   @override
   Future<LatLng> currentLocation() async {
-    // MOCK — a fixed fix, no device GPS this phase. Phase 3 swaps this for a
-    // real position and everything above the interface is unchanged.
     await Future<void>.delayed(const Duration(milliseconds: 500));
     return MockSeed.mockCurrentLocation;
   }
@@ -46,55 +45,6 @@ class MockActivityRepository implements ActivityRepository {
   @override
   Future<List<PrayerIntention>> suggestedIntentions() =>
       _backend.read(() => MockSeed.suggestedIntentions(DateTime.now()));
-
-  @override
-  Future<ActivityDraft> beginMockRecording({
-    required ActivityType type,
-    required List<PrayerIntention> intentions,
-  }) async {
-    // MOCK — real tracking in Phase 3. The "recording" is a pre-traced loop
-    // with stats derived from it, so the live screen and summary agree.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    final route = MockSeed.mockRecordingRoute();
-    final distance = RouteShapes.lengthMeters(route);
-    final startedAt = DateTime.now();
-    final secondsPerKm = switch (type) {
-      ActivityType.walk => 700,
-      ActivityType.run => 335,
-      ActivityType.hike => 900,
-      ActivityType.cycle => 190,
-    };
-    final duration = Duration(
-      seconds: (distance / 1000 * secondsPerKm).round(),
-    );
-    final points = RouteShapes.along(route, 2);
-    return ActivityDraft(
-      type: type,
-      title: _defaultTitle(type, startedAt),
-      startedAt: startedAt,
-      duration: duration,
-      distanceMeters: distance,
-      elevationGainMeters: type == ActivityType.hike ? 186 : 24,
-      route: route,
-      waypoints: [
-        Waypoint(
-          id: _backend.nextId('w'),
-          point: points[0],
-          kind: WaypointKind.intercession,
-          label: 'Paused here',
-          elapsed: duration * 0.34,
-        ),
-        Waypoint(
-          id: _backend.nextId('w'),
-          point: points[1],
-          kind: WaypointKind.stillness,
-          label: 'Kept silence',
-          elapsed: duration * 0.72,
-        ),
-      ],
-      intentions: intentions,
-    );
-  }
 
   @override
   Future<Activity> saveDraft(String userId, ActivityDraft draft) {
@@ -156,11 +106,9 @@ class MockActivityRepository implements ActivityRepository {
   }
 }
 
+/// Real recorded activities, in Supabase.
 final activityRepositoryProvider = Provider<ActivityRepository>((ref) {
-  return MockActivityRepository(
-    ref.watch(mockBackendProvider),
-    ref.watch(currentUserIdProvider) ?? '',
-  );
+  return SupabaseActivityRepository(ref.watch(locationServiceProvider));
 });
 
 /// Filter for the History screen.
@@ -177,22 +125,51 @@ class HistoryFilter extends Notifier<ActivityType?> {
 
 /// The signed-in person's activities, honouring the history filter.
 final historyProvider = FutureProvider<List<Activity>>((ref) {
-  final userId = ref.watch(currentUserIdProvider);
+  final userId = ref.watch(currentAuthUserIdProvider);
   if (userId == null) return Future.value(const []);
   return ref
       .watch(activityRepositoryProvider)
       .activitiesForUser(userId, type: ref.watch(historyFilterProvider));
 });
 
+/// The seeded dataset, still serving the feed and the seeded members.
+final mockActivityRepositoryProvider = Provider<ActivityRepository>((ref) {
+  return MockActivityRepository(
+    ref.watch(mockBackendProvider),
+    ref.watch(currentUserIdProvider) ?? '',
+  );
+});
+
+/// Real rows are uuids; every seeded id is `a_1` / `u_maria`.
+///
+/// PHASE BRIDGE: the feed and the social screens still hand out seeded ids, and
+/// those rows exist only in the mock backend. Routing by id shape keeps both
+/// alive while the two datasets overlap. Delete this — and the mock repository
+/// with it — the moment feed and social move to Supabase.
+bool _isRealId(String id) => RegExp(
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+  caseSensitive: false,
+).hasMatch(id);
+
+ActivityRepository _repoForId(Ref ref, String id) => _isRealId(id)
+    ? ref.watch(activityRepositoryProvider)
+    : ref.watch(mockActivityRepositoryProvider);
+
+/// The repository that owns a given activity id — for writes from a screen
+/// that could be looking at either dataset. Part of the same bridge.
+final activityRepositoryForIdProvider =
+    Provider.family<ActivityRepository, String>(
+      (ref, id) => _repoForId(ref, id),
+    );
+
 /// Another person's activities, unfiltered — used on their profile.
 final activitiesForUserProvider =
     FutureProvider.family<List<Activity>, String>(
-      (ref, userId) =>
-          ref.watch(activityRepositoryProvider).activitiesForUser(userId),
+      (ref, userId) => _repoForId(ref, userId).activitiesForUser(userId),
     );
 
 final activityProvider = FutureProvider.family<Activity, String>(
-  (ref, id) => ref.watch(activityRepositoryProvider).activityById(id),
+  (ref, id) => _repoForId(ref, id).activityById(id),
 );
 
 final suggestedIntentionsProvider = FutureProvider<List<PrayerIntention>>(

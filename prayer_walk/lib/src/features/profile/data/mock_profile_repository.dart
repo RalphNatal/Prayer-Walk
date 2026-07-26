@@ -4,6 +4,7 @@ import '../../../core/mock_backend/mock_backend.dart';
 import '../../auth/data/auth_providers.dart';
 import '../domain/profile_repository.dart';
 import '../domain/user_profile.dart';
+import 'supabase_profile_repository.dart';
 
 class MockProfileRepository implements ProfileRepository {
   MockProfileRepository(this._backend);
@@ -32,35 +33,34 @@ class MockProfileRepository implements ProfileRepository {
   }
 }
 
+/// The real `profiles` row — the Profile feature's backend as of this step.
 final profileRepositoryProvider = Provider<ProfileRepository>(
+  (ref) => const SupabaseProfileRepository(),
+);
+
+/// The seeded dataset, still backing the profiles that *other* features look
+/// up by id. See [profileProvider].
+final mockProfileRepositoryProvider = Provider<ProfileRepository>(
   (ref) => MockProfileRepository(ref.watch(mockBackendProvider)),
 );
 
 /// Any profile, by id.
+///
+/// PHASE-2 BRIDGE: still the seeded dataset. Every caller of this family — the
+/// feed byline, another member's profile, the follow lists, admin member
+/// detail — is resolving a *mock* id (`u_maria`, `u_ben`, …) that has no row in
+/// Supabase, because those features have not been de-mocked yet. It moves to
+/// [profileRepositoryProvider] when they do.
 final profileProvider = FutureProvider.family<UserProfile, String>(
-  (ref, id) => ref.watch(profileRepositoryProvider).profileById(id),
+  (ref, id) => ref.watch(mockProfileRepositoryProvider).profileById(id),
 );
 
-/// The signed-in person's profile.
-///
-/// PHASE-2 BRIDGE: real identity — display name and role — comes from the
-/// Supabase `profiles` row ([authProfileProvider]); the rich stats, handle and
-/// walk history are still the seeded dataset keyed to [currentUserIdProvider].
-/// The screen therefore shows the *real* signed-in name and the *real* role
-/// over Phase 1's mock history, until the content backend is migrated too.
+/// The signed-in person's profile — real, from Supabase, keyed to the real
+/// auth user id rather than a seeded one.
 final currentProfileProvider = FutureProvider<UserProfile>((ref) async {
-  final id = ref.watch(currentUserIdProvider);
+  final id = ref.watch(currentAuthUserIdProvider);
   if (id == null) {
     throw StateError('currentProfileProvider read while signed out');
   }
-  final seeded = await ref.watch(profileRepositoryProvider).profileById(id);
-  final account = await ref.watch(authProfileProvider.future);
-  if (account == null) return seeded;
-  final realName = account.fullName?.trim();
-  return seeded.copyWith(
-    displayName: (realName != null && realName.isNotEmpty)
-        ? realName
-        : seeded.displayName,
-    role: account.role,
-  );
+  return ref.watch(profileRepositoryProvider).profileById(id);
 });

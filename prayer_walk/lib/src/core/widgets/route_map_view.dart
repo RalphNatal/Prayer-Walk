@@ -16,7 +16,7 @@ import 'trail_painter.dart';
 ///
 /// Tiles come from OpenStreetMap over the network. That is the one remote call
 /// this phase makes; there is no app backend yet.
-class RouteMapView extends StatelessWidget {
+class RouteMapView extends StatefulWidget {
   const RouteMapView({
     super.key,
     this.points = const [],
@@ -30,6 +30,7 @@ class RouteMapView extends StatelessWidget {
     this.fitPadding = const EdgeInsets.all(44),
     this.initialZoom = 15.5,
     this.pulsePoint,
+    this.followPoint,
     this.overlay,
     this.semanticLabel,
     this.borderRadius,
@@ -56,6 +57,11 @@ class RouteMapView extends StatelessWidget {
   /// Still under reduced motion.
   final LatLng? pulsePoint;
 
+  /// Keeps the camera on this point as it changes — the live screen following
+  /// the walker. [initialCameraFit] only ever runs once, so a growing route
+  /// needs this to stay in view. Null (the default) leaves the camera alone.
+  final LatLng? followPoint;
+
   /// Stacked above the map — a recentre button, a scrim, a legend.
   final Widget? overlay;
 
@@ -65,18 +71,66 @@ class RouteMapView extends StatelessWidget {
 
   static const _osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
+  /// Only reached when a caller passes neither route nor centre.
+  static const _fallbackCenter = LatLng(14.5794, 121.0359);
+
+  @override
+  State<RouteMapView> createState() => _RouteMapViewState();
+}
+
+class _RouteMapViewState extends State<RouteMapView> {
+  final MapController _mapController = MapController();
+
+  @override
+  void didUpdateWidget(RouteMapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final follow = widget.followPoint;
+    if (follow == null || follow == oldWidget.followPoint) return;
+    // `camera` throws until the map has laid out at least once, and a fix can
+    // land in that window. A missed recentre is not worth crashing a recording.
+    try {
+      _mapController.move(follow, _mapController.camera.zoom);
+    } catch (_) {
+      /* Map not ready — the next fix will recentre. */
+    }
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final trail = theme.trail;
+    final points = widget.points;
+    final waypoints = widget.waypoints;
     final hasRoute = points.length >= 2;
+    final interactive = widget.interactive;
+    final strokeWidth = widget.strokeWidth;
+    final pulsePoint = widget.pulsePoint;
+    final overlay = widget.overlay;
+    final borderRadius = widget.borderRadius;
+    final height = widget.height;
+    final semanticLabel = widget.semanticLabel;
 
     final map = FlutterMap(
+      mapController: _mapController,
       options: MapOptions(
-        initialCenter: center ?? (points.isNotEmpty ? points.first : _fallbackCenter),
-        initialZoom: initialZoom,
-        initialCameraFit: hasRoute
-            ? CameraFit.coordinates(coordinates: points, padding: fitPadding)
+        initialCenter:
+            widget.center ??
+            widget.followPoint ??
+            (points.isNotEmpty ? points.first : RouteMapView._fallbackCenter),
+        initialZoom: widget.initialZoom,
+        // Fits the whole route once, on first layout. A live recording passes
+        // [followPoint] instead and keeps the camera on the walker.
+        initialCameraFit: hasRoute && widget.followPoint == null
+            ? CameraFit.coordinates(
+                coordinates: points,
+                padding: widget.fitPadding,
+              )
             : null,
         backgroundColor: theme.colorScheme.surfaceContainerHighest,
         interactionOptions: InteractionOptions(
@@ -87,7 +141,7 @@ class RouteMapView extends StatelessWidget {
       ),
       children: [
         TileLayer(
-          urlTemplate: _osmTiles,
+          urlTemplate: RouteMapView._osmTiles,
           userAgentPackageName: 'com.calledpresentations.prayer_walk',
           maxNativeZoom: 19,
           tileDisplay: const TileDisplay.fadeIn(
@@ -137,7 +191,7 @@ class RouteMapView extends StatelessWidget {
                 ),
             ],
           ),
-        if (hasRoute && showEndpoints)
+        if (hasRoute && widget.showEndpoints)
           MarkerLayer(
             markers: [
               Marker(
@@ -158,14 +212,14 @@ class RouteMapView extends StatelessWidget {
           MarkerLayer(
             markers: [
               Marker(
-                point: pulsePoint!,
+                point: pulsePoint,
                 width: 72,
                 height: 72,
                 child: _PulseMarker(color: trail.endMark),
               ),
             ],
           ),
-        if (showAttribution)
+        if (widget.showAttribution)
           SimpleAttributionWidget(
             source: Text(
               'OpenStreetMap contributors',
@@ -185,7 +239,7 @@ class RouteMapView extends StatelessWidget {
     );
 
     if (borderRadius != null) {
-      content = ClipRRect(borderRadius: borderRadius!, child: content);
+      content = ClipRRect(borderRadius: borderRadius, child: content);
     }
     if (height != null) {
       content = SizedBox(height: height, child: content);
@@ -199,9 +253,6 @@ class RouteMapView extends StatelessWidget {
       child: content,
     );
   }
-
-  /// Only reached when a caller passes neither route nor centre.
-  static const LatLng _fallbackCenter = LatLng(14.5794, 121.0359);
 }
 
 /// A prayer waypoint on the map: the same candle the painter draws.

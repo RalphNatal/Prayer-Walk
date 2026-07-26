@@ -35,11 +35,13 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
 
-    await ref.read(activityRepositoryProvider).deleteActivity(activityId);
+    await ref
+        .read(activityRepositoryForIdProvider(activityId))
+        .deleteActivity(activityId);
     ref
       ..invalidate(historyProvider)
-      ..invalidate(feedProvider)
-      ..invalidate(currentProfileProvider);
+      ..invalidate(activitiesForUserProvider)
+      ..invalidate(feedProvider);
     if (context.mounted) {
       showAppSnackBar(context, 'Walk deleted.');
       context.canPop() ? context.pop() : context.goNamed(Routes.history);
@@ -49,7 +51,10 @@ class ActivityDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activity = ref.watch(activityProvider(activityId));
-    final viewerId = ref.watch(currentUserIdProvider);
+    // Real recorded walks are owned by the real auth id. Seeded ones (reached
+    // from the still-mock feed) simply never match, which is correct — you
+    // don't own them.
+    final viewerId = ref.watch(currentAuthUserIdProvider);
 
     return Scaffold(
       body: AsyncView<Activity>(

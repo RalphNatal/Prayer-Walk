@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prayer_walk/src/app.dart';
+import 'package:prayer_walk/src/core/mock_backend/mock_backend.dart';
 import 'package:prayer_walk/src/core/mock_backend/seed_data.dart';
 import 'package:prayer_walk/src/core/theme/app_typography.dart';
 import 'package:prayer_walk/src/core/widgets/pilgrimage_card.dart';
+import 'package:prayer_walk/src/features/activity/data/mock_activity_repository.dart';
 import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
 import 'package:prayer_walk/src/features/auth/domain/profile.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
@@ -17,6 +19,11 @@ import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
 /// place. These deliberately stay off the map-backed screens (record, live,
 /// summary, activity detail): mounting `flutter_map` fires tile requests that
 /// cannot succeed offline. Those screens are covered by walking the app.
+///
+/// Activities now come from Supabase, which a widget test also has no access
+/// to, so the repository is swapped for the seeded one at the interface — the
+/// point of the seam. History is therefore still asserted against seed data;
+/// what changed is that it arrives through an override rather than by default.
 ProviderScope _appAs(UserRole role) => ProviderScope(
   overrides: [
     authPhaseProvider.overrideWith((ref) => AuthPhase.signedIn),
@@ -25,6 +32,15 @@ ProviderScope _appAs(UserRole role) => ProviderScope(
         id: MockSeed.currentUserId,
         fullName: 'Maria Reyes',
         role: role,
+      ),
+    ),
+    // Reading the real one would touch `Supabase.instance`, which is not
+    // initialized in a test.
+    currentAuthUserIdProvider.overrideWith((ref) => MockSeed.currentUserId),
+    activityRepositoryProvider.overrideWith(
+      (ref) => MockActivityRepository(
+        ref.watch(mockBackendProvider),
+        MockSeed.currentUserId,
       ),
     ),
   ],
