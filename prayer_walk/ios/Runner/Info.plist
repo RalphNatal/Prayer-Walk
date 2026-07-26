@@ -66,5 +66,22 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Google Sign-In: the reversed iOS client ID (the reversed form
+				     of env.json's GOOGLE_IOS_CLIENT_ID). -->
+				<string>com.googleusercontent.apps.406468739083-r1bbd8lsetaa4rk3pqnda7jafstk6h90</string>
+				<!-- Supabase deep link for email confirmation / password reset.
+				     Equals the bundle id; must match the Supabase Redirect URL
+				     com.calledpresentations.prayer_walk://login-callback -->
+				<string>com.calledpresentations.prayer_walk</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -1,121 +1,138 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'src/app.dart';
+import 'src/core/config/app_config.dart';
+import 'src/core/utils/app_logger.dart';
+
+/// Three nets, because an uncaught error can escape by three different routes
+/// and any one of them left open means a failure that reports nothing at all:
+///
+/// * [FlutterError.onError] — errors raised inside the framework (build, layout,
+///   paint, gesture callbacks).
+/// * [PlatformDispatcher.instance.onError] — async errors that escape the
+///   widget tree entirely, including anything thrown from a platform channel
+///   callback. This is the one that catches a failing plugin call.
+/// * [runZonedGuarded] — everything else running in the app's zone.
+///
+/// All three funnel into `[PW-FATAL]`, which is the single string to grep for.
+/// None of them swallow: `presentError` still runs in debug so the red screen
+/// and the usual console dump are unchanged.
 void main() {
-  runApp(const MyApp());
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      FlutterError.onError = (details) {
+        AppLogger.fatal(
+          'FlutterError.onError${details.context == null ? '' : ' (${details.context})'}',
+          details.exception,
+          details.stack,
+        );
+        if (kDebugMode) FlutterError.presentError(details);
+      };
+
+      PlatformDispatcher.instance.onError = (error, stack) {
+        AppLogger.fatal('PlatformDispatcher.onError', error, stack);
+        // Handled — reported above, and swallowing it here would be the exact
+        // silence this instrumentation exists to remove.
+        return true;
+      };
+
+      try {
+        // Everything runtime-configurable comes from env.json via
+        // `--dart-define-from-file=env.json`. Validate first so a missing define
+        // fails with a readable, on-screen message instead of a blank white
+        // screen or an opaque network error on the first request.
+        AppConfig.validate();
+
+        await Supabase.initialize(
+          url: AppConfig.supabaseUrl,
+          publishableKey: AppConfig.supabasePublishableKey,
+        );
+      } catch (error, stackTrace) {
+        // Startup failed before the app could mount. Show the reason on screen
+        // rather than leaving a blank canvas the developer has to guess at.
+        AppLogger.error('PW-STARTUP', 'Startup failed', error, stackTrace);
+        runApp(StartupErrorApp(error: error, stackTrace: stackTrace));
+        return;
+      }
+
+      runApp(const ProviderScope(child: PrayerWalkApp()));
+    },
+    (error, stackTrace) => AppLogger.fatal('runZonedGuarded', error, stackTrace),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// A deliberately plain, dependency-free screen shown when startup fails.
+///
+/// It must not touch the app's theme, router, or providers — those are exactly
+/// what may have failed to initialize. Its only job is to make a startup
+/// failure legible instead of rendering a blank white screen. The stack trace
+/// is only shown in debug builds.
+class StartupErrorApp extends StatelessWidget {
+  const StartupErrorApp({super.key, required this.error, this.stackTrace});
 
-  // This widget is the root of your application.
+  final Object error;
+  final StackTrace? stackTrace;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF1B1B1B),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Color(0xFFFF6B6B),
+                    size: 40,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Prayer Walk could not start',
+                    style: TextStyle(
+                      color: Color(0xFFFF6B6B),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SelectableText(
+                    '$error',
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                  ),
+                  if (kDebugMode && stackTrace != null) ...[
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Stack trace (debug only):',
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                    const SizedBox(height: 6),
+                    SelectableText(
+                      '$stackTrace',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }

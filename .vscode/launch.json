@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Prayer Walk (Android emulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "prayer_walk",
+      "toolArgs": ["--dart-define-from-file", "env.json"]
+    },
+    {
+      "name": "Prayer Walk (Android — release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "prayer_walk",
+      "flutterMode": "release",
+      "toolArgs": ["--dart-define-from-file", "env.json"]
+    },
+    {
+      "name": "Prayer Walk (iOS)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "prayer_walk",
+      "toolArgs": ["--dart-define-from-file", "env.json"]
+    }
+  ]
+}

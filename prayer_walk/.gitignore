@@ -1,3 +1,7 @@
+# Local runtime configuration — Supabase URL/keys and Google client IDs.
+# Copy env.example.json to env.json and fill it in. Never commit env.json.
+env.json
+
 # Miscellaneous
 *.class
 *.log

@@ -1,30 +1,74 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prayer_walk/src/app.dart';
+import 'package:prayer_walk/src/core/mock_backend/seed_data.dart';
+import 'package:prayer_walk/src/core/theme/app_typography.dart';
+import 'package:prayer_walk/src/core/widgets/pilgrimage_card.dart';
+import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
+import 'package:prayer_walk/src/features/auth/domain/profile.dart';
+import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
 
-import 'package:prayer_walk/main.dart';
+/// These exercise the *real* router redirect, but with the Supabase-backed auth
+/// providers overridden — a widget test has no backend, and what's under test
+/// here is the redirect's session/role gating, not the network.
+ProviderScope _signedOutApp() => ProviderScope(
+  overrides: [authPhaseProvider.overrideWith((ref) => AuthPhase.signedOut)],
+  child: const PrayerWalkApp(),
+);
+
+ProviderScope _signedInApp(UserRole role) => ProviderScope(
+  overrides: [
+    authPhaseProvider.overrideWith((ref) => AuthPhase.signedIn),
+    authProfileProvider.overrideWith(
+      (ref) async => Profile(
+        id: MockSeed.currentUserId,
+        fullName: 'Maria Reyes',
+        role: role,
+      ),
+    ),
+  ],
+  child: const PrayerWalkApp(),
+);
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  // Resolve fonts by name rather than fetching them — no test touches the
+  // network, and the map layer is never mounted by these flows.
+  setUpAll(AppTypography.useBundledFonts);
+  tearDownAll(AppTypography.useNetworkFonts);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  Future<void> settle(WidgetTester tester) async {
     await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+  }
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  Future<void> boot(WidgetTester tester, ProviderScope app) async {
+    await tester.pumpWidget(app);
+    await settle(tester);
+  }
+
+  testWidgets('a signed-out first run lands on onboarding', (tester) async {
+    await boot(tester, _signedOutApp());
+
+    expect(find.text('Walk it, and mean it'), findsOneWidget);
+    expect(find.text('Next'), findsOneWidget);
+  });
+
+  testWidgets('skipping onboarding reaches the sign-in form', (tester) async {
+    await boot(tester, _signedOutApp());
+
+    await tester.tap(find.text('Skip'));
+    await settle(tester);
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+  });
+
+  testWidgets('a signed-in member is routed to the feed', (tester) async {
+    await boot(tester, _signedInApp(UserRole.member));
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(PilgrimageCard), findsWidgets);
   });
 }

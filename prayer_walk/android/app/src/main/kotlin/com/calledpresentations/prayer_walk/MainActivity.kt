@@ -1,4 +1,4 @@
-package com.example.prayer_walk
+package com.calledpresentations.prayer_walk
 
 import io.flutter.embedding.android.FlutterActivity
 
