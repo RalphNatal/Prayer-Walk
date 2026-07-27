@@ -199,9 +199,32 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               const SizedBox(height: AppSpacing.lg),
               Text(activity.title, style: theme.textTheme.displaySmall),
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                Fmt.dayAndTime(activity.startedAt),
-                style: theme.textTheme.bodySmall,
+              Row(
+                children: [
+                  Text(
+                    Fmt.dayAndTime(activity.startedAt),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  // Null for older walks, routeless logs and failed lookups —
+                  // the line simply reads as it always did.
+                  if (activity.placeName != null) ...[
+                    Text('  ·  ', style: theme.textTheme.bodySmall),
+                    Icon(
+                      Icons.place_outlined,
+                      size: 14,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AppSpacing.xxs),
+                    Flexible(
+                      child: Text(
+                        activity.placeName!,
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: AppSpacing.xl),
 

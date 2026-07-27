@@ -30,6 +30,16 @@
 	     this phase — the app does not track with the screen locked. -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Prayer Walk records your route while you walk so you can see and reflect on it afterward.</string>
+	<!-- Lets the app ask for temporary full accuracy when the person has
+	     granted only approximate location (iOS 14+), which is accurate to
+	     roughly a kilometre and cannot trace a walk. The dictionary key must
+	     match the `purposeKey` passed to requestTemporaryFullAccuracy in
+	     location_service.dart exactly, or iOS silently declines to prompt. -->
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>PreciseWalkTracking</key>
+		<string>Prayer Walk needs your precise location to trace the route you actually walked.</string>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

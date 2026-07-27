@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../../../core/mock_backend/mock_backend.dart';
 import '../../../core/mock_backend/seed_data.dart';
@@ -36,11 +35,18 @@ class MockActivityRepository implements ActivityRepository {
     () => _backend.hydrate(_backend.rawActivityById(id), _viewerId),
   );
 
+  /// There is no such thing as a mock current position.
+  ///
+  /// This used to hand back [MockSeed.seedOrigin] — a fixed point in Metro
+  /// Manila — which is a plausible answer for a seeded *route* and a lie about
+  /// a *person*. Seeded activities can live anywhere; the walker holding the
+  /// phone is only ever where the device says they are.
   @override
-  Future<LatLng> currentLocation() async {
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    return MockSeed.mockCurrentLocation;
-  }
+  Future<LocationReading> currentLocation() async =>
+      throw UnsupportedError(
+        'The seeded dataset has no device position. Read '
+        'currentLocationProvider, which is always backed by the real one.',
+      );
 
   @override
   Future<List<PrayerIntention>> suggestedIntentions() =>
@@ -176,6 +182,11 @@ final suggestedIntentionsProvider = FutureProvider<List<PrayerIntention>>(
   (ref) => ref.watch(activityRepositoryProvider).suggestedIntentions(),
 );
 
-final currentLocationProvider = FutureProvider<LatLng>(
+/// What the device can currently tell us, for the record screen.
+///
+/// Resolves to a reading with a null fix — rather than to some stand-in
+/// position — whenever there is nothing trustworthy to show, so the screen can
+/// render its locating state and name the actual reason.
+final currentLocationProvider = FutureProvider<LocationReading>(
   (ref) => ref.watch(activityRepositoryProvider).currentLocation(),
 );

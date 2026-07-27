@@ -878,11 +878,16 @@ class MockSeed {
     ),
   ];
 
-  /// The route the mock recording traces. Phase 3 replaces this with the
-  /// device's location stream.
+  /// The route the mock recording traces. Real recordings come from the
+  /// device's location stream; this only shapes seeded rows.
   static List<LatLng> mockRecordingRoute() =>
-      RouteShapes.loop(mockCurrentLocation, radiusKm: 0.64, seed: 77, wobble: 0.34);
+      RouteShapes.loop(seedOrigin, radiusKm: 0.64, seed: 77, wobble: 0.34);
 
-  /// Where the record screen centres its map. MOCK — no device GPS this phase.
-  static const LatLng mockCurrentLocation = LatLng(14.5794, 121.0359);
+  /// The anchor the generated seed routes are drawn around.
+  ///
+  /// SEED DATA ONLY. This was once also the record screen's map centre, which
+  /// is how every user in the world was shown standing in Mandaluyong. Nothing
+  /// outside the mock backend may read it — a person's position comes from the
+  /// device or it does not exist.
+  static const LatLng seedOrigin = LatLng(14.5794, 121.0359);
 }

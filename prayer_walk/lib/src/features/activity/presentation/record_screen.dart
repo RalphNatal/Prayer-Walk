@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
@@ -40,7 +39,9 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
           .read(recordingControllerProvider.notifier)
           .start();
       if (!mounted) return;
-      if (access == LocationAccess.granted) {
+      // Approximate counts as started: the walk records, and the live screen
+      // carries the warning that the trace will be rough.
+      if (access.canRecord) {
         context.goNamed(Routes.liveTracking);
       }
     } catch (_) {
@@ -63,6 +64,14 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
         await service.openLocationSettings();
       case LocationAccess.deniedForever:
         await service.openAppSettings();
+      case LocationAccess.grantedApproximate:
+        // Precise location can only be turned on by the person, in system
+        // settings. On iOS the temporary-accuracy prompt has already been shown
+        // and declined by the time we get here, so app settings is the only
+        // route left on either platform.
+        await service.openAppSettings();
+        // Coming back from settings, re-read: the answer may have changed.
+        ref.invalidate(currentLocationProvider);
       case LocationAccess.denied:
         // Still askable — go straight back through the prompt.
         await _start();
@@ -71,31 +80,69 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
     }
   }
 
+  /// Why the map has nothing to centre on. Each of these is a different
+  /// problem with a different fix, and none of them is "you are in Manila".
+  static String _locatingLabel(LocationAccess access) => switch (access) {
+    LocationAccess.serviceDisabled => 'Location is switched off',
+    LocationAccess.denied ||
+    LocationAccess.deniedForever => 'Location is not shared',
+    LocationAccess.granted ||
+    LocationAccess.grantedApproximate => 'Finding you…',
+  };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final state = ref.watch(recordingControllerProvider);
     final location = ref.watch(currentLocationProvider);
 
+    // What the panel should complain about: whatever the last start attempt
+    // reported, or — before any attempt — whatever the device just told us.
+    // `granted` is the silent case; everything else has something to say.
+    final access =
+        state.access ?? location.value?.access ?? LocationAccess.granted;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Record')),
       body: Column(
         children: [
           Expanded(
-            child: AsyncView<LatLng>(
+            child: AsyncView<LocationReading>(
               value: location,
               onRetry: () => ref.invalidate(currentLocationProvider),
-              loading: const ShimmerScope(child: SkeletonBox(height: 400, radius: 0)),
-              data: (center) => RouteMapView(
-                center: center,
-                pulsePoint: center,
-                initialZoom: 16,
-                semanticLabel: 'Map of your current area',
-              ),
+              loading: const RouteMapView(locatingLabel: 'Finding you…'),
+              data: (reading) {
+                final fix = reading.fix;
+                if (fix == null) {
+                  // No trustworthy position. Say which kind of "no" this is
+                  // rather than centring the map on a guess.
+                  return RouteMapView(
+                    locatingLabel: _locatingLabel(reading.access),
+                  );
+                }
+                return RouteMapView(
+                  center: fix.point,
+                  pulsePoint: fix.point,
+                  accuracyMeters: fix.accuracyMeters,
+                  initialZoom: 16,
+                  semanticLabel: 'Map of your current area',
+                  overlay: Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: SignalIndicator(
+                        signal: fix.signal,
+                        accuracyMeters: fix.accuracyMeters,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           _RecordPanel(
             state: state,
+            access: access,
             starting: _starting,
             onSelectType: (type) => ref
                 .read(recordingControllerProvider.notifier)
@@ -116,6 +163,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
 class _RecordPanel extends StatelessWidget {
   const _RecordPanel({
     required this.state,
+    required this.access,
     required this.starting,
     required this.onSelectType,
     required this.onEditIntentions,
@@ -125,6 +173,12 @@ class _RecordPanel extends StatelessWidget {
   });
 
   final RecordingState state;
+
+  /// The current access level. [LocationAccess.granted] shows no notice;
+  /// everything else, including an approximate grant, has something the walker
+  /// needs to know before they set off.
+  final LocationAccess access;
+
   final bool starting;
   final ValueChanged<ActivityType> onSelectType;
   final VoidCallback onEditIntentions;
@@ -234,10 +288,10 @@ class _RecordPanel extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              if (state.access != null) ...[
+              if (access != LocationAccess.granted) ...[
                 _AccessNotice(
-                  access: state.access!,
-                  onResolve: () => onResolveAccess(state.access!),
+                  access: access,
+                  onResolve: () => onResolveAccess(access),
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
@@ -265,11 +319,15 @@ class _RecordPanel extends StatelessWidget {
   }
 }
 
-/// Why recording can't start, and the one thing that fixes it.
+/// What is wrong with the app's location access, and the one thing that fixes
+/// it.
 ///
 /// Each case gets its own action because they are genuinely different problems:
 /// a fresh denial can just be asked again, a permanent one needs app settings,
-/// and location being switched off isn't a permission matter at all.
+/// location being switched off isn't a permission matter at all, and an
+/// *approximate* grant is not a failure — recording works, it just will not be
+/// accurate, and the walker is owed that fact before they set off rather than
+/// after they look at a route that misses their street by a kilometre.
 class _AccessNotice extends StatelessWidget {
   const _AccessNotice({required this.access, required this.onResolve});
 
@@ -279,29 +337,51 @@ class _AccessNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
-    final (message, action) = switch (access) {
+    // Approximate is a warning, not an error: nothing is blocked, so it does
+    // not get the error colour or the alarm.
+    final blocking = !access.canRecord;
+
+    final (message, action, icon) = switch (access) {
       LocationAccess.serviceDisabled => (
         'Location is switched off on this device, so there is no route to '
             'record.',
         'Turn on location',
+        Icons.location_off_outlined,
       ),
       LocationAccess.deniedForever => (
         'Prayer Walk cannot see your location. Allow it in Settings to record '
             'a route.',
         'Open settings',
+        Icons.location_off_outlined,
       ),
       LocationAccess.denied => (
         'Prayer Walk needs your location to trace the route you walk.',
         'Allow location',
+        Icons.location_off_outlined,
       ),
-      LocationAccess.granted => ('', ''),
+      LocationAccess.grantedApproximate => (
+        'Only approximate location is shared, which is accurate to about a '
+            'kilometre. You can still walk, but the trace will be rough. Turn '
+            'on Precise location to record the route properly.',
+        'Open settings',
+        Icons.blur_on_rounded,
+      ),
+      LocationAccess.granted => ('', '', Icons.check_rounded),
     };
+
+    final background = blocking
+        ? scheme.errorContainer
+        : scheme.tertiaryContainer;
+    final foreground = blocking
+        ? scheme.onErrorContainer
+        : scheme.onTertiaryContainer;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer,
+        color: background,
         borderRadius: AppRadius.control,
       ),
       child: Column(
@@ -310,17 +390,13 @@ class _AccessNotice extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.location_off_outlined,
-                size: 18,
-                color: theme.colorScheme.onErrorContainer,
-              ),
+              Icon(icon, size: 18, color: foreground),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   message,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onErrorContainer,
+                    color: foreground,
                   ),
                 ),
               ),

@@ -92,6 +92,7 @@ class Activity {
     this.waypoints = const [],
     this.intentions = const [],
     this.note = '',
+    this.placeName,
     this.encouragementCount = 0,
     this.commentCount = 0,
     this.encouragedByViewer = false,
@@ -111,6 +112,14 @@ class Activity {
   final List<Waypoint> waypoints;
   final List<PrayerIntention> intentions;
   final String note;
+
+  /// Where the walk happened, in words — "Antipolo", "Kreuzberg". Resolved once
+  /// by reverse geocoding when the walk is saved and stored on the row, so
+  /// reading a walk never costs a geocoding request. Null for walks recorded
+  /// before this existed, for walks with no route, and whenever the lookup
+  /// failed — it is a nicety, and nothing waits on it.
+  final String? placeName;
+
   final int encouragementCount;
   final int commentCount;
   final bool encouragedByViewer;
@@ -118,6 +127,7 @@ class Activity {
   Activity copyWith({
     String? title,
     String? note,
+    String? placeName,
     List<PrayerIntention>? intentions,
     List<Waypoint>? waypoints,
     int? encouragementCount,
@@ -137,6 +147,7 @@ class Activity {
       waypoints: waypoints ?? this.waypoints,
       intentions: intentions ?? this.intentions,
       note: note ?? this.note,
+      placeName: placeName ?? this.placeName,
       encouragementCount: encouragementCount ?? this.encouragementCount,
       commentCount: commentCount ?? this.commentCount,
       encouragedByViewer: encouragedByViewer ?? this.encouragedByViewer,
@@ -159,6 +170,7 @@ class ActivityDraft {
     required this.waypoints,
     required this.intentions,
     this.note = '',
+    this.placeName,
   });
 
   final ActivityType type;
@@ -171,6 +183,11 @@ class ActivityDraft {
   final List<Waypoint> waypoints;
   final List<PrayerIntention> intentions;
   final String note;
+
+  /// Filled in asynchronously after the walk finishes, if the lookup lands
+  /// before the walker saves. Null is entirely ordinary — see
+  /// [Activity.placeName].
+  final String? placeName;
 
   /// The partial state shown on the live screen: the first [fraction] of the
   /// traced route with stats scaled to match, so the mock reads as a walk in
@@ -190,12 +207,14 @@ class ActivityDraft {
           .toList(growable: false),
       intentions: intentions,
       note: note,
+      placeName: placeName,
     );
   }
 
   ActivityDraft copyWith({
     String? title,
     String? note,
+    String? placeName,
     List<PrayerIntention>? intentions,
     List<Waypoint>? waypoints,
   }) {
@@ -210,6 +229,7 @@ class ActivityDraft {
       waypoints: waypoints ?? this.waypoints,
       intentions: intentions ?? this.intentions,
       note: note ?? this.note,
+      placeName: placeName ?? this.placeName,
     );
   }
 }

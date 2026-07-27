@@ -31,6 +31,19 @@ abstract final class AppConfig {
     'GOOGLE_IOS_CLIENT_ID',
   );
 
+  /// Mapbox public access token (`pk.…`), for basemap tiles and geocoding.
+  ///
+  /// Deliberately **not** in [validate]'s required list. A missing token
+  /// degrades the map to the public OSM tiles rather than failing the launch —
+  /// see [RouteMapView] — because an unconfigured dev build should still run.
+  /// A production build must set it: the public OSM tile server is
+  /// community-funded and its usage policy does not permit app traffic.
+  static const mapboxAccessToken = String.fromEnvironment(
+    'MAPBOX_ACCESS_TOKEN',
+  );
+
+  static bool get hasMapboxToken => mapboxAccessToken.isNotEmpty;
+
   /// Throws a [StateError] naming **every** missing key at once if any required
   /// compile-time value is absent.
   ///

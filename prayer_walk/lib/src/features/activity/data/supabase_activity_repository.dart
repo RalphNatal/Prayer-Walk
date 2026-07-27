@@ -22,7 +22,8 @@ class SupabaseActivityRepository implements ActivityRepository {
 
   static const _columns =
       'id, user_id, type, title, started_at, duration_seconds, distance_meters, '
-      'elevation_gain_meters, route, waypoints, intentions, note, created_at';
+      'elevation_gain_meters, route, waypoints, intentions, note, place_name, '
+      'created_at';
 
   @override
   Future<List<Activity>> activitiesForUser(
@@ -50,16 +51,13 @@ class SupabaseActivityRepository implements ActivityRepository {
     return _fromRow(row);
   }
 
+  /// Never throws for an ordinary "no". A refusal, a switched-off radio and a
+  /// GPS that hasn't locked yet are all real answers the screen renders
+  /// differently — turning them into one exception would collapse them back
+  /// into a single unhelpful error, which is where a fabricated centre becomes
+  /// tempting again.
   @override
-  Future<LatLng> currentLocation() async {
-    final fix = await _location.currentFix();
-    if (fix == null) {
-      throw const LocationUnavailable(
-        "We couldn't get your location. Check location is on, then try again.",
-      );
-    }
-    return fix;
-  }
+  Future<LocationReading> currentLocation() => _location.read();
 
   @override
   Future<List<PrayerIntention>> suggestedIntentions() async {
@@ -84,6 +82,10 @@ class SupabaseActivityRepository implements ActivityRepository {
           'waypoints': _encodeWaypoints(draft.waypoints),
           'intentions': _encodeIntentions(draft.intentions),
           'note': draft.note.trim(),
+          // Whatever the recorder managed to resolve while the walker was on
+          // the summary screen. Null is written as null — the save is never
+          // delayed to go and look it up.
+          'place_name': draft.placeName,
         })
         .select(_columns)
         .single();
@@ -144,6 +146,9 @@ class SupabaseActivityRepository implements ActivityRepository {
       waypoints: _decodeWaypoints(row['waypoints'], id),
       intentions: _decodeIntentions(row['intentions'], id, startedAt),
       note: (row['note'] as String?) ?? '',
+      placeName: (row['place_name'] as String?)?.trim().isNotEmpty ?? false
+          ? (row['place_name'] as String).trim()
+          : null,
       // No social tables yet — see the class doc.
     );
   }

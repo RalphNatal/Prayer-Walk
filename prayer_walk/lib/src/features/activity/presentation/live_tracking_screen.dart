@@ -70,11 +70,29 @@ class LiveTrackingScreen extends ConsumerWidget {
                 points: state.route,
                 waypoints: state.waypoints.toTrailWaypoints(),
                 pulsePoint: state.lastPoint,
+                // The uncertainty, drawn to scale. A dot alone claims a
+                // precision the device has not yet earned.
+                accuracyMeters: state.accuracyMeters,
                 // Keeps the camera on the walker as the route grows.
                 followPoint: state.lastPoint,
                 showEndpoints: false,
-                showAttribution: false,
                 interactive: false,
+                locatingLabel: state.warmingUp
+                    ? 'Getting a sharp signal…'
+                    : 'Finding you…',
+                overlay: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: SafeArea(
+                      child: SignalIndicator(
+                        signal: state.signal,
+                        accuracyMeters: state.accuracyMeters,
+                        onDark: true,
+                      ),
+                    ),
+                  ),
+                ),
                 semanticLabel:
                     'Map showing the route so far, '
                     '${Fmt.distance(state.distanceMeters)}',
@@ -184,28 +202,44 @@ class _LivePanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (isPaused)
+              // Recording on approximate permission. This stays on screen for
+              // the whole walk on purpose: the resulting trace can be a
+              // kilometre out, and the walker should never have to work that
+              // out for themselves afterwards.
+              if (state.isApproximate)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(
-                    'PAUSED',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.amber,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                )
-              else if (state.route.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(
-                    'FINDING YOU…',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.amber,
-                      letterSpacing: 2,
-                    ),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.blur_on_rounded,
+                        size: 16,
+                        color: AppColors.amber,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Flexible(
+                        child: Text(
+                          'Approximate location only — this trace will be rough.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.amber,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+
+              if (isPaused)
+                _LiveBadge(label: 'PAUSED', theme: theme)
+              // The warm-up gate is deliberately visible: the walk has started
+              // and nothing is being plotted yet, which without a word on
+              // screen looks like the app has frozen.
+              else if (state.warmingUp)
+                _LiveBadge(label: 'GETTING A SHARP SIGNAL…', theme: theme)
+              else if (state.route.isEmpty)
+                _LiveBadge(label: 'FINDING YOU…', theme: theme),
               Text(
                 Fmt.distanceValue(state.distanceMeters),
                 style: AppTypography.statDisplay(onDark, size: 64),
@@ -318,6 +352,30 @@ class _LivePanel extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The one-word status above the distance: paused, warming up, or still
+/// looking. Only ever one of them at a time.
+class _LiveBadge extends StatelessWidget {
+  const _LiveBadge({required this.label, required this.theme});
+
+  final String label;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: AppColors.amber,
+          letterSpacing: 2,
         ),
       ),
     );

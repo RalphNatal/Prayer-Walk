@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/utils/app_logger.dart';
 import '../../auth/data/auth_providers.dart';
 import '../domain/activity.dart';
+import 'geocoding_service.dart';
 import 'location_service.dart';
 import 'mock_activity_repository.dart';
 
@@ -41,6 +44,8 @@ class RecordingState {
     this.route = const [],
     this.waypoints = const [],
     this.access,
+    this.accuracyMeters,
+    this.warmingUp = false,
   });
 
   final ActivityType type;
@@ -72,9 +77,37 @@ class RecordingState {
   final List<LatLng> route;
   final List<Waypoint> waypoints;
 
-  /// Why the last [RecordingController.start] failed, when it did. Null while
-  /// things are fine.
+  /// Why the last [RecordingController.start] failed, when it did — or
+  /// [LocationAccess.grantedApproximate] when it succeeded on reduced accuracy,
+  /// which the live screen has to keep saying out loud. Null while things are
+  /// fine.
   final LocationAccess? access;
+
+  /// The accuracy radius of the most recent fix the device delivered, accepted
+  /// or not. Drives the signal indicator; null before the first fix arrives.
+  final double? accuracyMeters;
+
+  /// True while the recorder is deliberately holding fixes back, waiting for
+  /// the signal to sharpen before it anchors the route.
+  final bool warmingUp;
+
+  /// How the current signal should be described. Reads the same scale the
+  /// one-shot fix does, so "sharp" means the same thing on both screens.
+  LocationSignal get signal {
+    final accuracy = accuracyMeters;
+    if (accuracy == null || accuracy <= 0) return LocationSignal.unknown;
+    if (accuracy <= LocationQuality.goodAccuracyMeters) {
+      return LocationSignal.sharp;
+    }
+    if (accuracy <= LocationQuality.maxDisplayAccuracyMeters) {
+      return LocationSignal.fair;
+    }
+    return LocationSignal.weak;
+  }
+
+  /// Recording on approximate permission — the trace will be rough and the UI
+  /// must say so rather than presenting a kilometre-wide error as a walk.
+  bool get isApproximate => access == LocationAccess.grantedApproximate;
 
   bool get hasDraft => draft != null;
 
@@ -99,9 +132,12 @@ class RecordingState {
     List<LatLng>? route,
     List<Waypoint>? waypoints,
     LocationAccess? access,
+    double? accuracyMeters,
+    bool? warmingUp,
     bool clearDraft = false,
     bool clearDevotional = false,
     bool clearAccess = false,
+    bool clearAccuracy = false,
   }) {
     return RecordingState(
       type: type ?? this.type,
@@ -118,6 +154,10 @@ class RecordingState {
       route: route ?? this.route,
       waypoints: waypoints ?? this.waypoints,
       access: clearAccess ? null : (access ?? this.access),
+      accuracyMeters: clearAccuracy
+          ? null
+          : (accuracyMeters ?? this.accuracyMeters),
+      warmingUp: warmingUp ?? this.warmingUp,
     );
   }
 }
@@ -129,11 +169,14 @@ class RecordingState {
 /// it stops when the OS stops delivering to a backgrounded app — background
 /// tracking is a separate phase with its own service and permission.
 ///
-/// Two invariants the tests of "believable stats" rest on:
+/// Three invariants the tests of "believable stats" rest on:
 ///  * a fix is only *accepted* if it is accurate enough and far enough from the
 ///    last accepted one, so standing still doesn't accumulate metres;
 ///  * `_previous` is cleared on pause, so resuming never draws — or measures —
-///    the straight line across wherever the walker went while paused.
+///    the straight line across wherever the walker went while paused;
+///  * nothing is plotted until the signal reaches recording grade (or the
+///    warm-up window expires), so the route is never anchored on the coarse
+///    network fix a cold GPS start hands over first.
 class RecordingController extends Notifier<RecordingState> {
   StreamSubscription<LocationFix>? _subscription;
   Timer? _ticker;
@@ -145,16 +188,14 @@ class RecordingController extends Notifier<RecordingState> {
   /// Altitude of the last accepted fix, for the elevation delta.
   double? _previousAltitude;
 
-  /// Worse than this and the fix is noise, not a position.
-  static const _maxAccuracyMeters = 25.0;
+  /// When the warm-up gate opened. Null once the gate has closed for good.
+  DateTime? _warmUpStartedAt;
 
-  /// Below this, a "movement" is GPS jitter. The platform's `distanceFilter`
-  /// already screens most of it; this catches the rest.
-  static const _minStepMeters = 3.0;
+  static const _tag = 'PW-REC';
 
-  /// GPS altitude wanders by several metres at rest. Only climbs above this
-  /// count toward the gain.
-  static const _minClimbMeters = 1.5;
+  // The thresholds live in [LocationQuality] rather than here, so the recorder
+  // and the location service cannot drift into disagreeing about how accurate
+  // a fix has to be.
 
   @override
   RecordingState build() {
@@ -212,9 +253,11 @@ class RecordingController extends Notifier<RecordingState> {
   /// Runs the permission gate and, on success, opens the position stream.
   ///
   /// Returns the access result so the screen can decide what to show; it never
-  /// throws for a denial, since a denial is an ordinary answer.
+  /// throws for a denial, since a denial is an ordinary answer. An *approximate*
+  /// grant is a success — recording proceeds — but it is carried into the state
+  /// so the live screen can keep saying the trace will be rough.
   Future<LocationAccess> start() async {
-    if (state.isLive) return LocationAccess.granted;
+    if (state.isLive) return state.access ?? LocationAccess.granted;
 
     state = state.copyWith(
       status: RecordingStatus.requesting,
@@ -222,13 +265,17 @@ class RecordingController extends Notifier<RecordingState> {
     );
 
     final access = await ref.read(locationServiceProvider).ensureAccess();
-    if (access != LocationAccess.granted) {
+    if (!access.canRecord) {
       state = state.copyWith(status: RecordingStatus.idle, access: access);
       return access;
     }
 
     _previous = null;
     _previousAltitude = null;
+    // The gate that kills the classic opening jump: a cold GPS start emits a
+    // coarse network fix first, and anchoring the route on it puts the first
+    // point hundreds of metres from where the walk actually began.
+    _warmUpStartedAt = DateTime.now();
     state = state.copyWith(
       status: RecordingStatus.recording,
       startedAt: DateTime.now(),
@@ -237,8 +284,12 @@ class RecordingController extends Notifier<RecordingState> {
       elevationGainMeters: 0,
       route: const [],
       waypoints: const [],
+      warmingUp: true,
       clearDraft: true,
-      clearAccess: true,
+      clearAccuracy: true,
+      // Precise clears the notice; approximate keeps it on screen.
+      clearAccess: access.isPrecise,
+      access: access.isPrecise ? null : access,
     );
 
     _subscription = ref
@@ -247,7 +298,7 @@ class RecordingController extends Notifier<RecordingState> {
         .listen(_onFix, onError: (_) {/* A dropped fix is not fatal. */});
 
     _ticker = Timer.periodic(const Duration(seconds: 1), _onTick);
-    return LocationAccess.granted;
+    return access;
   }
 
   void _onTick(Timer _) {
@@ -259,11 +310,27 @@ class RecordingController extends Notifier<RecordingState> {
   /// "believable stats" policy lives here.
   void _onFix(LocationFix fix) {
     // Paused: stay subscribed (re-acquiring a lock is slow and battery-hungry)
-    // but consume nothing.
-    if (state.status != RecordingStatus.recording) return;
+    // but consume nothing beyond the signal reading, which the indicator still
+    // wants to be honest about.
+    if (state.status != RecordingStatus.recording) {
+      state = state.copyWith(accuracyMeters: fix.accuracyMeters);
+      return;
+    }
 
     // A wide accuracy radius means the position could be anywhere in it.
-    if (fix.accuracyMeters > _maxAccuracyMeters) return;
+    if (fix.accuracyMeters > LocationQuality.maxRecordingAccuracyMeters) {
+      state = state.copyWith(accuracyMeters: fix.accuracyMeters);
+      return;
+    }
+
+    if (_isWarmingUp(fix)) {
+      state = state.copyWith(accuracyMeters: fix.accuracyMeters);
+      return;
+    }
+
+    if (kDebugMode) {
+      AppLogger.debug(_tag, 'accepted ${fix.describe()}');
+    }
 
     final previous = _previous;
     if (previous == null) {
@@ -276,7 +343,10 @@ class RecordingController extends Notifier<RecordingState> {
     }
 
     final step = distanceBetweenMeters(previous.point, fix.point);
-    if (step < _minStepMeters) return;
+    if (step < LocationQuality.minStepMeters) {
+      state = state.copyWith(accuracyMeters: fix.accuracyMeters);
+      return;
+    }
 
     final climb = fix.altitudeMeters - (_previousAltitude ?? fix.altitudeMeters);
 
@@ -285,10 +355,44 @@ class RecordingController extends Notifier<RecordingState> {
     state = state.copyWith(
       route: [...state.route, fix.point],
       distanceMeters: state.distanceMeters + step,
-      elevationGainMeters: climb > _minClimbMeters
+      accuracyMeters: fix.accuracyMeters,
+      elevationGainMeters: climb > LocationQuality.minClimbMeters
           ? state.elevationGainMeters + climb
           : state.elevationGainMeters,
     );
+  }
+
+  /// The warm-up gate: hold fixes back until the signal reaches recording
+  /// grade, or until the window runs out.
+  ///
+  /// Returns true while the fix should be dropped. Once the gate closes it
+  /// stays closed for the rest of the walk — a pause mid-route already keeps
+  /// its own lock, and re-gating there would swallow the first fix after every
+  /// resume.
+  bool _isWarmingUp(LocationFix fix) {
+    final startedAt = _warmUpStartedAt;
+    if (startedAt == null) return false;
+
+    final sharp =
+        fix.hasAccuracy &&
+        fix.accuracyMeters <= LocationQuality.goodAccuracyMeters;
+    final expired =
+        DateTime.now().difference(startedAt) >= LocationQuality.warmUpWindow;
+
+    if (!sharp && !expired) return true;
+
+    _warmUpStartedAt = null;
+    state = state.copyWith(warmingUp: false);
+    if (kDebugMode) {
+      AppLogger.debug(
+        _tag,
+        expired && !sharp
+            ? 'warm-up timed out at ±${fix.accuracyMeters.round()}m — '
+                  'starting anyway'
+            : 'warm-up done at ±${fix.accuracyMeters.round()}m',
+      );
+    }
+    return false;
   }
 
   void togglePause() => state.isPaused ? resume() : pause();
@@ -333,6 +437,7 @@ class RecordingController extends Notifier<RecordingState> {
     final startedAt = state.startedAt ?? DateTime.now();
     state = state.copyWith(
       status: RecordingStatus.finished,
+      warmingUp: false,
       draft: ActivityDraft(
         type: state.type,
         title: defaultTitle(state.type, startedAt),
@@ -343,6 +448,38 @@ class RecordingController extends Notifier<RecordingState> {
         route: List.unmodifiable(state.route),
         waypoints: List.unmodifiable(state.waypoints),
         intentions: state.intentions,
+      ),
+    );
+
+    // Fire-and-forget: the summary screen is already usable, and a walk must
+    // never wait on a geocoding endpoint to be saveable.
+    unawaited(_resolvePlaceName());
+  }
+
+  /// Names the walk by where it happened — "Morning walk in Antipolo".
+  ///
+  /// Deliberately after [finish] rather than inside it: the lookup is remote
+  /// and the summary screen must appear immediately. If it lands, the title
+  /// upgrades under the walker; if it doesn't, they keep a perfectly good
+  /// plain title and never learn a request was made.
+  Future<void> _resolvePlaceName() async {
+    final draft = state.draft;
+    if (draft == null || draft.route.isEmpty) return;
+
+    final place = await ref
+        .read(geocodingServiceProvider)
+        .reverseGeocode(draft.route.first);
+    if (place == null) return;
+
+    final current = state.draft;
+    // The walker may have retitled, discarded or saved while we were away.
+    // Only an untouched default title gets rewritten — never their words.
+    if (current == null || current.title != draft.title) return;
+
+    state = state.copyWith(
+      draft: current.copyWith(
+        title: '${current.title} in $place',
+        placeName: place,
       ),
     );
   }
@@ -395,6 +532,7 @@ class RecordingController extends Notifier<RecordingState> {
     _ticker = null;
     _previous = null;
     _previousAltitude = null;
+    _warmUpStartedAt = null;
   }
 
   static String defaultTitle(ActivityType type, DateTime at) {

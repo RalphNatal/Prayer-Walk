@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../config/app_config.dart';
 import '../constants/app_spacing.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_logger.dart';
 import 'motion.dart';
 import 'trail_painter.dart';
 
@@ -14,8 +16,13 @@ import 'trail_painter.dart';
 /// and nothing else — which is the reason it exists rather than screens
 /// dropping `FlutterMap` in directly.
 ///
-/// Tiles come from OpenStreetMap over the network. That is the one remote call
-/// this phase makes; there is no app backend yet.
+/// Tiles come from Mapbox, keyed by `MAPBOX_ACCESS_TOKEN` in `env.json`. The
+/// tile provider has nothing to do with positioning accuracy — that is entirely
+/// the location service's job — but it does decide whether a *correct* position
+/// lands on a well-drawn basemap or on sparse, misaligned data, which in parts
+/// of the world is the difference between a map that looks right and one that
+/// looks broken. It also comes with a licence that permits app traffic, which
+/// the public OSM tile server does not.
 class RouteMapView extends StatefulWidget {
   const RouteMapView({
     super.key,
@@ -24,16 +31,17 @@ class RouteMapView extends StatefulWidget {
     this.center,
     this.height,
     this.interactive = true,
-    this.showAttribution = true,
     this.showEndpoints = true,
     this.strokeWidth = 6,
     this.fitPadding = const EdgeInsets.all(44),
     this.initialZoom = 15.5,
     this.pulsePoint,
+    this.accuracyMeters,
     this.followPoint,
     this.overlay,
     this.semanticLabel,
     this.borderRadius,
+    this.locatingLabel = 'Finding you…',
   });
 
   /// The traced route. Empty renders the basemap around [center] — which is
@@ -47,7 +55,6 @@ class RouteMapView extends StatefulWidget {
 
   final double? height;
   final bool interactive;
-  final bool showAttribution;
   final bool showEndpoints;
   final double strokeWidth;
   final EdgeInsets fitPadding;
@@ -56,6 +63,12 @@ class RouteMapView extends StatefulWidget {
   /// Draws a breathing amber ring here — the live screen's "you are here".
   /// Still under reduced motion.
   final LatLng? pulsePoint;
+
+  /// The accuracy radius of [pulsePoint], drawn to scale as a translucent
+  /// circle. This is the affordance that turns "the app is wrong" into "my GPS
+  /// hasn't locked yet" — a dot claims a point, a circle claims an area, and
+  /// the circle is the truthful claim. Null draws no circle.
+  final double? accuracyMeters;
 
   /// Keeps the camera on this point as it changes — the live screen following
   /// the walker. [initialCameraFit] only ever runs once, so a growing route
@@ -69,10 +82,25 @@ class RouteMapView extends StatefulWidget {
   final String? semanticLabel;
   final BorderRadius? borderRadius;
 
+  /// Shown instead of the map when there is no route, no centre and no
+  /// position — see [_LocatingView].
+  final String locatingLabel;
+
+  /// Fallback only. The public OSM tile server is community-funded and its
+  /// usage policy does not permit production app traffic — a release build
+  /// without a token is a licensing problem, not just a cosmetic one, which is
+  /// why [_MapTiles] logs a warning when it lands here.
   static const _osmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-  /// Only reached when a caller passes neither route nor centre.
-  static const _fallbackCenter = LatLng(14.5794, 121.0359);
+  /// Where the camera goes, or null when nothing has earned the right to say.
+  ///
+  /// There is deliberately no fallback. This used to end in a hardcoded centre
+  /// copied out of the mock seed, which meant a caller with no route and no fix
+  /// silently showed every user in the world standing in one Metro Manila
+  /// suburb, indistinguishable from a real position. A map that does not know
+  /// where you are must say so.
+  LatLng? get _camera =>
+      center ?? followPoint ?? (points.isNotEmpty ? points.first : null);
 
   @override
   State<RouteMapView> createState() => _RouteMapViewState();
@@ -115,14 +143,27 @@ class _RouteMapViewState extends State<RouteMapView> {
     final borderRadius = widget.borderRadius;
     final height = widget.height;
     final semanticLabel = widget.semanticLabel;
+    final camera = widget._camera;
+    final tiles = _MapTiles.resolve(
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+    );
+
+    // Nothing to centre on. Rather than invent a position, say plainly that we
+    // are still looking — the one state the old fallback centre made
+    // unreachable, and the honest answer everywhere outside Metro Manila.
+    if (camera == null) {
+      return _LocatingView(
+        label: widget.locatingLabel,
+        height: height,
+        borderRadius: borderRadius,
+        overlay: overlay,
+      );
+    }
 
     final map = FlutterMap(
       mapController: _mapController,
       options: MapOptions(
-        initialCenter:
-            widget.center ??
-            widget.followPoint ??
-            (points.isNotEmpty ? points.first : RouteMapView._fallbackCenter),
+        initialCenter: camera,
         initialZoom: widget.initialZoom,
         // Fits the whole route once, on first layout. A live recording passes
         // [followPoint] instead and keeps the camera on the walker.
@@ -141,9 +182,11 @@ class _RouteMapViewState extends State<RouteMapView> {
       ),
       children: [
         TileLayer(
-          urlTemplate: RouteMapView._osmTiles,
+          urlTemplate: tiles.urlTemplate,
+          additionalOptions: tiles.additionalOptions,
           userAgentPackageName: 'com.calledpresentations.prayer_walk',
-          maxNativeZoom: 19,
+          maxNativeZoom: tiles.maxNativeZoom,
+          retinaMode: tiles.retina,
           tileDisplay: const TileDisplay.fadeIn(
             duration: AppDurations.fast,
           ),
@@ -208,6 +251,23 @@ class _RouteMapViewState extends State<RouteMapView> {
               ),
             ],
           ),
+        // The accuracy circle goes under the marker, so the dot still reads as
+        // the position and the circle as the uncertainty around it.
+        if (pulsePoint != null && (widget.accuracyMeters ?? 0) > 0)
+          CircleLayer<Object>(
+            circles: [
+              CircleMarker(
+                point: pulsePoint,
+                radius: widget.accuracyMeters!,
+                // Metres, not pixels — the circle has to grow and shrink with
+                // the zoom or it is decoration rather than information.
+                useRadiusInMeter: true,
+                color: trail.endMark.withValues(alpha: 0.12),
+                borderColor: trail.endMark.withValues(alpha: 0.35),
+                borderStrokeWidth: 1,
+              ),
+            ],
+          ),
         if (pulsePoint != null)
           MarkerLayer(
             markers: [
@@ -219,14 +279,14 @@ class _RouteMapViewState extends State<RouteMapView> {
               ),
             ],
           ),
-        if (widget.showAttribution)
-          SimpleAttributionWidget(
-            source: Text(
-              'OpenStreetMap contributors',
-              style: theme.textTheme.bodySmall,
-            ),
-            backgroundColor: theme.colorScheme.surface.withValues(alpha: 0.82),
-          ),
+        // Unconditional, and deliberately not behind a flag. Credit is a
+        // condition of the tile licence — Mapbox's and OpenStreetMap's alike —
+        // and a `showAttribution: false` parameter is an invitation to breach
+        // it on whichever screen feels too cramped that week.
+        SimpleAttributionWidget(
+          source: Text(tiles.attribution, style: theme.textTheme.bodySmall),
+          backgroundColor: theme.colorScheme.surface.withValues(alpha: 0.82),
+        ),
       ],
     );
 
@@ -252,6 +312,153 @@ class _RouteMapViewState extends State<RouteMapView> {
       excludeSemantics: true,
       child: content,
     );
+  }
+}
+
+/// Which basemap the app is drawing on, and what it is obliged to say about it.
+///
+/// Every Mapbox-specific string lives in this class and nowhere else. Screens
+/// pass routes and points; they have never heard of a style id or a token, so
+/// changing provider is a change to this one type.
+///
+/// Attribution is not optional decoration. Mapbox, OpenStreetMap and every
+/// other provider require visible credit as a condition of the licence, which
+/// is why [attribution] has no null case.
+class _MapTiles {
+  const _MapTiles._({
+    required this.urlTemplate,
+    required this.attribution,
+    required this.retina,
+    this.additionalOptions = const {},
+  });
+
+  /// Reads the configured provider, falling back to OSM when there is no token.
+  ///
+  /// [devicePixelRatio] decides the retina variant: serving `@2x` tiles to a
+  /// 1x display wastes bandwidth, and serving 1x tiles to a modern phone looks
+  /// blurry — and a blurry basemap gets read as an inaccurate one.
+  factory _MapTiles.resolve({required double devicePixelRatio}) {
+    final retina = devicePixelRatio > 1.5;
+
+    if (!AppConfig.hasMapboxToken) {
+      // Debug builds keep working unconfigured; release builds should not be
+      // here at all, so say so loudly enough to be caught before shipping —
+      // but once, not on every rebuild of every map.
+      if (!_warnedAboutMissingToken) {
+        _warnedAboutMissingToken = true;
+        AppLogger.warn(
+          'PW-MAP',
+          'MAPBOX_ACCESS_TOKEN is empty — falling back to public OSM tiles, '
+          'which are not licensed for app traffic. Set it in env.json.',
+        );
+      }
+      return _MapTiles._(
+        urlTemplate: RouteMapView._osmTiles,
+        attribution: '© OpenStreetMap contributors',
+        // The OSM tile server has no @2x variant; asking for one 404s.
+        retina: false,
+      );
+    }
+
+    return _MapTiles._(
+      // `{r}` is flutter_map's retina placeholder — it expands to `@2x` or to
+      // nothing, driven by `retinaMode` on the layer.
+      urlTemplate:
+          'https://api.mapbox.com/styles/v1/{style}/tiles/512/{z}/{x}/{y}{r}'
+          '?access_token={accessToken}',
+      attribution: '© Mapbox © OpenStreetMap',
+      retina: retina,
+      additionalOptions: {
+        'style': _mapboxStyle,
+        'accessToken': AppConfig.mapboxAccessToken,
+      },
+    );
+  }
+
+  /// Mapbox Outdoors: trails, paths and contours are drawn, which is the right
+  /// emphasis for an app about walking.
+  static const _mapboxStyle = 'mapbox/outdoors-v12';
+
+  static bool _warnedAboutMissingToken = false;
+
+  final String urlTemplate;
+  final String attribution;
+  final bool retina;
+  final Map<String, String> additionalOptions;
+
+  /// 512 px Mapbox tiles cover two standard zoom levels each, so the highest
+  /// native level is one below OSM's.
+  int get maxNativeZoom => AppConfig.hasMapboxToken ? 18 : 19;
+}
+
+/// What the map shows when it does not know where the person is.
+///
+/// The whole point of this widget is that it is visually *unlike* a map with a
+/// position on it. The bug it replaces was not that the old fallback centre was
+/// the wrong city — it was that a guess and a fix looked identical, so there
+/// was nothing on screen to distrust.
+class _LocatingView extends StatelessWidget {
+  const _LocatingView({
+    required this.label,
+    this.height,
+    this.borderRadius,
+    this.overlay,
+  });
+
+  final String label;
+  final double? height;
+  final BorderRadius? borderRadius;
+  final Widget? overlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final trail = theme.trail;
+
+    Widget content = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [trail.groundTop, trail.groundBottom],
+        ),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.my_location_rounded,
+                  size: 28,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (overlay != null) IgnorePointer(child: overlay!),
+        ],
+      ),
+    );
+
+    if (borderRadius != null) {
+      content = ClipRRect(borderRadius: borderRadius!, child: content);
+    }
+    if (height != null) {
+      content = SizedBox(height: height, child: content);
+    }
+
+    return Semantics(label: label, child: content);
   }
 }
 

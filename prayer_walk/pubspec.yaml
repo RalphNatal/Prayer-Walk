@@ -43,6 +43,9 @@ dependencies:
   supabase_flutter: ^2.16.0
   google_sign_in: ^7.2.0
   geolocator: ^14.0.3
+  # Reverse geocoding only — see geocoding_service.dart. Supabase and Mapbox
+  # tiles bring their own transports; this is for the one plain REST call.
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

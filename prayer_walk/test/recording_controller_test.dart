@@ -107,6 +107,90 @@ void main() {
     });
   });
 
+  group('approximate location', () {
+    test('a reduced-accuracy grant still records, and says so', () async {
+      setUpWith(LocationAccess.grantedApproximate);
+
+      final access = await controller().start();
+
+      expect(access, LocationAccess.grantedApproximate);
+      expect(state().status, RecordingStatus.recording);
+      expect(service.streamsOpened, 1, reason: 'a rough walk is still a walk');
+      expect(
+        state().isApproximate,
+        isTrue,
+        reason: 'the live screen has to keep warning about the trace',
+      );
+    });
+
+    test('a precise grant leaves no notice behind', () async {
+      await controller().start();
+
+      expect(state().access, isNull);
+      expect(state().isApproximate, isFalse);
+    });
+  });
+
+  group('accuracy warm-up', () {
+    test('a coarse opening fix is held back, not plotted', () async {
+      await controller().start();
+      expect(state().warmingUp, isTrue);
+
+      // Inside the recording filter's 25 m, but short of the 20 m the gate
+      // wants — exactly the cell/network fix a cold GPS start hands over first.
+      await emit(fixAt(14.5794, 121.0359, accuracy: 22));
+
+      expect(
+        state().route,
+        isEmpty,
+        reason: 'the route must not be anchored on a coarse fix',
+      );
+      expect(state().warmingUp, isTrue);
+      expect(
+        state().accuracyMeters,
+        22,
+        reason: 'the signal indicator still reports the truth while waiting',
+      );
+    });
+
+    test('the gate opens once the signal sharpens', () async {
+      await controller().start();
+      await emit(fixAt(14.5794, 121.0359, accuracy: 22)); // held
+      await emit(fixAt(14.5804, 121.0359, accuracy: 8)); // sharp
+
+      expect(state().warmingUp, isFalse);
+      expect(state().route, hasLength(1));
+      expect(
+        state().distanceMeters,
+        0,
+        reason: 'the first plotted fix is a start, not a step',
+      );
+    });
+
+    test('the gate stays open for the rest of the walk', () async {
+      await controller().start();
+      await emit(fixAt(14.5794, 121.0359, accuracy: 8));
+      // Degrading again mid-walk must not re-arm the gate; a fix inside the
+      // recording threshold keeps being recorded.
+      await emit(fixAt(14.5804, 121.0359, accuracy: 22));
+
+      expect(state().warmingUp, isFalse);
+      expect(state().route, hasLength(2));
+      expect(state().distanceMeters, closeTo(111, 3));
+    });
+
+    test('a paused fix still updates the signal reading', () async {
+      await controller().start();
+      await emit(fixAt(14.5794, 121.0359, accuracy: 5));
+      controller().pause();
+
+      await emit(fixAt(14.5804, 121.0359, accuracy: 40));
+
+      expect(state().accuracyMeters, 40);
+      expect(state().route, hasLength(1), reason: 'still not recording');
+    });
+  });
+
   group('distance accumulation', () {
     test('the first fix starts the route without adding distance', () async {
       await controller().start();
