@@ -6,9 +6,12 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/admin_shell.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../profile/data/mock_profile_repository.dart';
+import '../../profile/data/profile_providers.dart';
 import '../data/mock_admin_repository.dart';
 import '../domain/admin_models.dart';
+
+/// Log tag for this screen's failures.
+const _tag = 'PW-ANNOUNCE';
 
 /// Write a broadcast, see who it reaches, confirm before it goes.
 class AdminAnnouncementComposeScreen extends ConsumerStatefulWidget {
@@ -66,11 +69,14 @@ class _AdminAnnouncementComposeScreenState
         'Sent to ${Fmt.plural(recipients, 'person', 'people')}.',
       );
       context.pop();
-    } catch (_) {
+    } catch (error, stack) {
       if (mounted) {
-        showAppSnackBar(
+        reportFailure(
           context,
-          "That didn't send. Check your connection, then try again.",
+          error,
+          stack,
+          tag: _tag,
+          fallback: "The announcement didn't send.",
         );
       }
     } finally {

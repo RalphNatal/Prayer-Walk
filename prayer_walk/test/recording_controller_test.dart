@@ -3,9 +3,13 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:prayer_walk/src/features/activity/data/activity_providers.dart';
 import 'package:prayer_walk/src/features/activity/data/location_service.dart';
 import 'package:prayer_walk/src/features/activity/data/recording_controller.dart';
 import 'package:prayer_walk/src/features/activity/domain/activity.dart';
+import 'package:prayer_walk/src/features/activity/domain/activity_repository.dart';
+import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 /// A location service driven by the test rather than the device.
 class _FakeLocationService extends LocationService {
@@ -368,4 +372,129 @@ void main() {
       expect(service.streamsClosed, 1);
     });
   });
+
+  group('a failed save', () {
+    late _ScriptedActivityRepository repository;
+
+    /// A walk that has been finished and is sitting on the summary screen.
+    Future<void> walkAndFinish() async {
+      service = _FakeLocationService();
+      repository = _ScriptedActivityRepository();
+      container = ProviderContainer(
+        overrides: [
+          locationServiceProvider.overrideWithValue(service),
+          activityRepositoryProvider.overrideWithValue(repository),
+          currentAuthUserIdProvider.overrideWith((ref) => 'u_walker'),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await controller().start();
+      service.controller.add(fixAt(14.5794, 121.0359));
+      await Future<void>.delayed(Duration.zero);
+      service.controller.add(fixAt(14.5804, 121.0369));
+      await Future<void>.delayed(Duration.zero);
+      controller().finish();
+    }
+
+    test('keeps the walk so it can be sent again', () async {
+      await walkAndFinish();
+      final recorded = container.read(recordingControllerProvider).draft!;
+
+      // The failure the missing `place_name` column produces on a project that
+      // has not run migration 20260727000000.
+      repository.failWith = PostgrestException(
+        message: 'column "place_name" of relation "activities" does not exist',
+        code: '42703',
+      );
+
+      await expectLater(controller().save(), throwsA(isA<PostgrestException>()));
+
+      final surviving = container.read(recordingControllerProvider).draft;
+      expect(
+        surviving,
+        isNotNull,
+        reason: 'an hour on the road must not go with a failed write',
+      );
+      expect(surviving!.route, recorded.route);
+      expect(surviving.distanceMeters, recorded.distanceMeters);
+      expect(container.read(recordingControllerProvider).status,
+          RecordingStatus.finished);
+    });
+
+    test('the retry sends the same walk, and clears it once it lands', () async {
+      await walkAndFinish();
+      final recorded = container.read(recordingControllerProvider).draft!;
+
+      repository.failWith = const SocketException('no route to host');
+      await expectLater(controller().save(), throwsA(isA<SocketException>()));
+
+      repository.failWith = null;
+      final id = await controller().save();
+
+      expect(id, 'a_saved');
+      expect(repository.saved.last.route, recorded.route);
+      expect(
+        container.read(recordingControllerProvider).draft,
+        isNull,
+        reason: 'a walk that has been written is no longer a draft',
+      );
+    });
+  });
+}
+
+/// Fails the next write with whatever the test puts in [failWith], and records
+/// what it was asked to save.
+class _ScriptedActivityRepository implements ActivityRepository {
+  Object? failWith;
+  final List<ActivityDraft> saved = [];
+
+  @override
+  Future<Activity> saveDraft(String userId, ActivityDraft draft) async {
+    final failure = failWith;
+    if (failure != null) throw failure;
+    saved.add(draft);
+    return Activity(
+      id: 'a_saved',
+      userId: userId,
+      type: draft.type,
+      title: draft.title,
+      startedAt: draft.startedAt,
+      duration: draft.duration,
+      distanceMeters: draft.distanceMeters,
+      elevationGainMeters: draft.elevationGainMeters,
+      route: draft.route,
+    );
+  }
+
+  @override
+  Future<List<Activity>> activitiesForUser(
+    String userId, {
+    ActivityType? type,
+  }) async => const [];
+
+  @override
+  Future<Activity> activityById(String id) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<LocationReading> currentLocation() async =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<PrayerIntention>> suggestedIntentions() async => const [];
+
+  @override
+  Future<void> deleteActivity(String id) async {}
+}
+
+/// Stands in for `dart:io`'s, which this package does not import — the app also
+/// builds for web. What matters here is only that the write threw.
+class SocketException implements Exception {
+  const SocketException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'SocketException: $message';
 }

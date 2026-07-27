@@ -7,8 +7,11 @@ import '../../../core/router/admin_shell.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../devotionals/data/mock_devotional_repository.dart';
 import '../../devotionals/domain/devotional.dart';
-import '../../profile/data/mock_profile_repository.dart';
+import '../../profile/data/profile_providers.dart';
 import '../data/mock_admin_repository.dart';
+
+/// Log tag for this screen's failures.
+const _tag = 'PW-ADMINCONTENT';
 
 /// Create or edit a devotional. [devotionalId] null means create.
 class AdminContentFormScreen extends ConsumerStatefulWidget {
@@ -85,11 +88,15 @@ class _AdminContentFormScreenState
             : '"${saved.title}" saved as a draft.',
       );
       context.pop();
-    } catch (_) {
+    } catch (error, stack) {
       if (mounted) {
-        showAppSnackBar(
+        reportFailure(
           context,
-          "That didn't save. Check your connection, then try again.",
+          error,
+          stack,
+          tag: _tag,
+          fallback: "The devotional didn't save.",
+          onRetry: _save,
         );
       }
     } finally {

@@ -240,12 +240,20 @@ class _LivePanel extends StatelessWidget {
                 _LiveBadge(label: 'GETTING A SHARP SIGNAL…', theme: theme)
               else if (state.route.isEmpty)
                 _LiveBadge(label: 'FINDING YOU…', theme: theme),
-              Text(
-                Fmt.distanceValue(state.distanceMeters),
-                style: AppTypography.statDisplay(onDark, size: 64),
+              // A three-figure distance at a large text setting is wider than
+              // the panel. It scales rather than spilling; nothing else on this
+              // screen moves.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  Fmt.distanceValue(state.distanceMeters),
+                  maxLines: 1,
+                  style: AppTypography.statDisplay(onDark, size: 64),
+                ),
               ),
               Text(
                 '${Fmt.distanceUnit(state.distanceMeters)}  ·  ${type.label.toLowerCase()}',
+                textAlign: TextAlign.center,
                 style: theme.textTheme.labelMedium?.copyWith(color: muted),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -253,24 +261,34 @@ class _LivePanel extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _LiveStat(
-                    label: 'Time',
-                    value: Fmt.duration(state.elapsed),
-                    onDark: onDark,
-                    muted: muted,
+                  // Loose flex: each readout keeps its natural width and the
+                  // spacing stays even, but none of the three can push the row
+                  // wider than the panel — an hour-long walk's `1:23:45` and a
+                  // large text setting both land here.
+                  Flexible(
+                    child: _LiveStat(
+                      label: 'Time',
+                      value: Fmt.duration(state.elapsed),
+                      onDark: onDark,
+                      muted: muted,
+                    ),
                   ),
-                  _LiveStat(
-                    label: paceLabel,
-                    value: paceValue,
-                    onDark: onDark,
-                    muted: muted,
+                  Flexible(
+                    child: _LiveStat(
+                      label: paceLabel,
+                      value: paceValue,
+                      onDark: onDark,
+                      muted: muted,
+                    ),
                   ),
-                  _LiveStat(
-                    label: 'Elevation',
-                    value: state.elevationGainMeters.round().toString(),
-                    unit: 'm',
-                    onDark: onDark,
-                    muted: muted,
+                  Flexible(
+                    child: _LiveStat(
+                      label: 'Elevation',
+                      value: state.elevationGainMeters.round().toString(),
+                      unit: 'm',
+                      onDark: onDark,
+                      muted: muted,
+                    ),
                   ),
                 ],
               ),
@@ -404,23 +422,39 @@ class _LiveStat extends StatelessWidget {
       label: '$label: $value${unit ?? ''}',
       excludeSemantics: true,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(value, style: AppTypography.statValue(onDark, size: 26)),
-              if (unit != null)
+          // Figure and unit stay one reading on one baseline, scaling together
+          // when the slot is too narrow rather than breaking apart.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
                 Text(
-                  unit!,
-                  style: theme.textTheme.labelSmall?.copyWith(color: muted),
+                  value,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: AppTypography.statValue(onDark, size: 26),
                 ),
-            ],
+                if (unit != null)
+                  Text(
+                    unit!,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: theme.textTheme.labelSmall?.copyWith(color: muted),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
             label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(color: muted),
           ),
         ],

@@ -11,9 +11,14 @@ class ErrorReport {
     required this.tag,
     required this.code,
     required this.message,
+    this.title = 'What went wrong',
     this.details,
     this.stackTrace,
   });
+
+  /// The dialog's heading. Names the thing that failed — this report is shown
+  /// for saves and posts as well as for sign-in.
+  final String title;
 
   /// Which subsystem reported it, e.g. `GoogleAuth`.
   final String tag;
@@ -83,7 +88,7 @@ class _ErrorReportDialog extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Sign-in failed',
+                      report.title,
                       style: const TextStyle(
                         color: _danger,
                         fontSize: 18,
@@ -137,8 +142,13 @@ class _ErrorReportDialog extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              // Wrap, not Row: two labelled buttons are wider than a narrow
+              // phone at a large text setting, and the one dialog that exists
+              // to report failures must not produce one of its own.
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 4,
+                runSpacing: 4,
                 children: [
                   TextButton(
                     onPressed: () async {
@@ -155,7 +165,6 @@ class _ErrorReportDialog extends StatelessWidget {
                       style: TextStyle(color: Color(0xFF8AB4F8)),
                     ),
                   ),
-                  const SizedBox(width: 4),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: const Text(

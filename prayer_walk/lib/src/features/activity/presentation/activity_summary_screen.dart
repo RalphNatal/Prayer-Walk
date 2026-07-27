@@ -6,11 +6,15 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../data/mock_activity_repository.dart';
+import '../data/activity_providers.dart';
 import '../data/recording_controller.dart';
 import '../domain/activity.dart';
 import 'trail_mapping.dart';
 import 'widgets/intentions_sheet.dart';
+
+/// Log tag for this screen's failures. `[PW-SUMMARY]` is what to grep for when
+/// a walk refuses to save.
+const _tag = 'PW-SUMMARY';
 
 /// What you just walked, before it is saved.
 class ActivitySummaryScreen extends ConsumerStatefulWidget {
@@ -58,11 +62,19 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
         Routes.activityDetail,
         pathParameters: {'activityId': id},
       );
-    } catch (_) {
+    } catch (error, stack) {
+      // The draft is untouched: [RecordingController.save] only clears the
+      // recording after the write comes back. An hour on the road survives a
+      // failed save, and Retry sends the same walk again.
       if (mounted) {
-        showAppSnackBar(
+        reportFailure(
           context,
-          "That didn't save. Check your connection, then try again.",
+          error,
+          stack,
+          tag: _tag,
+          fallback: "The walk didn't save. It's still here — try again.",
+          onRetry: _save,
+          retryLabel: 'Retry',
         );
       }
     } finally {

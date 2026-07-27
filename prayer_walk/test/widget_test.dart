@@ -5,9 +5,14 @@ import 'package:prayer_walk/src/app.dart';
 import 'package:prayer_walk/src/core/mock_backend/seed_data.dart';
 import 'package:prayer_walk/src/core/theme/app_typography.dart';
 import 'package:prayer_walk/src/core/widgets/pilgrimage_card.dart';
+import 'package:prayer_walk/src/features/activity/domain/activity.dart';
 import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
 import 'package:prayer_walk/src/features/auth/domain/profile.dart';
+import 'package:prayer_walk/src/features/feed/data/feed_providers.dart';
+import 'package:prayer_walk/src/features/feed/domain/feed_entry.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
+
+import 'support/stub_repositories.dart';
 
 /// These exercise the *real* router redirect, but with the Supabase-backed auth
 /// providers overridden — a widget test has no backend, and what's under test
@@ -15,6 +20,32 @@ import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
 ProviderScope _signedOutApp() => ProviderScope(
   overrides: [authPhaseProvider.overrideWith((ref) => AuthPhase.signedOut)],
   child: const PrayerWalkApp(),
+);
+
+/// One walk from someone you follow, so the feed the member lands on has
+/// something on it. Built here rather than seeded: the feed is real now, and a
+/// test that wants content has to say what the content is.
+FeedEntry _entry() => FeedEntry(
+  activity: Activity(
+    id: 'b6f3e1a2-0000-4000-8000-000000000001',
+    userId: 'b6f3e1a2-0000-4000-8000-0000000000aa',
+    type: ActivityType.walk,
+    title: 'Six laps before work',
+    startedAt: DateTime.now().subtract(const Duration(hours: 2)),
+    duration: const Duration(minutes: 42),
+    distanceMeters: 4200,
+    elevationGainMeters: 12,
+    route: const [],
+  ),
+  author: UserProfile(
+    id: 'b6f3e1a2-0000-4000-8000-0000000000aa',
+    displayName: 'Ana Villanueva',
+    handle: '@anav',
+    role: UserRole.member,
+    status: MemberStatus.active,
+    joinedAt: DateTime.now().subtract(const Duration(days: 30)),
+    accentIndex: 2,
+  ),
 );
 
 ProviderScope _signedInApp(UserRole role) => ProviderScope(
@@ -26,6 +57,12 @@ ProviderScope _signedInApp(UserRole role) => ProviderScope(
         fullName: 'Maria Reyes',
         role: role,
       ),
+    ),
+    // Reading the real one would touch `Supabase.instance`, which is not
+    // initialized in a test.
+    currentAuthUserIdProvider.overrideWith((ref) => MockSeed.currentUserId),
+    feedRepositoryProvider.overrideWith(
+      (ref) => StubFeedRepository([_entry()]),
     ),
   ],
   child: const PrayerWalkApp(),

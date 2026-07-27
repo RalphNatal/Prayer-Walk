@@ -9,7 +9,7 @@ import '../../auth/data/auth_providers.dart';
 import '../domain/activity.dart';
 import 'geocoding_service.dart';
 import 'location_service.dart';
-import 'mock_activity_repository.dart';
+import 'activity_providers.dart';
 
 /// Where the recorder is in its lifecycle.
 enum RecordingStatus {

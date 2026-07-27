@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../constants/app_spacing.dart';
+import '../utils/app_logger.dart';
+import '../utils/error_messages.dart';
+import 'error_report_dialog.dart';
 
 /// Asks before something irreversible happens.
 ///
@@ -64,6 +68,101 @@ void showAppSnackBar(
         action: actionLabel == null || onAction == null
             ? null
             : SnackBarAction(label: actionLabel, onPressed: onAction),
+      ),
+    );
+}
+
+/// The one way this app reports a failure.
+///
+/// It does three things in a fixed order, because the order is the point:
+///  1. describes the error from what it actually is — a Postgres code, a
+///     transport failure, an unrecognised throw;
+///  2. logs type, message and code under [tag] *before* anything is shown, so a
+///     failure is on the console even if the person taps the snack bar away;
+///  3. shows one honest line, with **Details** for the full report and, when
+///     the caller can offer one, a retry.
+///
+/// [fallback] names the action that failed ("The walk didn't save.") and is
+/// used verbatim when the cause is not one [describeFailure] recognises. It
+/// must not mention the connection — that sentence is added only for a real
+/// transport failure.
+///
+/// Returns what the error was, for callers that want to log more around it.
+AppErrorInfo reportFailure(
+  BuildContext context,
+  Object error,
+  StackTrace stackTrace, {
+  required String tag,
+  required String fallback,
+  String? uniqueMessage,
+  VoidCallback? onRetry,
+  String retryLabel = 'Retry',
+}) {
+  final info = describeFailure(
+    error,
+    fallback: fallback,
+    uniqueMessage: uniqueMessage,
+  );
+  AppLogger.error(
+    tag,
+    '${info.code} — ${info.diagnostic}',
+    error,
+    kDebugMode ? stackTrace : null,
+  );
+  if (context.mounted) {
+    showFailureSnackBar(
+      context,
+      info,
+      tag: tag,
+      stackTrace: stackTrace,
+      onRetry: onRetry,
+      retryLabel: retryLabel,
+    );
+  }
+  return info;
+}
+
+/// A failure on screen: the friendly line, plus a way to see what it really
+/// was. Never shouts the exception at someone who did not ask for it.
+void showFailureSnackBar(
+  BuildContext context,
+  AppErrorInfo info, {
+  required String tag,
+  StackTrace? stackTrace,
+  VoidCallback? onRetry,
+  String retryLabel = 'Retry',
+}) {
+  final messenger = ScaffoldMessenger.of(context);
+  void openDetails() {
+    messenger.hideCurrentSnackBar();
+    showErrorReport(
+      context,
+      info.toReport(tag: tag, stackTrace: stackTrace),
+    );
+  }
+
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        // Longer than a confirmation: this one has to be read, and possibly
+        // acted on, before it goes.
+        duration: const Duration(seconds: 8),
+        content: Row(
+          children: [
+            Expanded(child: Text(info.message)),
+            // Inline rather than in the action slot so a retry can have the
+            // slot. Both affordances fit because the message shrinks, not the
+            // buttons.
+            TextButton(
+              onPressed: openDetails,
+              child: const Text('Details'),
+            ),
+          ],
+        ),
+        action: onRetry == null
+            ? null
+            : SnackBarAction(label: retryLabel, onPressed: onRetry),
       ),
     );
 }

@@ -116,9 +116,15 @@ class PilgrimageCard extends StatelessWidget {
                       children: [
                         ActivityTypeChip(type: type),
                         const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          Fmt.relativeTime(startedAt),
-                          style: theme.textTheme.bodySmall,
+                        // The chip keeps its size; the timestamp gives way at
+                        // large text settings rather than the row spilling.
+                        Flexible(
+                          child: Text(
+                            Fmt.relativeTime(startedAt),
+                            style: theme.textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -293,23 +299,32 @@ class _CardActions extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _CardAction(
-            icon: encouraged
-                ? Icons.local_fire_department_rounded
-                : Icons.local_fire_department_outlined,
-            label: encouragementCount == 0 ? 'Encourage' : '$encouragementCount',
-            semanticLabel: encouraged
-                ? 'Withdraw encouragement. ${Fmt.plural(encouragementCount, 'encouragement')}'
-                : 'Send encouragement. ${Fmt.plural(encouragementCount, 'encouragement')}',
-            color: encouraged ? scheme.tertiary : scheme.onSurfaceVariant,
-            onPressed: onEncourage,
+          // Two buttons whose labels grow with the text setting. Loose flex
+          // keeps them at their natural size until they would not both fit,
+          // then each gives way inside its own half.
+          Flexible(
+            child: _CardAction(
+              icon: encouraged
+                  ? Icons.local_fire_department_rounded
+                  : Icons.local_fire_department_outlined,
+              label: encouragementCount == 0
+                  ? 'Encourage'
+                  : '$encouragementCount',
+              semanticLabel: encouraged
+                  ? 'Withdraw encouragement. ${Fmt.plural(encouragementCount, 'encouragement')}'
+                  : 'Send encouragement. ${Fmt.plural(encouragementCount, 'encouragement')}',
+              color: encouraged ? scheme.tertiary : scheme.onSurfaceVariant,
+              onPressed: onEncourage,
+            ),
           ),
-          _CardAction(
-            icon: Icons.mode_comment_outlined,
-            label: commentCount == 0 ? 'Comment' : '$commentCount',
-            semanticLabel: Fmt.plural(commentCount, 'comment'),
-            color: scheme.onSurfaceVariant,
-            onPressed: onComment,
+          Flexible(
+            child: _CardAction(
+              icon: Icons.mode_comment_outlined,
+              label: commentCount == 0 ? 'Comment' : '$commentCount',
+              semanticLabel: Fmt.plural(commentCount, 'comment'),
+              color: scheme.onSurfaceVariant,
+              onPressed: onComment,
+            ),
           ),
         ],
       ),
@@ -341,7 +356,7 @@ class _CardAction extends StatelessWidget {
       child: TextButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 20, color: color),
-        label: Text(label),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
         style: TextButton.styleFrom(
           foregroundColor: color,
           textStyle: Theme.of(context).textTheme.labelMedium,

@@ -123,7 +123,11 @@ class AppTextButton extends StatelessWidget {
             Icon(icon, size: 18),
             const SizedBox(width: AppSpacing.xs),
           ],
-          Text(label),
+          // Same treatment as [PrimaryButton]: given a bounded slot the label
+          // gives way inside the button instead of pushing past it. Loose flex
+          // on a min-size row, so an unbounded parent — an app bar action —
+          // still lays the label out at its natural width.
+          Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );

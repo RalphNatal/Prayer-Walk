@@ -7,7 +7,7 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/widgets.dart';
-import '../../../activity/data/mock_activity_repository.dart';
+import '../../../activity/data/activity_providers.dart';
 import '../../../activity/domain/activity.dart';
 import '../../../activity/presentation/trail_mapping.dart';
 import '../../domain/user_profile.dart';
@@ -74,7 +74,11 @@ class ProfileHeader extends StatelessWidget {
           Text(profile.bio, style: theme.textTheme.bodyLarge),
         ],
         const SizedBox(height: AppSpacing.lg),
-        Row(
+        // Two counts with their words spelled out are wider than a narrow
+        // phone at a large text setting. They stack rather than spill.
+        Wrap(
+          spacing: AppSpacing.xl,
+          runSpacing: AppSpacing.xs,
           children: [
             _FollowCount(
               count: profile.followerCount,
@@ -84,7 +88,6 @@ class ProfileHeader extends StatelessWidget {
                 pathParameters: {'userId': profile.id},
               ),
             ),
-            const SizedBox(width: AppSpacing.xl),
             _FollowCount(
               count: profile.followingCount,
               label: 'Following',
@@ -127,16 +130,25 @@ class _FollowCount extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 Fmt.count(count),
+                maxLines: 1,
                 style: AppTypography.statInline(
                   theme.colorScheme.onSurface,
                   size: 16,
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(label, style: theme.textTheme.bodyMedium),
+              Flexible(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),

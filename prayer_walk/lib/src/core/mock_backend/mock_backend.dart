@@ -4,7 +4,6 @@ import '../../features/activity/domain/activity.dart';
 import '../../features/admin/domain/admin_models.dart';
 import '../../features/devotionals/domain/devotional.dart';
 import '../../features/profile/domain/user_profile.dart';
-import '../../features/social/domain/social.dart';
 import '../utils/app_exception.dart';
 import 'seed_data.dart';
 
@@ -20,26 +19,22 @@ enum MockScenario {
   final String label;
 }
 
-/// The fake backend.
+/// The fake backend, for what is left on mock data.
 ///
-/// One in-memory store standing in for Supabase: the feature repositories are
-/// thin queries over these lists, exactly as they will be thin queries over
-/// Postgres in Phase 2. Keeping it in one place is what makes cross-feature
-/// mutations coherent — saving an activity really does show up in the feed, in
-/// history, and in the admin activity count, because they are all reading the
-/// same rows.
+/// One in-memory store standing in for Supabase. Most of it has been replaced:
+/// auth, profiles, activities, the follow graph, encouragements, comments, the
+/// feed and lifetime stats are all real Postgres now, and the lists that backed
+/// them are gone with the repositories that read them.
 ///
-/// PHASE 2: this class is replaced by a `SupabaseClient`; the repository
-/// implementations beside it change their bodies and nothing above them moves.
+/// What remains here is what remains mocked — devotionals and the admin console
+/// (members and activities read for its metrics, plus moderation reports and
+/// announcements). It goes away entirely with the last de-mock.
 class MockBackend {
   MockBackend({this.latency = const Duration(milliseconds: 260)}) {
     final seed = MockSeed.build();
     users.addAll(seed.users);
     activities.addAll(seed.activities);
     devotionals.addAll(seed.devotionals);
-    comments.addAll(seed.comments);
-    encouragements.addAll(seed.encouragements);
-    follows.addAll(seed.follows);
     reports.addAll(seed.reports);
     announcements.addAll(seed.announcements);
   }
@@ -51,9 +46,6 @@ class MockBackend {
   final List<UserProfile> users = [];
   final List<Activity> activities = [];
   final List<Devotional> devotionals = [];
-  final List<Comment> comments = [];
-  final List<Encouragement> encouragements = [];
-  final List<Follow> follows = [];
   final List<ModerationReport> reports = [];
   final List<Announcement> announcements = [];
 
@@ -133,23 +125,6 @@ class MockBackend {
     devotionals[i] = updated;
   }
 
-  /// Fills in the social counts an [Activity] carries for a given viewer.
-  /// Counts live in the join tables, not on the row, so a new encouragement is
-  /// reflected everywhere at once.
-  Activity hydrate(Activity activity, String viewerId) {
-    return activity.copyWith(
-      encouragementCount: encouragements
-          .where((e) => e.activityId == activity.id)
-          .length,
-      commentCount: comments.where((c) => c.activityId == activity.id).length,
-      encouragedByViewer: encouragements.any(
-        (e) => e.activityId == activity.id && e.fromUserId == viewerId,
-      ),
-    );
-  }
-
-  List<Activity> hydrateAll(Iterable<Activity> source, String viewerId) =>
-      source.map((a) => hydrate(a, viewerId)).toList(growable: false);
 }
 
 /// The single store every repository reads from.

@@ -180,15 +180,18 @@ class _ReportCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // `report.reason` is free text and can be long. Pills wrap onto a
+          // second line rather than pushing the status off the card.
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               StatusPill(label: report.targetType.label),
-              const SizedBox(width: AppSpacing.sm),
               StatusPill(
                 label: report.reason,
                 tone: PillTone.warning,
               ),
-              const Spacer(),
               StatusPill(
                 label: report.status.label,
                 tone: switch (report.status) {
@@ -220,10 +223,11 @@ class _ReportCard extends StatelessWidget {
           ),
           if (isPending) ...[
             const SizedBox(height: AppSpacing.md),
-            Row(
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
               children: [
                 SecondaryButton(label: 'Dismiss', onPressed: onDismiss),
-                const SizedBox(width: AppSpacing.sm),
                 PrimaryButton(label: 'Remove content', onPressed: onRemove),
               ],
             ),

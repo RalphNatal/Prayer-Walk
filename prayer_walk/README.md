@@ -88,6 +88,22 @@ iOS URL scheme).
 > both platforms; and the registration in Google Cloud + Supabase. Change them
 > together.
 
+## Database
+
+Schema lives in `supabase/migrations/`, oldest first. Apply a new one by pasting
+it into the Supabase SQL editor (or `supabase db push` if you have the CLI
+linked). They are written to be re-runnable.
+
+| Migration | What it adds |
+| --- | --- |
+| `20260726000000_profiles_member_fields` | `handle`, `bio`, `parish`, `status` on `profiles`. |
+| `20260726010000_activities` | Recorded walks, with route/waypoints/intentions as JSONB. |
+| `20260727000000_activity_place_name` | `place_name` on `activities`. |
+| `20260727010000_social_graph` | `follows`, `encouragements`, `comments`; the `feed_for` / `activities_for` / `activity_detail` / `member_stats` read functions. |
+
+Every table has RLS on, and the read functions are `security invoker` so the
+policies still apply inside them. The app only ever uses the publishable key.
+
 ## Builds
 
 ```bash

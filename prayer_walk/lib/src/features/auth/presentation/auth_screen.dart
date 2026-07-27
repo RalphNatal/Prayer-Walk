@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/widgets.dart';
 import '../data/auth_repository.dart';
 import 'widgets/brand_trail_mark.dart';
@@ -84,6 +85,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         await _report(
           ErrorReport(
             tag: _tag,
+            title: 'Sign-in failed',
             code: error.code!,
             message: error.message,
             details: error.details,
@@ -92,19 +94,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         );
       }
     } catch (error, stack) {
-      // Never silent: whatever this is, it gets logged and shown.
-      AppLogger.error(_tag, 'Unhandled ${error.runtimeType}', error, stack);
-      if (!mounted) return;
-      setState(
-        () => _failure = "That didn't go through. Check your connection, "
-            'then try again.',
+      // Never silent, and never a guess: the shared mapper decides what this
+      // was. Only a real transport failure gets to mention the connection.
+      final info = describeFailure(
+        error,
+        fallback: "That didn't go through.",
       );
+      AppLogger.error(_tag, '${info.code} — ${info.diagnostic}', error, stack);
+      if (!mounted) return;
+      setState(() => _failure = info.message);
       await _report(
-        ErrorReport(
+        info.toReport(
           tag: _tag,
-          code: 'unhandled:${error.runtimeType}',
-          message: 'Something failed before sign-in could complete.',
-          details: '$error',
+          title: 'Sign-in failed',
           stackTrace: stack,
         ),
       );

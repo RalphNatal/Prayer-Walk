@@ -6,7 +6,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../data/mock_activity_repository.dart';
+import '../data/activity_providers.dart';
 import '../domain/activity.dart';
 import 'widgets/activity_pilgrimage_card.dart';
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../constants/app_spacing.dart';
 import '../utils/app_exception.dart';
+import '../utils/error_messages.dart';
 import 'app_buttons.dart';
+import 'error_report_dialog.dart';
 
 /// An empty list, framed as an invitation rather than an absence.
 class EmptyState extends StatelessWidget {
@@ -96,7 +98,12 @@ class ErrorStateView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appError = error is AppException ? error as AppException : null;
-    final message = appError?.message ?? AppException.network.message;
+    // What actually failed, rather than the old assumption that every failed
+    // read was the network. An [AppException] still speaks for itself; a
+    // Postgres code gets named; anything unrecognised gets a neutral line and
+    // the details button below.
+    final info = describeFailure(error, fallback: "That didn't load.");
+    final message = info.message;
     final actionLabel = appError?.actionLabel ?? 'Try again';
 
     return Padding(
@@ -132,6 +139,18 @@ class ErrorStateView extends StatelessWidget {
               label: actionLabel,
               icon: Icons.refresh_rounded,
               onPressed: onRetry,
+            ),
+          ],
+          // Only where the friendly line does not already name the cause —
+          // a phrased [AppException] has nothing more to show.
+          if (appError == null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            AppTextButton(
+              label: 'Details',
+              onPressed: () => showErrorReport(
+                context,
+                info.toReport(tag: 'PW-LOAD', title: "That didn't load"),
+              ),
             ),
           ],
         ],

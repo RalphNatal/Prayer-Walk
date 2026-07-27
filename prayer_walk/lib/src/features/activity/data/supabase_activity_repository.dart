@@ -1,54 +1,66 @@
-import 'package:latlong2/latlong.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 import '../../../core/supabase/supabase_client.dart';
+import '../../../core/utils/app_exception.dart';
+import '../../../core/utils/app_logger.dart';
 import '../domain/activity.dart';
 import '../domain/activity_repository.dart';
+import 'activity_row_mapper.dart';
 import 'location_service.dart';
 
 /// Real recorded activities, read and written through RLS.
 ///
-/// Route, waypoints and intentions live as JSONB on the row — see the
-/// `20260726010000_activities.sql` migration for why. All the encoding and
-/// decoding of that shape is in this file; nothing above the interface knows
-/// the route is stored as `[[lat,lng], ...]`.
+/// Reads go through the `activity_detail` / `activities_for` functions rather
+/// than a plain select, because a card is never just the activity: it carries
+/// the encouragement and comment counts and whether *this* viewer has already
+/// encouraged it. Those come back on the same row, so a list of walks is one
+/// round trip however long the list is.
 ///
-/// Social counts are hard zeros for now: there are no encouragement or comment
-/// tables yet, and inventing numbers under a real walk would be a lie. They
-/// become real in the social phase.
+/// [_viewerId] is whose encouragement state the returned rows are hydrated for
+/// — the signed-in person, or null while signed out. The row shape is the same
+/// either way; `encouragedByViewer` is simply always false for nobody.
 class SupabaseActivityRepository implements ActivityRepository {
-  const SupabaseActivityRepository(this._location);
+  const SupabaseActivityRepository(this._location, this._viewerId);
 
   final LocationService _location;
+  final String? _viewerId;
 
-  static const _columns =
-      'id, user_id, type, title, started_at, duration_seconds, distance_meters, '
-      'elevation_gain_meters, route, waypoints, intentions, note, place_name, '
-      'created_at';
+  static const _tag = 'PW-ACT';
 
   @override
   Future<List<Activity>> activitiesForUser(
     String userId, {
     ActivityType? type,
   }) async {
-    final filter = supabase
-        .from('activities')
-        .select(_columns)
-        .eq('user_id', userId);
+    final rows =
+        await supabase.rpc(
+              'activities_for',
+              params: {
+                'target': userId,
+                'viewer': _viewerId,
+                'type_filter': type?.name,
+              },
+            )
+            as List<dynamic>;
 
-    final rows = await (type == null ? filter : filter.eq('type', type.name))
-        .order('started_at', ascending: false);
-
-    return rows.map(_fromRow).toList(growable: false);
+    return [
+      for (final row in rows) activityFromRow(row as Map<String, dynamic>),
+    ];
   }
 
   @override
   Future<Activity> activityById(String id) async {
-    final row = await supabase
-        .from('activities')
-        .select(_columns)
-        .eq('id', id)
-        .single();
-    return _fromRow(row);
+    final rows =
+        await supabase.rpc(
+              'activity_detail',
+              params: {'activity_id': id, 'viewer': _viewerId},
+            )
+            as List<dynamic>;
+
+    // No row means deleted, or hidden from this viewer by RLS. Both read the
+    // same to the person looking at a dead link.
+    if (rows.isEmpty) throw AppException.notFound;
+    return activityFromRow(rows.first as Map<String, dynamic>);
   }
 
   /// Never throws for an ordinary "no". A refusal, a switched-off radio and a
@@ -68,155 +80,53 @@ class SupabaseActivityRepository implements ActivityRepository {
 
   @override
   Future<Activity> saveDraft(String userId, ActivityDraft draft) async {
-    final row = await supabase
-        .from('activities')
-        .insert({
-          'user_id': userId,
-          'type': draft.type.name,
-          'title': draft.title.trim(),
-          'started_at': draft.startedAt.toUtc().toIso8601String(),
-          'duration_seconds': draft.duration.inSeconds,
-          'distance_meters': draft.distanceMeters,
-          'elevation_gain_meters': draft.elevationGainMeters,
-          'route': _encodeRoute(draft.route),
-          'waypoints': _encodeWaypoints(draft.waypoints),
-          'intentions': _encodeIntentions(draft.intentions),
-          'note': draft.note.trim(),
-          // Whatever the recorder managed to resolve while the walker was on
-          // the summary screen. Null is written as null — the save is never
-          // delayed to go and look it up.
-          'place_name': draft.placeName,
-        })
-        .select(_columns)
-        .single();
-    return _fromRow(row);
+    final payload = {
+      'user_id': userId,
+      'type': draft.type.name,
+      'title': draft.title.trim(),
+      'started_at': draft.startedAt.toUtc().toIso8601String(),
+      'duration_seconds': draft.duration.inSeconds,
+      'distance_meters': draft.distanceMeters,
+      'elevation_gain_meters': draft.elevationGainMeters,
+      'route': encodeRoute(draft.route),
+      'waypoints': encodeWaypoints(draft.waypoints),
+      'intentions': encodeIntentions(draft.intentions),
+      'note': draft.note.trim(),
+      // Whatever the recorder managed to resolve while the walker was on
+      // the summary screen. Null is written as null — the save is never
+      // delayed to go and look it up.
+      'place_name': draft.placeName,
+    };
+
+    try {
+      final row = await supabase
+          .from('activities')
+          .insert(payload)
+          .select(activityColumns)
+          .single();
+      // A walk nobody has seen yet has no encouragement and no comments, so the
+      // plain row's zeros are the truth here rather than a placeholder.
+      return activityFromRow(row);
+    } catch (error) {
+      // Keys, never values — a walk's route and note are the walker's, and this
+      // line can end up in logcat. What it answers is the question a 42703
+      // raises: which column did we send that the server does not have?
+      if (kDebugMode) {
+        AppLogger.debug(
+          _tag,
+          'insert into activities failed (${error.runtimeType}); '
+          'payload keys: ${payload.keys.join(', ')}',
+        );
+      }
+      rethrow;
+    }
   }
 
   @override
   Future<void> deleteActivity(String id) async {
     // RLS scopes this to the owner — a delete of someone else's row simply
-    // matches nothing.
+    // matches nothing. Comments and encouragements go with it on cascade.
     await supabase.from('activities').delete().eq('id', id);
-  }
-
-  // ------------------------------------------------------------- encoding ---
-
-  static List<List<double>> _encodeRoute(List<LatLng> route) => [
-    for (final point in route) [point.latitude, point.longitude],
-  ];
-
-  static List<Map<String, dynamic>> _encodeWaypoints(List<Waypoint> waypoints) => [
-    for (final waypoint in waypoints)
-      {
-        'lat': waypoint.point.latitude,
-        'lng': waypoint.point.longitude,
-        'kind': waypoint.kind.name,
-        'label': waypoint.label,
-        'note': waypoint.note,
-        'elapsed_seconds': waypoint.elapsed.inSeconds,
-      },
-  ];
-
-  static List<Map<String, dynamic>> _encodeIntentions(
-    List<PrayerIntention> intentions,
-  ) => [
-    for (final intention in intentions)
-      {'text': intention.text, 'category': intention.category.name},
-  ];
-
-  // ------------------------------------------------------------- decoding ---
-
-  Activity _fromRow(Map<String, dynamic> row) {
-    final id = row['id'] as String;
-    final startedAt =
-        DateTime.tryParse((row['started_at'] as String?) ?? '')?.toLocal() ??
-        DateTime.now();
-
-    return Activity(
-      id: id,
-      userId: row['user_id'] as String,
-      type: _typeFrom(row['type'] as String?),
-      title: (row['title'] as String?) ?? '',
-      startedAt: startedAt,
-      duration: Duration(seconds: (row['duration_seconds'] as num?)?.toInt() ?? 0),
-      distanceMeters: (row['distance_meters'] as num?)?.toDouble() ?? 0,
-      elevationGainMeters:
-          (row['elevation_gain_meters'] as num?)?.toDouble() ?? 0,
-      route: _decodeRoute(row['route']),
-      waypoints: _decodeWaypoints(row['waypoints'], id),
-      intentions: _decodeIntentions(row['intentions'], id, startedAt),
-      note: (row['note'] as String?) ?? '',
-      placeName: (row['place_name'] as String?)?.trim().isNotEmpty ?? false
-          ? (row['place_name'] as String).trim()
-          : null,
-      // No social tables yet — see the class doc.
-    );
-  }
-
-  static ActivityType _typeFrom(String? value) => ActivityType.values.firstWhere(
-    (t) => t.name == value,
-    orElse: () => ActivityType.walk,
-  );
-
-  static List<LatLng> _decodeRoute(Object? raw) {
-    if (raw is! List) return const [];
-    return [
-      for (final pair in raw)
-        if (pair is List && pair.length >= 2)
-          LatLng((pair[0] as num).toDouble(), (pair[1] as num).toDouble()),
-    ];
-  }
-
-  static List<Waypoint> _decodeWaypoints(Object? raw, String activityId) {
-    if (raw is! List) return const [];
-    var index = 0;
-    return [
-      for (final item in raw)
-        if (item is Map)
-          Waypoint(
-            // Waypoints have no ids of their own in JSONB. A positional id is
-            // enough — it is stable for a given row and only ever used as a
-            // widget key.
-            id: '${activityId}_w${index++}',
-            point: LatLng(
-              (item['lat'] as num).toDouble(),
-              (item['lng'] as num).toDouble(),
-            ),
-            kind: WaypointKind.values.firstWhere(
-              (k) => k.name == item['kind'],
-              orElse: () => WaypointKind.intercession,
-            ),
-            label: (item['label'] as String?) ?? '',
-            note: (item['note'] as String?) ?? '',
-            elapsed: Duration(
-              seconds: (item['elapsed_seconds'] as num?)?.toInt() ?? 0,
-            ),
-          ),
-    ];
-  }
-
-  static List<PrayerIntention> _decodeIntentions(
-    Object? raw,
-    String activityId,
-    DateTime startedAt,
-  ) {
-    if (raw is! List) return const [];
-    var index = 0;
-    return [
-      for (final item in raw)
-        if (item is Map)
-          PrayerIntention(
-            id: '${activityId}_i${index++}',
-            text: (item['text'] as String?) ?? '',
-            category: PrayerCategory.values.firstWhere(
-              (c) => c.name == item['category'],
-              orElse: () => PrayerCategory.community,
-            ),
-            // Intentions aren't timestamped in JSONB; the walk's start is the
-            // closest honest answer and nothing renders this yet.
-            createdAt: startedAt,
-          ),
-    ];
   }
 
   static List<PrayerIntention> _staticSuggestions() {

@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/mock_backend/seed_data.dart';
 import '../domain/profile.dart';
 import 'auth_repository.dart';
 
@@ -39,24 +38,13 @@ final currentRoleProvider = Provider((ref) {
 
 /// The real signed-in user id, or null while signed out.
 ///
-/// This is the id every de-mocked feature keys off. Profile uses it today;
-/// [currentUserIdProvider] below is what everything still on mock data uses.
+/// The one identity in the app. There used to be a second — a
+/// `currentUserIdProvider` handing out a seeded id to whatever was still on
+/// mock data — and it is gone: the feed, the social graph and the stats all key
+/// off this one now.
 final currentAuthUserIdProvider = Provider<String?>((ref) {
   return ref.watch(authPhaseProvider) == AuthPhase.signedIn
       ? ref.watch(authRepositoryProvider).currentUser?.id
-      : null;
-});
-
-/// The id the mock content layer (feed, activities, social) is keyed to.
-///
-/// PHASE-2 BRIDGE: authentication is real, but the app's *content* is still the
-/// seeded dataset from Phase 1. So while a real session exists, the content
-/// keeps resolving against the seeded profile; real identity and role come from
-/// [authProfileProvider] instead. When the content backend is migrated, this
-/// returns the real `currentUser!.id` and the bridge goes away.
-final currentUserIdProvider = Provider<String?>((ref) {
-  return ref.watch(authPhaseProvider) == AuthPhase.signedIn
-      ? MockSeed.currentUserId
       : null;
 });
 

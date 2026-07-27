@@ -202,7 +202,13 @@ class _ContentRow extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Row(
+              // Three labelled buttons do not fit one line on a phone at a
+              // large text setting. They wrap to a second line rather than
+              // running off the card — and Delete stays last either way.
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                alignment: WrapAlignment.start,
                 children: [
                   AppTextButton(
                     label: 'Edit',
@@ -216,7 +222,6 @@ class _ContentRow extends StatelessWidget {
                         : Icons.publish_rounded,
                     onPressed: onTogglePublish,
                   ),
-                  const Spacer(),
                   AppTextButton(
                     label: 'Delete',
                     icon: Icons.delete_outline_rounded,

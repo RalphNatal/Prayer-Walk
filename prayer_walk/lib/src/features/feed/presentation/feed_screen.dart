@@ -7,7 +7,7 @@ import '../../../core/router/routes.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../activity/presentation/widgets/activity_pilgrimage_card.dart';
 import '../../auth/data/auth_providers.dart';
-import '../data/mock_feed_repository.dart';
+import '../data/feed_providers.dart';
 import '../domain/feed_entry.dart';
 
 /// Home: walks from the people you follow, and your own.
@@ -18,7 +18,7 @@ class FeedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final feed = ref.watch(feedProvider);
-    final viewerId = ref.watch(currentUserIdProvider);
+    final viewerId = ref.watch(currentAuthUserIdProvider);
 
     return Scaffold(
       appBar: AppBar(

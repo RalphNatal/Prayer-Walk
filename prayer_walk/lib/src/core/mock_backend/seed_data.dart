@@ -4,18 +4,18 @@ import '../../features/activity/domain/activity.dart';
 import '../../features/admin/domain/admin_models.dart';
 import '../../features/devotionals/domain/devotional.dart';
 import '../../features/profile/domain/user_profile.dart';
-import '../../features/social/domain/social.dart';
 import 'route_shapes.dart';
 
 /// Everything the fake backend starts life holding.
+///
+/// The social fixtures — follows, encouragements, comments — used to live here
+/// too. They are real rows in Postgres now, so there is nothing left to seed:
+/// a walker's followers are whoever actually followed them.
 class MockSeed {
   const MockSeed({
     required this.users,
     required this.activities,
     required this.devotionals,
-    required this.comments,
-    required this.encouragements,
-    required this.follows,
     required this.reports,
     required this.announcements,
   });
@@ -23,13 +23,10 @@ class MockSeed {
   final List<UserProfile> users;
   final List<Activity> activities;
   final List<Devotional> devotionals;
-  final List<Comment> comments;
-  final List<Encouragement> encouragements;
-  final List<Follow> follows;
   final List<ModerationReport> reports;
   final List<Announcement> announcements;
 
-  /// The seeded person the mock session signs in as.
+  /// The seeded person the mock-backed screens resolve against.
   static const currentUserId = 'u_maria';
 
   static MockSeed build() {
@@ -200,21 +197,6 @@ class MockSeed {
           intentionCount: 5,
         ),
       ),
-    ];
-
-    // ------------------------------------------------------------- follows ---
-    const follows = <Follow>[
-      Follow(followerId: currentUserId, followeeId: 'u_ben'),
-      Follow(followerId: currentUserId, followeeId: 'u_dan'),
-      Follow(followerId: currentUserId, followeeId: 'u_ana'),
-      Follow(followerId: currentUserId, followeeId: 'u_jon'),
-      Follow(followerId: currentUserId, followeeId: 'u_grace'),
-      Follow(followerId: 'u_dan', followeeId: currentUserId),
-      Follow(followerId: 'u_ana', followeeId: currentUserId),
-      Follow(followerId: 'u_grace', followeeId: currentUserId),
-      Follow(followerId: 'u_ben', followeeId: 'u_ana'),
-      Follow(followerId: 'u_rex', followeeId: 'u_dan'),
-      Follow(followerId: 'u_jon', followeeId: 'u_dan'),
     ];
 
     // ------------------------------------------------------------- routes ---
@@ -656,92 +638,6 @@ class MockSeed {
       ),
     ];
 
-    // -------------------------------------------------------------- social ---
-    final encouragements = <Encouragement>[
-      for (final e in <(String, String, int)>[
-        ('a_1', 'u_dan', 40),
-        ('a_1', 'u_ana', 90),
-        ('a_1', 'u_grace', 150),
-        ('a_2', 'u_grace', 2100),
-        ('a_2', 'u_ben', 2400),
-        ('a_3', 'u_dan', 5000),
-        ('a_4', currentUserId, 30),
-        ('a_4', 'u_rex', 75),
-        ('a_4', 'u_jon', 120),
-        ('a_5', 'u_ben', 600),
-        ('a_5', currentUserId, 700),
-        ('a_6', 'u_dan', 900),
-        ('a_7', 'u_ben', 20),
-        ('a_9', 'u_ana', 12000),
-        ('a_10', 'u_grace', 8000),
-      ])
-        Encouragement(
-          id: 'e_${e.$1}_${e.$2}',
-          activityId: e.$1,
-          fromUserId: e.$2,
-          createdAt: now.subtract(Duration(minutes: e.$3)),
-        ),
-    ];
-
-    final comments = <Comment>[
-      Comment(
-        id: 'c_1',
-        activityId: 'a_1',
-        authorId: 'u_grace',
-        body: 'Holding Lola Iding with you today.',
-        createdAt: now.subtract(const Duration(minutes: 95)),
-      ),
-      Comment(
-        id: 'c_2',
-        activityId: 'a_1',
-        authorId: 'u_dan',
-        body: 'That bell at six is the best part of the whole village.',
-        createdAt: now.subtract(const Duration(minutes: 62)),
-      ),
-      Comment(
-        id: 'c_3',
-        activityId: 'a_1',
-        authorId: 'u_ben',
-        body: 'Come by after. I will put her name on the list.',
-        createdAt: now.subtract(const Duration(minutes: 30)),
-      ),
-      Comment(
-        id: 'c_4',
-        activityId: 'a_4',
-        authorId: currentUserId,
-        body: 'Heavy legs still count. Praying for Nanay.',
-        createdAt: now.subtract(const Duration(minutes: 44)),
-      ),
-      Comment(
-        id: 'c_5',
-        activityId: 'a_5',
-        authorId: 'u_ben',
-        body: '412 metres before a shift. Ana, please sleep.',
-        createdAt: now.subtract(const Duration(hours: 14)),
-      ),
-      Comment(
-        id: 'c_6',
-        activityId: 'a_5',
-        authorId: currentUserId,
-        body: 'The rain last night was something else. Thank you for this.',
-        createdAt: now.subtract(const Duration(hours: 11)),
-      ),
-      Comment(
-        id: 'c_7',
-        activityId: 'a_6',
-        authorId: 'u_dan',
-        body: 'Two hours twenty. Next time wake me.',
-        createdAt: now.subtract(const Duration(hours: 18)),
-      ),
-      Comment(
-        id: 'c_8',
-        activityId: 'a_7',
-        authorId: currentUserId,
-        body: 'Six more days. We are walking them with you.',
-        createdAt: now.subtract(const Duration(minutes: 18)),
-      ),
-    ];
-
     // ---------------------------------------------------------- moderation ---
     final reports = <ModerationReport>[
       ModerationReport(
@@ -830,9 +726,6 @@ class MockSeed {
       users: users,
       activities: activities,
       devotionals: devotionals,
-      comments: comments,
-      encouragements: encouragements,
-      follows: List.of(follows),
       reports: reports,
       announcements: announcements,
     );

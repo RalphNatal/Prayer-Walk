@@ -3,12 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/data/auth_providers.dart';
-import '../data/mock_profile_repository.dart';
+import '../data/profile_providers.dart';
 import '../data/supabase_profile_repository.dart';
 import '../domain/profile_repository.dart';
 import '../domain/user_profile.dart';
+
+/// Log tag for this screen's failures.
+const _tag = 'PW-EDITPROFILE';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -56,14 +60,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (!mounted) return;
       showAppSnackBar(context, 'Profile updated.');
       context.pop();
-    } on ProfileFailure catch (failure) {
-      // Already phrased for the person — a taken handle, most often.
+    } on ProfileFailure catch (failure, stack) {
+      // Already phrased for the person — a taken handle, most often. Logged
+      // anyway: a phrased failure is still one that happened.
+      AppLogger.warn(_tag, 'ProfileFailure: ${failure.message}', failure, stack);
       if (mounted) showAppSnackBar(context, failure.message);
-    } catch (_) {
+    } catch (error, stack) {
       if (mounted) {
-        showAppSnackBar(
+        reportFailure(
           context,
-          "That didn't save. Check your connection, then try again.",
+          error,
+          stack,
+          tag: _tag,
+          fallback: "Your profile didn't save.",
+          // The one unique index on this table is the handle, so a 23505 here
+          // means exactly one thing.
+          uniqueMessage: 'That handle is taken. Pick another.',
+          onRetry: _save,
         );
       }
     } finally {

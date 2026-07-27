@@ -7,10 +7,13 @@ import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../data/location_service.dart';
-import '../data/mock_activity_repository.dart';
+import '../data/activity_providers.dart';
 import '../data/recording_controller.dart';
 import '../domain/activity.dart';
 import 'widgets/intentions_sheet.dart';
+
+/// Log tag for this screen's failures.
+const _tag = 'PW-RECORD';
 
 /// Pre-activity: pick what you are doing, name what you are carrying, start.
 class RecordScreen extends ConsumerStatefulWidget {
@@ -44,11 +47,15 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
       if (access.canRecord) {
         context.goNamed(Routes.liveTracking);
       }
-    } catch (_) {
+    } catch (error, stack) {
       if (mounted) {
-        showAppSnackBar(
+        reportFailure(
           context,
-          "Couldn't start the recording. Try again in a moment.",
+          error,
+          stack,
+          tag: _tag,
+          fallback: "The recording didn't start.",
+          onRetry: _start,
         );
       }
     } finally {

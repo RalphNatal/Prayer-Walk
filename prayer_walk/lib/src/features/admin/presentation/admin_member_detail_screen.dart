@@ -5,7 +5,6 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/admin_shell.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../profile/data/mock_profile_repository.dart';
 import '../../profile/domain/user_profile.dart';
 import '../data/mock_admin_repository.dart';
 import 'widgets/status_pill.dart';
@@ -86,12 +85,13 @@ class AdminMemberDetailScreen extends ConsumerWidget {
     }
   }
 
+  /// Console-only. The member screens read real `profiles` rows now, and the
+  /// members here are still seeded ones — there is no shared row to refresh.
   void _refresh(WidgetRef ref, String id) {
     ref
       ..invalidate(adminMemberProvider(id))
       ..invalidate(adminMembersProvider)
-      ..invalidate(adminMetricsProvider)
-      ..invalidate(profileProvider(id));
+      ..invalidate(adminMetricsProvider);
   }
 
   @override

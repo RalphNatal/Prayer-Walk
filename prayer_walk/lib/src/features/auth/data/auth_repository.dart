@@ -109,8 +109,12 @@ class AuthRepository {
           .maybeSingle();
       if (row != null) return Profile.fromMap(row);
       if (attempt >= 2) {
+        // The read succeeded and came back empty three times: the row is not
+        // there. Nothing about that is the connection, and saying it was sent
+        // people to check their wifi over a trigger that had not fired.
         throw const AuthFailure(
-          "We couldn't load your profile. Check your connection and try again.",
+          "Your profile hasn't finished setting up. Sign in again in a moment.",
+          code: 'profile_row_missing',
         );
       }
       await Future<void>.delayed(const Duration(milliseconds: 350));

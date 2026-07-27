@@ -209,9 +209,16 @@ class _ActivityChart extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            Text(
-                              day.count.toString(),
-                              style: theme.textTheme.labelSmall,
+                            // Fourteen bars across a phone leaves each a
+                            // sliver; a three-digit day at a large text
+                            // setting scales into its column.
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                day.count.toString(),
+                                maxLines: 1,
+                                style: theme.textTheme.labelSmall,
+                              ),
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Container(

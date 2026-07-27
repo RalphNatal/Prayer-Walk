@@ -4,18 +4,24 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/data/auth_providers.dart';
-import '../../feed/data/mock_feed_repository.dart';
-import '../../profile/data/mock_profile_repository.dart';
+import '../../feed/data/feed_providers.dart';
+import '../../profile/data/profile_providers.dart';
 import '../../profile/domain/user_profile.dart';
-import '../../social/data/mock_social_repository.dart';
 import '../../social/data/social_actions.dart';
+import '../../social/data/social_providers.dart';
+import '../../social/data/supabase_social_repository.dart' show SocialFailure;
 import '../../social/domain/social_repository.dart';
-import '../data/mock_activity_repository.dart';
+import '../../social/presentation/optimistic_toggle.dart';
+import '../data/activity_providers.dart';
 import '../domain/activity.dart';
 import 'trail_mapping.dart';
+
+/// Log tag for this screen's failures.
+const _tag = 'PW-DETAIL';
 
 /// One walk, in full: the trail, the numbers, what was carried, who responded.
 class ActivityDetailScreen extends ConsumerWidget {
@@ -35,9 +41,22 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
 
-    await ref
-        .read(activityRepositoryForIdProvider(activityId))
-        .deleteActivity(activityId);
+    try {
+      await ref.read(activityRepositoryProvider).deleteActivity(activityId);
+    } catch (error, stack) {
+      // A delete that fails leaves the walk on screen; say which failure it
+      // was rather than letting it fall through to the app-wide handler.
+      if (context.mounted) {
+        reportFailure(
+          context,
+          error,
+          stack,
+          tag: _tag,
+          fallback: "The walk wasn't deleted.",
+        );
+      }
+      return;
+    }
     ref
       ..invalidate(historyProvider)
       ..invalidate(activitiesForUserProvider)
@@ -51,9 +70,6 @@ class ActivityDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activity = ref.watch(activityProvider(activityId));
-    // Real recorded walks are owned by the real auth id. Seeded ones (reached
-    // from the still-mock feed) simply never match, which is correct — you
-    // don't own them.
     final viewerId = ref.watch(currentAuthUserIdProvider);
 
     return Scaffold(
@@ -127,16 +143,28 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
 
   Future<void> _send() async {
     final body = _comment.text.trim();
-    if (body.isEmpty) return;
+    if (body.isEmpty) {
+      showAppSnackBar(context, 'Write something first.');
+      return;
+    }
     setState(() => _sending = true);
     try {
       await ref.read(socialActionsProvider).addComment(widget.activity.id, body);
       _comment.clear();
-    } catch (_) {
+    } on SocialFailure catch (failure, stack) {
+      // Already phrased for the person — say what it says, but never silently:
+      // a phrased failure is still a failure worth having on the console.
+      AppLogger.warn(_tag, 'SocialFailure: ${failure.message}', failure, stack);
+      if (mounted) showAppSnackBar(context, failure.message);
+    } catch (error, stack) {
       if (mounted) {
-        showAppSnackBar(
+        reportFailure(
           context,
-          "That comment didn't post. Check your connection, then try again.",
+          error,
+          stack,
+          tag: _tag,
+          fallback: "That comment didn't post.",
+          onRetry: _send,
         );
       }
     } finally {
@@ -201,9 +229,16 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               const SizedBox(height: AppSpacing.xs),
               Row(
                 children: [
-                  Text(
-                    Fmt.dayAndTime(activity.startedAt),
-                    style: theme.textTheme.bodySmall,
+                  // The date gives way before the place does: a long place name
+                  // is the more useful half of this line, and at a large text
+                  // setting the two together are wider than a phone.
+                  Flexible(
+                    child: Text(
+                      Fmt.dayAndTime(activity.startedAt),
+                      style: theme.textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   // Null for older walks, routeless logs and failed lookups —
                   // the line simply reads as it always did.
@@ -482,29 +517,46 @@ class _EncouragementBar extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  activity.encouragementCount == 0
-                      ? 'No encouragement yet'
-                      : Fmt.plural(
-                          activity.encouragementCount,
-                          'encouragement',
-                        ),
-                  style: theme.textTheme.titleSmall,
-                ),
-              ),
-              PrimaryButton(
-                label: activity.encouragedByViewer ? 'Sent' : 'Send encouragement',
-                icon: activity.encouragedByViewer
-                    ? Icons.check_rounded
-                    : Icons.local_fire_department_rounded,
-                onPressed: () => ref
-                    .read(socialActionsProvider)
-                    .toggleEncouragement(activity.id),
-              ),
-            ],
+          OptimisticToggle(
+            value: activity.encouragedByViewer,
+            onToggle: () =>
+                ref.read(socialActionsProvider).toggleEncouragement(activity.id),
+            onFailure: (error, stack) => reportFailure(
+              context,
+              error,
+              stack,
+              tag: _tag,
+              fallback: "That encouragement didn't send.",
+            ),
+            builder: (context, encouraged, delta, toggle) {
+              final count = activity.encouragementCount + delta;
+              // "Send encouragement" plus its icon is wider than the card on a
+              // phone, so the count and the button cannot share a line there.
+              // A Wrap keeps them side by side wherever they fit and drops the
+              // button beneath the count where they do not — the label stays
+              // whole either way.
+              return Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    count == 0
+                        ? 'No encouragement yet'
+                        : Fmt.plural(count, 'encouragement'),
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  PrimaryButton(
+                    label: encouraged ? 'Sent' : 'Send encouragement',
+                    icon: encouraged
+                        ? Icons.check_rounded
+                        : Icons.local_fire_department_rounded,
+                    onPressed: toggle,
+                  ),
+                ],
+              );
+            },
           ),
           if (people.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),

@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/widgets/widgets.dart';
-import '../data/mock_profile_repository.dart';
+import '../data/profile_providers.dart';
 import '../domain/user_profile.dart';
 import 'widgets/profile_pieces.dart';
 

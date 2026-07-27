@@ -6,6 +6,7 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../../profile/domain/user_profile.dart';
 import '../../../social/data/social_actions.dart';
+import '../../../social/presentation/optimistic_toggle.dart';
 import '../../domain/activity.dart';
 import '../trail_mapping.dart';
 
@@ -29,39 +30,52 @@ class ActivityPilgrimageCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return PilgrimageCard(
-      title: activity.title,
-      type: activity.type,
-      startedAt: activity.startedAt,
-      distanceMeters: activity.distanceMeters,
-      duration: activity.duration,
-      route: activity.route,
-      waypoints: activity.waypoints.toTrailWaypoints(),
-      intentions: activity.intentions
-          .map((i) => i.text)
-          .toList(growable: false),
-      authorName: author?.displayName,
-      authorInitials: author?.initials,
-      authorAccentIndex: author?.accentIndex ?? 0,
-      encouragementCount: activity.encouragementCount,
-      commentCount: activity.commentCount,
-      encouraged: activity.encouragedByViewer,
-      isSelf: isSelf,
-      onTap: () => context.pushNamed(
-        Routes.activityDetail,
-        pathParameters: {'activityId': activity.id},
-      ),
-      onAuthorTap: author == null || isSelf
-          ? null
-          : () => context.pushNamed(
-              Routes.userProfile,
-              pathParameters: {'userId': author!.id},
-            ),
-      onEncourage: () =>
+    // The card answers the tap itself and takes it back if the write fails —
+    // waiting for the round trip would make every encouragement feel doubtful.
+    return OptimisticToggle(
+      value: activity.encouragedByViewer,
+      onToggle: () =>
           ref.read(socialActionsProvider).toggleEncouragement(activity.id),
-      onComment: () => context.pushNamed(
-        Routes.activityDetail,
-        pathParameters: {'activityId': activity.id},
+      onFailure: (error, stack) => reportFailure(
+        context,
+        error,
+        stack,
+        tag: 'PW-CARD',
+        fallback: "That encouragement didn't send.",
+      ),
+      builder: (context, encouraged, delta, toggle) => PilgrimageCard(
+        title: activity.title,
+        type: activity.type,
+        startedAt: activity.startedAt,
+        distanceMeters: activity.distanceMeters,
+        duration: activity.duration,
+        route: activity.route,
+        waypoints: activity.waypoints.toTrailWaypoints(),
+        intentions: activity.intentions
+            .map((i) => i.text)
+            .toList(growable: false),
+        authorName: author?.displayName,
+        authorInitials: author?.initials,
+        authorAccentIndex: author?.accentIndex ?? 0,
+        encouragementCount: activity.encouragementCount + delta,
+        commentCount: activity.commentCount,
+        encouraged: encouraged,
+        isSelf: isSelf,
+        onTap: () => context.pushNamed(
+          Routes.activityDetail,
+          pathParameters: {'activityId': activity.id},
+        ),
+        onAuthorTap: author == null || isSelf
+            ? null
+            : () => context.pushNamed(
+                Routes.userProfile,
+                pathParameters: {'userId': author!.id},
+              ),
+        onEncourage: toggle,
+        onComment: () => context.pushNamed(
+          Routes.activityDetail,
+          pathParameters: {'activityId': activity.id},
+        ),
       ),
     );
   }

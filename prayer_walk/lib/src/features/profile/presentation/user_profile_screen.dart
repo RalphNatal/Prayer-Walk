@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../social/data/mock_social_repository.dart';
+import '../../auth/data/auth_providers.dart';
 import '../../social/data/social_actions.dart';
-import '../data/mock_profile_repository.dart';
+import '../../social/data/social_providers.dart';
+import '../../social/presentation/optimistic_toggle.dart';
+import '../data/profile_providers.dart';
 import '../domain/user_profile.dart';
 import 'widgets/profile_pieces.dart';
 
@@ -18,6 +20,9 @@ class UserProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider(userId));
+    // Reachable for yourself — a follower list can lead back to you. There is
+    // nothing to follow there, so the button simply isn't offered.
+    final isSelf = ref.watch(currentAuthUserIdProvider) == userId;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
@@ -43,10 +48,12 @@ class UserProfileScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: AppSpacing.listBody,
             children: [
-              ProfileHeader(profile: item),
+              ProfileHeader(profile: item, isSelf: isSelf),
               const SizedBox(height: AppSpacing.xl),
-              _FollowButton(userId: userId, name: item.displayName),
-              const SizedBox(height: AppSpacing.xl),
+              if (!isSelf) ...[
+                _FollowButton(userId: userId, name: item.displayName),
+                const SizedBox(height: AppSpacing.xl),
+              ],
               LifetimeStatsPanel(stats: item.stats),
               const SizedBox(height: AppSpacing.xxl),
               const SectionHeader(title: 'Recent walks'),
@@ -68,34 +75,46 @@ class _FollowButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final following = ref.watch(isFollowingProvider(userId));
-    final isFollowing = following.value ?? false;
 
-    Future<void> toggle() async {
-      final nowFollowing = await ref
-          .read(socialActionsProvider)
-          .toggleFollow(userId);
-      if (nowFollowing == null || !context.mounted) return;
-      showAppSnackBar(
+    return OptimisticToggle(
+      value: following.value ?? false,
+      onToggle: () async {
+        final nowFollowing = await ref
+            .read(socialActionsProvider)
+            .toggleFollow(userId);
+        if (nowFollowing != null && context.mounted) {
+          showAppSnackBar(
+            context,
+            nowFollowing ? 'Following $name.' : 'Unfollowed $name.',
+          );
+        }
+        return nowFollowing;
+      },
+      onFailure: (error, stack) => reportFailure(
         context,
-        nowFollowing ? 'Following $name.' : 'Unfollowed $name.',
-      );
-    }
-
-    if (isFollowing) {
-      return SecondaryButton(
-        label: 'Following',
-        icon: Icons.check_rounded,
-        expand: true,
-        busy: following.isLoading,
-        onPressed: toggle,
-      );
-    }
-    return PrimaryButton(
-      label: 'Follow',
-      icon: Icons.add_rounded,
-      expand: true,
-      busy: following.isLoading,
-      onPressed: toggle,
+        error,
+        stack,
+        tag: 'PW-FOLLOW',
+        fallback: "That didn't go through.",
+      ),
+      builder: (context, isFollowing, _, toggle) {
+        if (isFollowing) {
+          return SecondaryButton(
+            label: 'Following',
+            icon: Icons.check_rounded,
+            expand: true,
+            busy: following.isLoading,
+            onPressed: toggle,
+          );
+        }
+        return PrimaryButton(
+          label: 'Follow',
+          icon: Icons.add_rounded,
+          expand: true,
+          busy: following.isLoading,
+          onPressed: toggle,
+        );
+      },
     );
   }
 }

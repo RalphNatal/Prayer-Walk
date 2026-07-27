@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../social/data/mock_social_repository.dart';
+import '../../social/data/social_providers.dart';
 import '../domain/user_profile.dart';
 
 enum FollowListMode {

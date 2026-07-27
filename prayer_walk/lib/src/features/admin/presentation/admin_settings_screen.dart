@@ -6,7 +6,7 @@ import '../../../core/router/admin_shell.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../profile/data/mock_profile_repository.dart';
+import '../../profile/data/profile_providers.dart';
 
 /// Console settings. Deliberately sparse — most of what belongs here needs a
 /// backend to configure against.

@@ -6,10 +6,14 @@ import 'package:prayer_walk/src/core/mock_backend/mock_backend.dart';
 import 'package:prayer_walk/src/core/mock_backend/seed_data.dart';
 import 'package:prayer_walk/src/core/theme/app_typography.dart';
 import 'package:prayer_walk/src/core/widgets/pilgrimage_card.dart';
-import 'package:prayer_walk/src/features/activity/data/mock_activity_repository.dart';
+import 'package:prayer_walk/src/features/activity/data/activity_providers.dart';
 import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
 import 'package:prayer_walk/src/features/auth/domain/profile.dart';
+import 'package:prayer_walk/src/features/feed/data/feed_providers.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
+
+import 'support/seeded_activity_repository.dart';
+import 'support/stub_repositories.dart';
 
 /// Reachability tests for both shells.
 ///
@@ -20,10 +24,11 @@ import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
 /// summary, activity detail): mounting `flutter_map` fires tile requests that
 /// cannot succeed offline. Those screens are covered by walking the app.
 ///
-/// Activities now come from Supabase, which a widget test also has no access
-/// to, so the repository is swapped for the seeded one at the interface — the
-/// point of the seam. History is therefore still asserted against seed data;
-/// what changed is that it arrives through an override rather than by default.
+/// Activities, the feed and the social graph now come from Supabase, which a
+/// widget test also has no access to, so each is swapped at its repository
+/// interface — the point of the seam. History is therefore still asserted
+/// against seed data; what changed is that it arrives through an override
+/// rather than by default.
 ProviderScope _appAs(UserRole role) => ProviderScope(
   overrides: [
     authPhaseProvider.overrideWith((ref) => AuthPhase.signedIn),
@@ -38,11 +43,11 @@ ProviderScope _appAs(UserRole role) => ProviderScope(
     // initialized in a test.
     currentAuthUserIdProvider.overrideWith((ref) => MockSeed.currentUserId),
     activityRepositoryProvider.overrideWith(
-      (ref) => MockActivityRepository(
-        ref.watch(mockBackendProvider),
-        MockSeed.currentUserId,
-      ),
+      (ref) => SeededActivityRepository(ref.watch(mockBackendProvider)),
     ),
+    // The member shell opens on the feed. It is empty here — this file is
+    // about reachability, and the feed's own content is not what it checks.
+    feedRepositoryProvider.overrideWith((ref) => const StubFeedRepository([])),
   ],
   child: const PrayerWalkApp(),
 );
