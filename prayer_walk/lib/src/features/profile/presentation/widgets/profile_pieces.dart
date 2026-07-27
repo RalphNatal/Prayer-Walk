@@ -286,7 +286,7 @@ class _MiniActivityCard extends StatelessWidget {
             children: [
               RouteTrailPreview(
                 points: activity.route,
-                waypoints: activity.waypoints.toTrailWaypoints(),
+                waypoints: activity.waypoints.toTrailWaypoints(theme.trail),
                 height: 100,
                 strokeWidth: 3,
                 showGlow: false,

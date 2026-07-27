@@ -5,6 +5,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../scripture/presentation/scripture_settings_panel.dart';
 
 /// Appearance, notifications, and the way out.
 ///
@@ -62,6 +63,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 .read(themeModeControllerProvider.notifier)
                 .set(selection.first),
           ),
+
+          const SizedBox(height: AppSpacing.xxl),
+          const SectionHeader(
+            title: 'Scripture on the trail',
+            subtitle: 'The standing default. Each walk can be set differently '
+                'from the record screen.',
+          ),
+          const ScriptureSettingsPanel(showHeader: false),
 
           const SizedBox(height: AppSpacing.xxl),
           const SectionHeader(

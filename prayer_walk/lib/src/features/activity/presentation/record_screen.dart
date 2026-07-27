@@ -6,6 +6,8 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../scripture/data/scripture_providers.dart';
+import '../../scripture/presentation/scripture_settings_panel.dart';
 import '../data/location_service.dart';
 import '../data/activity_providers.dart';
 import '../data/recording_controller.dart';
@@ -25,6 +27,15 @@ class RecordScreen extends ConsumerStatefulWidget {
 
 class _RecordScreenState extends ConsumerState<RecordScreen> {
   bool _starting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Warms the verse library while the walker is still choosing what they are
+    // carrying, so pressing Start never waits on a request. Reading the
+    // provider is what starts it; the result is held for the walk.
+    ref.read(scriptureLibraryProvider);
+  }
 
   Future<void> _openIntentions() async {
     final current = ref.read(recordingControllerProvider).intentions;
@@ -293,6 +304,9 @@ class _RecordPanel extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.md),
+
+              const _ScriptureTile(),
               const SizedBox(height: AppSpacing.lg),
 
               if (access != LocationAccess.granted) ...[
@@ -320,6 +334,69 @@ class _RecordPanel extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The pre-walk scripture control: on or off, how often, and from where.
+///
+/// Deliberately the same weight and shape as the intentions row above it —
+/// something you set on the way out of the door, not a feature being sold.
+/// Whatever is chosen here is remembered, so it does not have to be set again
+/// before every walk.
+class _ScriptureTile extends ConsumerWidget {
+  const _ScriptureTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final settings = ref.watch(scriptureSettingsProvider);
+    final on = settings.enabled;
+
+    return InkWell(
+      onTap: () => showScriptureSettingsSheet(context),
+      borderRadius: AppRadius.control,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.control,
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              on ? Icons.menu_book_rounded : Icons.menu_book_outlined,
+              size: 20,
+              color: on
+                  ? theme.colorScheme.secondary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                'Scripture on the trail',
+                style: theme.textTheme.bodyMedium,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Flexible(
+              child: Text(
+                scriptureSummary(settings),
+                style: theme.textTheme.labelSmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded),
+          ],
         ),
       ),
     );

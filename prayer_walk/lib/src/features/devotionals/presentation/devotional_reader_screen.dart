@@ -177,7 +177,12 @@ class _ReaderFooter extends ConsumerWidget {
           onPressed: () {
             ref
                 .read(recordingControllerProvider.notifier)
-                .carryDevotional(devotional.title);
+                .carryDevotional(
+                  devotional.title,
+                  // Carried so scripture on the trail can prefer verses from
+                  // the same collection this walk was started from.
+                  category: devotional.category,
+                );
             context.goNamed(Routes.record);
           },
         ),

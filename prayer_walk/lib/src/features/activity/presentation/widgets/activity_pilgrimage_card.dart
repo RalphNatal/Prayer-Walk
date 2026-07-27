@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/routes.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../../profile/domain/user_profile.dart';
 import '../../../social/data/social_actions.dart';
@@ -50,7 +51,7 @@ class ActivityPilgrimageCard extends ConsumerWidget {
         distanceMeters: activity.distanceMeters,
         duration: activity.duration,
         route: activity.route,
-        waypoints: activity.waypoints.toTrailWaypoints(),
+        waypoints: activity.waypoints.toTrailWaypoints(Theme.of(context).trail),
         intentions: activity.intentions
             .map((i) => i.text)
             .toList(growable: false),

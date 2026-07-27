@@ -12,6 +12,9 @@ import 'package:prayer_walk/src/features/activity/presentation/activity_detail_s
 import 'package:prayer_walk/src/features/activity/presentation/activity_summary_screen.dart';
 import 'package:prayer_walk/src/features/activity/presentation/live_tracking_screen.dart';
 import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
+import 'package:prayer_walk/src/features/devotionals/domain/devotional.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_settings.dart';
 import 'package:prayer_walk/src/features/profile/data/profile_providers.dart';
 import 'package:prayer_walk/src/features/profile/domain/profile_repository.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
@@ -112,6 +115,39 @@ class _LiveRecording extends RecordingController {
     elapsed: Duration(hours: 1, minutes: 2, seconds: 3),
     distanceMeters: 4820,
     elevationGainMeters: 128,
+  );
+}
+
+/// The same walk with scripture on and a verse on screen.
+///
+/// The arrival card sits over the map and the delivered list sits inside the
+/// stats panel, so both have to survive the narrowest phone at the largest
+/// text setting — the two places this feature could push a live recording off
+/// the side of the screen.
+class _LiveRecordingWithVerse extends RecordingController {
+  static const _prompt = ScripturePrompt(
+    id: 'sp_ps121',
+    reference: 'Psalm 121:1-2',
+    body: 'I will lift up my eyes to the hills. Where does my help come from? '
+        'My help comes from the LORD, who made heaven and earth.',
+    translation: 'WEBBE',
+    category: DevotionalCategory.scriptureWalk,
+  );
+
+  static const _delivered = DeliveredPrompt(
+    prompt: _prompt,
+    elapsed: Duration(minutes: 12, seconds: 30),
+    atMeters: 1213,
+  );
+
+  @override
+  RecordingState build() => const RecordingState(
+    status: RecordingStatus.recording,
+    elapsed: Duration(hours: 1, minutes: 2, seconds: 3),
+    distanceMeters: 4820,
+    elevationGainMeters: 128,
+    deliveredPrompts: [_delivered],
+    currentPrompt: _delivered,
   );
 }
 
@@ -282,6 +318,34 @@ void main() {
 
       // An hour-long walk's clock is the widest thing this row carries.
       expect(find.text('1:02:03'), findsOneWidget);
+    });
+
+    forEverySize('carries an arrived verse without overflowing', (
+      tester,
+      width,
+      scale,
+    ) async {
+      await pumpAt(
+        tester,
+        ProviderScope(
+          overrides: [
+            recordingControllerProvider.overrideWith(
+              _LiveRecordingWithVerse.new,
+            ),
+            activityRepositoryProvider.overrideWithValue(
+              const _StubActivityRepository(),
+            ),
+            currentAuthUserIdProvider.overrideWith((ref) => _viewerId),
+          ],
+          child: _app(const LiveTrackingScreen(), scale),
+        ),
+        width: width,
+      );
+
+      // The card over the map and the row in the panel below it — the passage
+      // is reachable in both places, so a verse missed on the card is not lost.
+      expect(find.text('Psalm 121:1-2'), findsNWidgets(2));
+      expect(find.text('WEBBE'), findsOneWidget);
     });
   });
 

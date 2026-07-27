@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,17 +9,50 @@ import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../scripture/data/scripture_providers.dart';
+import '../../scripture/domain/scripture_settings.dart';
+import '../../scripture/presentation/scripture_arrival_card.dart';
+import '../../scripture/presentation/scripture_reading.dart';
 import '../data/recording_controller.dart';
 import '../domain/activity.dart';
 import 'trail_mapping.dart';
 
-/// The walk as it happens: the trail drawing itself, the numbers moving.
+/// The walk as it happens: the trail drawing itself, the numbers moving, and —
+/// when scripture is on — a verse arriving now and then.
 ///
-/// Everything here reads [RecordingController]'s live state — the route, the
-/// distance and the clock are the real ones being accumulated from the device's
-/// position stream. The screen owns no recording logic of its own.
-class LiveTrackingScreen extends ConsumerWidget {
+/// Everything here reads [RecordingController]'s live state: the route, the
+/// distance, the clock and the verses are all being accumulated by the
+/// recorder. The screen owns no recording logic of its own. What it does own is
+/// the *announcement* — the chime, the haptic and the voice — because those are
+/// platform channels, and keeping them out of the controller is what lets the
+/// recorder be tested without a speaker.
+class LiveTrackingScreen extends ConsumerStatefulWidget {
   const LiveTrackingScreen({super.key});
+
+  @override
+  ConsumerState<LiveTrackingScreen> createState() => _LiveTrackingScreenState();
+}
+
+class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
+  /// Whether the one-time "your phone has no step sensor" note has been shown.
+  bool _toldAboutFallback = false;
+
+  /// Held in a field rather than read on demand: `dispose` needs it, and `ref`
+  /// is not safe to touch once the element is on its way out.
+  late final ScriptureAnnouncer _announcer;
+
+  @override
+  void initState() {
+    super.initState();
+    _announcer = ref.read(scriptureAnnouncerProvider);
+  }
+
+  @override
+  void dispose() {
+    // Leaving the screen mid-sentence should not leave a voice talking.
+    unawaited(_announcer.silence());
+    super.dispose();
+  }
 
   Future<void> _confirmDiscard(BuildContext context, WidgetRef ref) async {
     final discard = await showConfirmDialog(
@@ -33,9 +68,68 @@ class LiveTrackingScreen extends ConsumerWidget {
     context.goNamed(Routes.record);
   }
 
+  /// A verse has landed. Chime, buzz, speak, and tell a screen reader.
+  ///
+  /// Fire-and-forget on purpose: nothing on this screen waits for audio, and
+  /// [ScriptureAnnouncer] swallows every platform failure, so a device with no
+  /// speech engine simply gets the card.
+  void _announce(DeliveredPrompt delivered) {
+    final settings = ref.read(recordingControllerProvider).scripture;
+    unawaited(
+      _announcer
+          .announce(
+            delivered.prompt,
+            sound: settings.sound,
+            voice: settings.voice,
+            view: View.of(context),
+          ),
+    );
+  }
+
+  void _toggleMute() {
+    final controller = ref.read(recordingControllerProvider.notifier);
+    final wasMuted = ref.read(recordingControllerProvider).scriptureMuted;
+    controller.setScriptureMuted(!wasMuted);
+    // Muting has to stop what is being said right now, or the control reads as
+    // broken for the eight seconds it takes the verse to finish.
+    if (!wasMuted) unawaited(_announcer.silence());
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(recordingControllerProvider);
+
+    // Each arrival is a fresh object, so identity is what separates "a verse
+    // has landed" from "this screen rebuilt".
+    ref.listen<DeliveredPrompt?>(
+      recordingControllerProvider.select((s) => s.currentPrompt),
+      (previous, next) {
+        if (next == null || identical(previous, next)) return;
+        _announce(next);
+      },
+    );
+
+    // Pausing is a request for quiet, not only for the clock to stop.
+    ref.listen<bool>(
+      recordingControllerProvider.select((s) => s.isPaused),
+      (_, paused) {
+        if (paused) unawaited(_announcer.silence());
+      },
+    );
+
+    // Steps were asked for and the device could not supply them. Said once,
+    // quietly, and never again for this walk.
+    ref.listen<bool>(
+      recordingControllerProvider.select((s) => s.scriptureFellBackToDistance),
+      (_, fellBack) {
+        if (!fellBack || _toldAboutFallback || !mounted) return;
+        _toldAboutFallback = true;
+        showAppSnackBar(
+          context,
+          'This phone has no step sensor, so verses are paced by distance.',
+        );
+      },
+    );
 
     if (!state.isLive) {
       // Reached by deep link, or after the recording was finished elsewhere.
@@ -53,6 +147,8 @@ class LiveTrackingScreen extends ConsumerWidget {
       );
     }
 
+    final current = state.currentPrompt;
+
     return PopScope(
       // Leaving mid-walk should be deliberate.
       canPop: false,
@@ -66,36 +162,61 @@ class LiveTrackingScreen extends ConsumerWidget {
           children: [
             Expanded(
               flex: 5,
-              child: RouteMapView(
-                points: state.route,
-                waypoints: state.waypoints.toTrailWaypoints(),
-                pulsePoint: state.lastPoint,
-                // The uncertainty, drawn to scale. A dot alone claims a
-                // precision the device has not yet earned.
-                accuracyMeters: state.accuracyMeters,
-                // Keeps the camera on the walker as the route grows.
-                followPoint: state.lastPoint,
-                showEndpoints: false,
-                interactive: false,
-                locatingLabel: state.warmingUp
-                    ? 'Getting a sharp signal…'
-                    : 'Finding you…',
-                overlay: Align(
-                  alignment: Alignment.topRight,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: SafeArea(
-                      child: SignalIndicator(
-                        signal: state.signal,
-                        accuracyMeters: state.accuracyMeters,
-                        onDark: true,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: RouteMapView(
+                      points: state.route,
+                      waypoints: state.waypoints.toTrailWaypoints(
+                        Theme.of(context).trail,
                       ),
+                      pulsePoint: state.lastPoint,
+                      // The uncertainty, drawn to scale. A dot alone claims a
+                      // precision the device has not yet earned.
+                      accuracyMeters: state.accuracyMeters,
+                      // Keeps the camera on the walker as the route grows.
+                      followPoint: state.lastPoint,
+                      showEndpoints: false,
+                      interactive: false,
+                      locatingLabel: state.warmingUp
+                          ? 'Getting a sharp signal…'
+                          : 'Finding you…',
+                      overlay: Align(
+                        alignment: Alignment.topRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          child: SafeArea(
+                            child: SignalIndicator(
+                              signal: state.signal,
+                              accuracyMeters: state.accuracyMeters,
+                              onDark: true,
+                            ),
+                          ),
+                        ),
+                      ),
+                      semanticLabel:
+                          'Map showing the route so far, '
+                          '${Fmt.distance(state.distanceMeters)}',
                     ),
                   ),
-                ),
-                semanticLabel:
-                    'Map showing the route so far, '
-                    '${Fmt.distance(state.distanceMeters)}',
+                  // Outside the map's own overlay slot, which is wrapped in an
+                  // IgnorePointer — this one has to be tappable.
+                  if (current != null)
+                    Positioned(
+                      left: AppSpacing.lg,
+                      right: AppSpacing.lg,
+                      bottom: AppSpacing.lg,
+                      child: ScriptureArrivalCard(
+                        delivered: current,
+                        showTranslation: state.scripture.showTranslation,
+                        muted: state.scriptureMuted,
+                        onToggleMute: _toggleMute,
+                        onDismiss: () => ref
+                            .read(recordingControllerProvider.notifier)
+                            .dismissPrompt(),
+                      ),
+                    ),
+                ],
               ),
             ),
             Expanded(
@@ -105,7 +226,9 @@ class LiveTrackingScreen extends ConsumerWidget {
                 onTogglePause: () =>
                     ref.read(recordingControllerProvider.notifier).togglePause(),
                 onDropWaypoint: () => _openWaypointSheet(context, ref),
+                onToggleMute: _toggleMute,
                 onFinish: () {
+                  unawaited(_announcer.silence());
                   ref.read(recordingControllerProvider.notifier).finish();
                   context.goNamed(Routes.activitySummary);
                 },
@@ -166,12 +289,14 @@ class _LivePanel extends StatelessWidget {
     required this.state,
     required this.onTogglePause,
     required this.onDropWaypoint,
+    required this.onToggleMute,
     required this.onFinish,
   });
 
   final RecordingState state;
   final VoidCallback onTogglePause;
   final VoidCallback onDropWaypoint;
+  final VoidCallback onToggleMute;
   final VoidCallback onFinish;
 
   @override
@@ -314,6 +439,17 @@ class _LivePanel extends StatelessWidget {
                   ],
                 ),
               ],
+
+              if (state.scripture.enabled) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _ScriptureStrip(
+                  state: state,
+                  onDark: onDark,
+                  muted: muted,
+                  onToggleMute: onToggleMute,
+                ),
+              ],
+
               const SizedBox(height: AppSpacing.lg),
               OutlinedButton.icon(
                 // Needs a position to pin the marker to.
@@ -370,6 +506,149 @@ class _LivePanel extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Everything scripture has said on this walk, and the way to make it stop.
+///
+/// The list is the safety net for the whole feature: a card that auto-dismisses
+/// is only kind if what it showed is still somewhere. A verse that arrived
+/// while the phone was in a pocket is here, in order, until the walk ends.
+class _ScriptureStrip extends StatelessWidget {
+  const _ScriptureStrip({
+    required this.state,
+    required this.onDark,
+    required this.muted,
+    required this.onToggleMute,
+  });
+
+  final RecordingState state;
+  final Color onDark;
+  final Color muted;
+  final VoidCallback onToggleMute;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final delivered = state.deliveredPrompts;
+    final isMuted = state.scriptureMuted;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.menu_book_rounded,
+              size: 16,
+              color: onDark.withValues(alpha: 0.8),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                delivered.isEmpty
+                    ? 'Scripture on the trail'
+                    : Fmt.plural(delivered.length, 'verse'),
+                style: theme.textTheme.labelMedium?.copyWith(color: muted),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // The one-tap mute, in a fixed place for the whole walk.
+            IconButton(
+              onPressed: onToggleMute,
+              iconSize: 20,
+              color: isMuted ? muted : AppColors.amber,
+              tooltip: isMuted ? 'Unmute scripture' : 'Mute scripture',
+              icon: Icon(
+                isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+              ),
+            ),
+          ],
+        ),
+        if (delivered.isEmpty)
+          Text(
+            'The first one arrives once you are on your way.',
+            style: theme.textTheme.bodySmall?.copyWith(color: muted),
+          )
+        else
+          for (final item in delivered.reversed)
+            _DeliveredRow(
+              delivered: item,
+              onDark: onDark,
+              muted: muted,
+              showTranslation: state.scripture.showTranslation,
+            ),
+      ],
+    );
+  }
+}
+
+class _DeliveredRow extends StatelessWidget {
+  const _DeliveredRow({
+    required this.delivered,
+    required this.onDark,
+    required this.muted,
+    required this.showTranslation,
+  });
+
+  final DeliveredPrompt delivered;
+  final Color onDark;
+  final Color muted;
+  final bool showTranslation;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final prompt = delivered.prompt;
+
+    return InkWell(
+      onTap: () => showScriptureReading(
+        context,
+        prompt,
+        showTranslation: showTranslation,
+      ),
+      borderRadius: AppRadius.control,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(top: 6, right: AppSpacing.md),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).trail.waypointScripture,
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prompt.reference,
+                    style: theme.textTheme.bodyMedium?.copyWith(color: onDark),
+                  ),
+                  Text(
+                    prompt.body,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              Fmt.durationShort(delivered.elapsed),
+              style: theme.textTheme.labelSmall?.copyWith(color: muted),
+            ),
+          ],
         ),
       ),
     );

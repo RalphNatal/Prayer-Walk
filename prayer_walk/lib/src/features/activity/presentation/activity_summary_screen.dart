@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../data/activity_providers.dart';
@@ -141,7 +142,7 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
         children: [
           RouteMapView(
             points: draft.route,
-            waypoints: draft.waypoints.toTrailWaypoints(),
+            waypoints: draft.waypoints.toTrailWaypoints(theme.trail),
             height: 260,
             interactive: false,
             semanticLabel:
@@ -322,6 +323,11 @@ class _WaypointRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Verse stops read in the same green they are drawn in on the trail, so a
+    // marker on the map and its line in this list are the same thing.
+    final tint = waypoint.kind == WaypointKind.scripture
+        ? theme.colorScheme.secondary
+        : theme.colorScheme.tertiary;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
@@ -333,10 +339,10 @@ class _WaypointRow extends StatelessWidget {
             margin: const EdgeInsets.only(top: 6, right: AppSpacing.md),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: theme.colorScheme.tertiary,
+              color: tint,
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.tertiary.withValues(alpha: 0.5),
+                  color: tint.withValues(alpha: 0.5),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -352,6 +358,12 @@ class _WaypointRow extends StatelessWidget {
                   '${waypoint.kind.label}  ·  ${Fmt.durationShort(waypoint.elapsed)} in',
                   style: theme.textTheme.bodySmall,
                 ),
+                // The verse itself. A scripture stop whose text is missing from
+                // the list is a reference with nothing behind it.
+                if (waypoint.note.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(waypoint.note, style: theme.textTheme.bodyMedium),
+                ],
               ],
             ),
           ),

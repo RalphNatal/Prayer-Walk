@@ -17,6 +17,7 @@ class AppTrailTheme extends ThemeExtension<AppTrailTheme> {
     required this.trailGlow,
     required this.trailUnderlay,
     required this.waypointCore,
+    required this.waypointScripture,
     required this.waypointHalo,
     required this.startMark,
     required this.endMark,
@@ -37,6 +38,13 @@ class AppTrailTheme extends ThemeExtension<AppTrailTheme> {
   final Color trailUnderlay;
 
   final Color waypointCore;
+
+  /// The core of a waypoint a verse dropped by itself, rather than one the
+  /// walker chose to place. Cooler than [waypointCore] and drawn in the same
+  /// warm halo, so a trail reads as one object while still saying which stops
+  /// were the walker's own.
+  final Color waypointScripture;
+
   final Color waypointHalo;
   final Color startMark;
   final Color endMark;
@@ -52,6 +60,7 @@ class AppTrailTheme extends ThemeExtension<AppTrailTheme> {
     trailGlow: Color(0x66E3A24A),
     trailUnderlay: Color(0x33223D30),
     waypointCore: Color(0xFFFFE2B0),
+    waypointScripture: Color(0xFFC7E4CE),
     waypointHalo: Color(0x99E3A24A),
     startMark: AppColors.pine,
     endMark: AppColors.amber,
@@ -66,6 +75,7 @@ class AppTrailTheme extends ThemeExtension<AppTrailTheme> {
     trailGlow: Color(0x7AE3A24A),
     trailUnderlay: Color(0x5C000000),
     waypointCore: Color(0xFFFFEACA),
+    waypointScripture: Color(0xFFA9D8B7),
     waypointHalo: Color(0xB3E3A24A),
     startMark: AppColors.mossLight,
     endMark: AppColors.amber,
@@ -81,6 +91,7 @@ class AppTrailTheme extends ThemeExtension<AppTrailTheme> {
     Color? trailGlow,
     Color? trailUnderlay,
     Color? waypointCore,
+    Color? waypointScripture,
     Color? waypointHalo,
     Color? startMark,
     Color? endMark,
@@ -94,6 +105,7 @@ class AppTrailTheme extends ThemeExtension<AppTrailTheme> {
       trailGlow: trailGlow ?? this.trailGlow,
       trailUnderlay: trailUnderlay ?? this.trailUnderlay,
       waypointCore: waypointCore ?? this.waypointCore,
+      waypointScripture: waypointScripture ?? this.waypointScripture,
       waypointHalo: waypointHalo ?? this.waypointHalo,
       startMark: startMark ?? this.startMark,
       endMark: endMark ?? this.endMark,
@@ -118,6 +130,11 @@ class AppTrailTheme extends ThemeExtension<AppTrailTheme> {
       trailGlow: Color.lerp(trailGlow, other.trailGlow, t)!,
       trailUnderlay: Color.lerp(trailUnderlay, other.trailUnderlay, t)!,
       waypointCore: Color.lerp(waypointCore, other.waypointCore, t)!,
+      waypointScripture: Color.lerp(
+        waypointScripture,
+        other.waypointScripture,
+        t,
+      )!,
       waypointHalo: Color.lerp(waypointHalo, other.waypointHalo, t)!,
       startMark: Color.lerp(startMark, other.startMark, t)!,
       endMark: Color.lerp(endMark, other.endMark, t)!,

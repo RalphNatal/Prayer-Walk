@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,10 +7,16 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/utils/app_logger.dart';
 import '../../auth/data/auth_providers.dart';
+import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
+import '../../scripture/data/scripture_providers.dart';
+import '../../scripture/domain/scripture_prompt.dart';
+import '../../scripture/domain/scripture_settings.dart';
 import '../domain/activity.dart';
+import '../domain/cadence_trigger.dart';
 import 'geocoding_service.dart';
 import 'location_service.dart';
 import 'activity_providers.dart';
+import 'step_cadence_trigger.dart';
 
 /// Where the recorder is in its lifecycle.
 enum RecordingStatus {
@@ -37,6 +44,11 @@ class RecordingState {
     this.draft,
     this.status = RecordingStatus.idle,
     this.devotionalTitle,
+    this.devotionalCategory,
+    this.scripture = const ScriptureSettings(),
+    this.scriptureFellBackToDistance = false,
+    this.deliveredPrompts = const [],
+    this.currentPrompt,
     this.startedAt,
     this.elapsed = Duration.zero,
     this.distanceMeters = 0,
@@ -57,6 +69,34 @@ class RecordingState {
   /// as context; it is not stored on the saved activity — devotional-to-
   /// activity linkage is not modelled yet.
   final String? devotionalTitle;
+
+  /// The theme of that devotional, when the walk was started from one. Used
+  /// only to bias which verses arrive — a scripture walk started from a
+  /// Lament devotional should not open with a psalm of thanksgiving.
+  final DevotionalCategory? devotionalCategory;
+
+  // ----------------------------------------------- scripture on the trail ---
+
+  /// The scripture settings *this walk* is running under.
+  ///
+  /// Snapshotted from the stored preference when the walk starts, so the live
+  /// mute control changes this walk without rewriting what the walker has
+  /// chosen as their default. Everything before the walk edits the preference;
+  /// everything during it edits this.
+  final ScriptureSettings scripture;
+
+  /// True when step cadence was asked for and the device could not supply it,
+  /// so the walk is running on distance instead. The live screen says this
+  /// once and then leaves it alone.
+  final bool scriptureFellBackToDistance;
+
+  /// Everything that has arrived on this walk, oldest first. Kept so a verse
+  /// missed while the phone was in a pocket is still there to be read.
+  final List<DeliveredPrompt> deliveredPrompts;
+
+  /// The one currently on screen, or null once it has been let go. A fresh
+  /// instance per arrival, which is what the live screen keys its chime off.
+  final DeliveredPrompt? currentPrompt;
 
   /// Assembled by [RecordingController.finish]; the summary edits it in place.
   final ActivityDraft? draft;
@@ -111,6 +151,10 @@ class RecordingState {
 
   bool get hasDraft => draft != null;
 
+  /// Whether this walk is running with both audio channels off. The live
+  /// screen's mute control reads and writes exactly this.
+  bool get scriptureMuted => !scripture.sound && !scripture.voice;
+
   bool get isPaused => status == RecordingStatus.paused;
 
   bool get isLive =>
@@ -125,6 +169,11 @@ class RecordingState {
     ActivityDraft? draft,
     RecordingStatus? status,
     String? devotionalTitle,
+    DevotionalCategory? devotionalCategory,
+    ScriptureSettings? scripture,
+    bool? scriptureFellBackToDistance,
+    List<DeliveredPrompt>? deliveredPrompts,
+    DeliveredPrompt? currentPrompt,
     DateTime? startedAt,
     Duration? elapsed,
     double? distanceMeters,
@@ -138,6 +187,7 @@ class RecordingState {
     bool clearDevotional = false,
     bool clearAccess = false,
     bool clearAccuracy = false,
+    bool clearCurrentPrompt = false,
   }) {
     return RecordingState(
       type: type ?? this.type,
@@ -147,6 +197,16 @@ class RecordingState {
       devotionalTitle: clearDevotional
           ? null
           : (devotionalTitle ?? this.devotionalTitle),
+      devotionalCategory: clearDevotional
+          ? null
+          : (devotionalCategory ?? this.devotionalCategory),
+      scripture: scripture ?? this.scripture,
+      scriptureFellBackToDistance:
+          scriptureFellBackToDistance ?? this.scriptureFellBackToDistance,
+      deliveredPrompts: deliveredPrompts ?? this.deliveredPrompts,
+      currentPrompt: clearCurrentPrompt
+          ? null
+          : (currentPrompt ?? this.currentPrompt),
       startedAt: startedAt ?? this.startedAt,
       elapsed: elapsed ?? this.elapsed,
       distanceMeters: distanceMeters ?? this.distanceMeters,
@@ -191,6 +251,26 @@ class RecordingController extends Notifier<RecordingState> {
   /// When the warm-up gate opened. Null once the gate has closed for good.
   DateTime? _warmUpStartedAt;
 
+  /// What paces the verses. Null when scripture is switched off for this walk.
+  /// Always a distance trigger to begin with, even when steps were asked for —
+  /// see [_armScripture].
+  CadenceTrigger? _cadence;
+
+  /// The library this walk draws from, and the order it draws in.
+  ///
+  /// [_pool] is the library shuffled without replacement: drawing walks the
+  /// cursor forward and never looks back, which is what stops a verse arriving
+  /// twice on one walk. Running off the end reshuffles rather than stopping —
+  /// an hour on the road should not go quiet because the library is short.
+  List<ScripturePrompt> _library = const [];
+  List<ScripturePrompt> _pool = const [];
+  int _cursor = 0;
+  final math.Random _shuffle = math.Random();
+
+  /// Set when the notifier is torn down, so the async scripture work — a
+  /// library fetch, a sensor probe — knows not to touch `state` on the way out.
+  bool _disposed = false;
+
   static const _tag = 'PW-REC';
 
   // The thresholds live in [LocationQuality] rather than here, so the recorder
@@ -202,7 +282,10 @@ class RecordingController extends Notifier<RecordingState> {
     // A Notifier can be disposed while a walk is in flight (the provider is
     // refreshed, the container is torn down). Without this the subscription
     // and ticker outlive it and keep waking the GPS.
-    ref.onDispose(_stopStreams);
+    ref.onDispose(() {
+      _disposed = true;
+      _stopStreams();
+    });
     return const RecordingState();
   }
 
@@ -213,8 +296,11 @@ class RecordingController extends Notifier<RecordingState> {
   }
 
   /// Called from the devotional reader's "Start a walk with this".
-  void carryDevotional(String title) =>
-      state = state.copyWith(devotionalTitle: title);
+  ///
+  /// [category] is carried alongside the title so scripture on the trail can
+  /// prefer verses from the same collection the walk was started from.
+  void carryDevotional(String title, {DevotionalCategory? category}) => state =
+      state.copyWith(devotionalTitle: title, devotionalCategory: category);
 
   void dropDevotional() => state = state.copyWith(clearDevotional: true);
 
@@ -276,6 +362,12 @@ class RecordingController extends Notifier<RecordingState> {
     // coarse network fix first, and anchoring the route on it puts the first
     // point hundreds of metres from where the walk actually began.
     _warmUpStartedAt = DateTime.now();
+
+    // Snapshotted, not watched: what the walker decided before setting off is
+    // what this walk runs on, and the live mute control edits the snapshot
+    // rather than rewriting their stored default.
+    final scripture = ref.read(scriptureSettingsProvider);
+
     state = state.copyWith(
       status: RecordingStatus.recording,
       startedAt: DateTime.now(),
@@ -285,12 +377,18 @@ class RecordingController extends Notifier<RecordingState> {
       route: const [],
       waypoints: const [],
       warmingUp: true,
+      scripture: scripture,
+      scriptureFellBackToDistance: false,
+      deliveredPrompts: const [],
+      clearCurrentPrompt: true,
       clearDraft: true,
       clearAccuracy: true,
       // Precise clears the notice; approximate keeps it on screen.
       clearAccess: access.isPrecise,
       access: access.isPrecise ? null : access,
     );
+
+    _armScripture(scripture);
 
     _subscription = ref
         .read(locationServiceProvider)
@@ -360,6 +458,10 @@ class RecordingController extends Notifier<RecordingState> {
           ? state.elevationGainMeters + climb
           : state.elevationGainMeters,
     );
+
+    // Only here, after the totals have moved: this is the one branch that
+    // changes the distance, and the cadence is measured against the distance.
+    _maybeDeliverPrompt();
   }
 
   /// The warm-up gate: hold fixes back until the signal reaches recording
@@ -427,6 +529,189 @@ class RecordingController extends Notifier<RecordingState> {
           elapsed: state.elapsed,
         ),
       ],
+    );
+  }
+
+  // ----------------------------------------------- scripture on the trail ---
+
+  /// Sets up the verses for a walk. Never throws, never blocks, never fails in
+  /// a way that costs the recording.
+  ///
+  /// The distance trigger is armed straight away even when steps were asked
+  /// for. That is deliberate: distance needs nothing the recorder is not
+  /// already measuring, so it can be armed synchronously, while a step sensor
+  /// needs a permission dialog and a probe that can take seconds or never
+  /// answer at all. Arming distance first and swapping the step trigger in when
+  /// it reports ready means pressing Start is never held up by a sensor, and a
+  /// device with no pedometer simply carries on in metres.
+  void _armScripture(ScriptureSettings settings) {
+    _cadence?.dispose();
+    _cadence = null;
+    _library = const [];
+    _pool = const [];
+    _cursor = 0;
+
+    if (!settings.enabled) return;
+
+    final cadence = settings.cadence;
+    _cadence = DistanceCadenceTrigger(
+      intervalMeters: cadence.source == CadenceSource.steps
+          ? cadence.approximateMeters
+          : cadence.intervalMeters,
+    );
+
+    unawaited(_loadLibrary());
+    if (cadence.source == CadenceSource.steps) {
+      unawaited(_armStepCadence(cadence));
+    }
+  }
+
+  /// Puts the walk's verses in memory.
+  ///
+  /// Reads the library provider, which the record screen has usually already
+  /// warmed, and which falls back through the local cache to the set bundled
+  /// in the binary — so this resolves with verses in airplane mode too. It is
+  /// never awaited by [start]: a walk that cannot begin until a server answers
+  /// is a walk that cannot begin in a valley.
+  Future<void> _loadLibrary() async {
+    List<ScripturePrompt> prompts;
+    try {
+      prompts = await ref.read(scriptureLibraryProvider.future);
+    } catch (error) {
+      // The repository does not throw; this is the provider being torn down
+      // mid-flight, which costs verses and nothing else.
+      AppLogger.info(_tag, 'no verses for this walk (${error.runtimeType})');
+      return;
+    }
+    if (_disposed || !state.isLive) return;
+    _library = prompts;
+    _refillPool();
+  }
+
+  /// Tries to upgrade the walk from distance to steps.
+  ///
+  /// This is the only path that asks for the motion permission, and it is only
+  /// reached because the walker chose step cadence. An unavailable sensor is
+  /// not an error — it leaves the distance trigger exactly where it was and
+  /// raises a flag the live screen mentions once.
+  Future<void> _armStepCadence(ScriptureCadence cadence) async {
+    final trigger = ref.read(stepTriggerBuilderProvider)(cadence.intervalSteps);
+
+    CadenceReadiness readiness;
+    try {
+      readiness = await trigger.prepare();
+    } catch (error) {
+      AppLogger.info(_tag, 'step cadence failed (${error.runtimeType})');
+      readiness = CadenceReadiness.unavailable;
+    }
+
+    if (_disposed || !state.isLive) {
+      trigger.dispose();
+      return;
+    }
+
+    if (readiness == CadenceReadiness.ready) {
+      _cadence?.dispose();
+      _cadence = trigger;
+      return;
+    }
+
+    trigger.dispose();
+    state = state.copyWith(scriptureFellBackToDistance: true);
+  }
+
+  /// Asks the cadence whether a verse is due, and delivers it if it is.
+  ///
+  /// Every suppression is checked *before* the trigger is consulted, because
+  /// consulting it advances it: asking during a pause and throwing the answer
+  /// away would silently eat the verse the walker was owed on the far side.
+  void _maybeDeliverPrompt() {
+    final trigger = _cadence;
+    if (trigger == null) return;
+    // Paused walks stay quiet, and so do walks that have finished.
+    if (state.status != RecordingStatus.recording) return;
+    // Nothing is plotted while the signal is still coarse, so there is nowhere
+    // truthful to put a marker yet.
+    if (state.warmingUp) return;
+    final point = state.lastPoint;
+    if (point == null) return;
+    // The library has not landed yet. Leave the threshold unclaimed so the
+    // first verse still arrives at the first interval it can.
+    if (_library.isEmpty) return;
+
+    if (!trigger.isDue(state.distanceMeters)) return;
+
+    final prompt = _draw();
+    if (prompt == null) return;
+
+    // An ordinary waypoint, through the ordinary path — the reference as the
+    // label, the text as the note. Nothing about persistence, the map or the
+    // summary needs to know these ones arrived by themselves.
+    dropWaypoint(
+      WaypointKind.scripture,
+      label: prompt.reference,
+      note: prompt.body,
+    );
+
+    final delivered = DeliveredPrompt(
+      prompt: prompt,
+      elapsed: state.elapsed,
+      atMeters: state.distanceMeters,
+    );
+    state = state.copyWith(
+      currentPrompt: delivered,
+      deliveredPrompts: [...state.deliveredPrompts, delivered],
+    );
+  }
+
+  /// The next unseen verse, or null when there is nothing to draw from.
+  ScripturePrompt? _draw() {
+    if (_library.isEmpty) return null;
+    if (_cursor >= _pool.length) {
+      final last = _pool.isEmpty ? null : _pool.last;
+      _refillPool();
+      // A reshuffle that opens on the verse that just went by reads as a
+      // repeat even though the pool was genuinely exhausted.
+      if (_pool.length > 1 && last != null && _pool.first.id == last.id) {
+        _pool = [..._pool.sublist(1, 2), _pool.first, ..._pool.sublist(2)];
+      }
+    }
+    return _pool[_cursor++];
+  }
+
+  /// Shuffles the library into a draw order, preferred theme first.
+  ///
+  /// "Prefer" rather than "filter": a themed walk works through everything in
+  /// its theme before it reaches anything else, which on any ordinary walk
+  /// means it only ever sees its theme — but a long one keeps receiving verses
+  /// instead of going silent at the end of a short collection.
+  void _refillPool() {
+    final preferred = state.scripture.category ?? state.devotionalCategory;
+    final first = <ScripturePrompt>[];
+    final rest = <ScripturePrompt>[];
+    for (final prompt in _library) {
+      (preferred != null && prompt.category == preferred ? first : rest)
+          .add(prompt);
+    }
+    first.shuffle(_shuffle);
+    rest.shuffle(_shuffle);
+    _pool = [...first, ...rest];
+    _cursor = 0;
+  }
+
+  /// Lets go of the card on screen. Ignoring a verse costs nothing, so this is
+  /// what the auto-dismiss timer calls as well as the close button.
+  void dismissPrompt() {
+    if (state.currentPrompt == null) return;
+    state = state.copyWith(clearCurrentPrompt: true);
+  }
+
+  /// The live screen's one-tap mute. Scoped to this walk — the stored default
+  /// is left alone, because muting one walk is not the same as deciding never
+  /// to hear another.
+  void setScriptureMuted(bool muted) {
+    state = state.copyWith(
+      scripture: state.scripture.copyWith(sound: !muted, voice: !muted),
     );
   }
 
@@ -533,6 +818,13 @@ class RecordingController extends Notifier<RecordingState> {
     _previous = null;
     _previousAltitude = null;
     _warmUpStartedAt = null;
+    // Releases the step sensor subscription along with the GPS one — a walk
+    // that has finished must not be left counting anything.
+    _cadence?.dispose();
+    _cadence = null;
+    _library = const [];
+    _pool = const [];
+    _cursor = 0;
   }
 
   static String defaultTitle(ActivityType type, DateTime at) {

@@ -4,6 +4,15 @@
          foreground service this phase — tracking stops when the app does. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Step-paced scripture on the trail, and nothing else. Declared here
+         because Android requires it declared, but it is only ever *requested*
+         from StepCadenceTrigger, which is only constructed when the walker has
+         chosen step cadence. A walker who leaves the default (distance) alone
+         is never asked for it. The device is marked as not requiring a step
+         sensor so handsets without one still see the app on Play. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false"/>
+    <uses-feature android:name="android.hardware.sensor.stepdetector" android:required="false"/>
     <application
         android:label="prayer_walk"
         android:name="${applicationName}"

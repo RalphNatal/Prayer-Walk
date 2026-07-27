@@ -40,6 +40,12 @@
 		<key>PreciseWalkTracking</key>
 		<string>Prayer Walk needs your precise location to trace the route you actually walked.</string>
 	</dict>
+	<!-- Only reached when the walker has chosen step-paced scripture: iOS shows
+	     this the first time CoreMotion is queried, which happens inside
+	     StepCadenceTrigger and nowhere else. Leaving the default cadence
+	     (distance) alone never triggers it. -->
+	<key>NSMotionUsageDescription</key>
+	<string>Prayer Walk counts your steps only if you ask for verses to arrive every so many steps. Nothing about your movement leaves the phone.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
@@ -205,7 +206,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
           flexibleSpace: FlexibleSpaceBar(
             background: RouteMapView(
               points: activity.route,
-              waypoints: activity.waypoints.toTrailWaypoints(),
+              waypoints: activity.waypoints.toTrailWaypoints(theme.trail),
               interactive: false,
               semanticLabel:
                   '${activity.title}. Traced route of '
@@ -453,6 +454,10 @@ class _WaypointTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Matches the cooler marker a verse gets on the trail.
+    final tint = waypoint.kind == WaypointKind.scripture
+        ? theme.colorScheme.secondary
+        : theme.colorScheme.tertiary;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Row(
@@ -464,10 +469,10 @@ class _WaypointTile extends StatelessWidget {
             margin: const EdgeInsets.only(top: 5, right: AppSpacing.md),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: theme.colorScheme.tertiary,
+              color: tint,
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.tertiary.withValues(alpha: 0.55),
+                  color: tint.withValues(alpha: 0.55),
                   blurRadius: 10,
                   spreadRadius: 1,
                 ),
