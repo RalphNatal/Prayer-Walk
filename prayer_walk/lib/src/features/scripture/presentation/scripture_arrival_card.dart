@@ -165,10 +165,14 @@ class _ScriptureArrivalCardState extends State<ScriptureArrivalCard>
                     ),
                     // One tap, always in the same place, for the walker who
                     // wants the reading to stop talking.
+                    //
+                    // Both of these are hit mid-stride, one-handed, on a phone
+                    // that is moving — which is exactly why they keep the full
+                    // 48dp target and only the icon inside it is small. They
+                    // used to be `visualDensity.compact`, i.e. 40dp.
                     IconButton(
                       onPressed: widget.onToggleMute,
                       iconSize: 20,
-                      visualDensity: VisualDensity.compact,
                       tooltip: widget.muted
                           ? 'Unmute scripture'
                           : 'Mute scripture',
@@ -181,7 +185,6 @@ class _ScriptureArrivalCardState extends State<ScriptureArrivalCard>
                     IconButton(
                       onPressed: widget.onDismiss,
                       iconSize: 20,
-                      visualDensity: VisualDensity.compact,
                       tooltip: 'Let it go',
                       icon: const Icon(Icons.close_rounded),
                     ),

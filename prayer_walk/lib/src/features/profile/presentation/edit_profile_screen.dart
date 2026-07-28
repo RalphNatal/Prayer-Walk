@@ -92,6 +92,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       appBar: AppBar(title: const Text('Edit profile')),
       body: AsyncView<UserProfile>(
         value: profile,
+        errorFallback: "Your profile couldn't be loaded for editing.",
         onRetry: () => ref.invalidate(currentProfileProvider),
         loading: const Padding(
           padding: EdgeInsets.all(AppSpacing.lg),

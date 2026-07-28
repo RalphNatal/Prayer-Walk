@@ -113,6 +113,7 @@ class _AdminContentFormScreenState
     final existing = ref.watch(devotionalProvider(widget.devotionalId!));
     return AsyncView<Devotional>(
       value: existing,
+      errorFallback: "That devotional couldn't be opened for editing.",
       onRetry: () => ref.invalidate(devotionalProvider(widget.devotionalId!)),
       loading: const AdminPage(
         title: 'Edit devotional',

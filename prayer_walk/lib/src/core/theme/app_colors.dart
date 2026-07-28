@@ -43,6 +43,16 @@ abstract final class AppColors {
   /// Border colour that clears the 3:1 non-text contrast floor on [canvas].
   static const Color outlineLight = Color(0xFF7C7A6D);
 
+  /// [pine], lifted and deepened. The two ends of the splash gradient, which is
+  /// the only place either is used.
+  ///
+  /// Named here rather than left as literals in `splash_screen.dart`: the
+  /// native splash is a flat `#223D30` and this gradient has to stay centred on
+  /// it, so the relationship between the three is a thing worth being able to
+  /// see in one place.
+  static const Color pineLift = Color(0xFF2A4A3A);
+  static const Color pineDeep = Color(0xFF16281F);
+
   // ----------------------------------------------------------------- dark ---
 
   /// Near-black forest — dark app background.

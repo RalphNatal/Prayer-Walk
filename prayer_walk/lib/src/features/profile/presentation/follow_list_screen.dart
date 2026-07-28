@@ -47,6 +47,7 @@ class FollowListScreen extends ConsumerWidget {
         onRefresh: () async => ref.refresh(provider.future),
         child: AsyncView<List<UserProfile>>(
           value: people,
+          errorFallback: "That list couldn't be loaded.",
           onRetry: () => ref.invalidate(provider),
           isEmpty: (items) => items.isEmpty,
           loading: const SingleChildScrollView(

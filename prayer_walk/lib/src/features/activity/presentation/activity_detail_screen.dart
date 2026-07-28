@@ -78,6 +78,7 @@ class ActivityDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: AsyncView<Activity>(
         value: activity,
+        errorFallback: "This walk couldn't be loaded.",
         onRetry: () => ref.invalidate(activityProvider(activityId)),
         loading: const _DetailLoading(),
         data: (item) => _DetailBody(
@@ -340,6 +341,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               ),
               AsyncView<List<CommentWithAuthor>>(
                 value: comments,
+                errorFallback: "Comments couldn't be loaded.",
                 onRetry: () => ref.invalidate(commentsProvider(activity.id)),
                 isEmpty: (items) => items.isEmpty,
                 loading: const RowListLoading(count: 2, leadingSize: 32),
@@ -388,6 +390,7 @@ class _AuthorRow extends StatelessWidget {
     final theme = Theme.of(context);
     return AsyncView<UserProfile>(
       value: author,
+      errorFallback: "That walker's name couldn't be loaded.",
       loading: const ShimmerScope(child: ListRowSkeleton(leadingSize: 44)),
       data: (profile) => Row(
         children: [
@@ -572,12 +575,15 @@ class _EncouragementBar extends ConsumerWidget {
                         : Fmt.plural(count, 'encouragement'),
                     style: theme.textTheme.titleSmall,
                   ),
-                  PrimaryButton(
-                    label: encouraged ? 'Sent' : 'Send encouragement',
-                    icon: encouraged
-                        ? Icons.check_rounded
-                        : Icons.local_fire_department_rounded,
-                    onPressed: toggle,
+                  Kindle(
+                    lit: encouraged,
+                    child: PrimaryButton(
+                      label: encouraged ? 'Sent' : 'Send encouragement',
+                      icon: encouraged
+                          ? Icons.check_rounded
+                          : Icons.local_fire_department_rounded,
+                      onPressed: toggle,
+                    ),
                   ),
                 ],
               );
@@ -653,11 +659,14 @@ class _CommentTile extends ConsumerWidget {
           ),
           // Small and unlabelled: an obvious Report button beside every comment
           // changes how a comment thread reads. It is reachable, not loud.
+          //
+          // The *icon* is small; the button is not. `visualDensity.compact`
+          // would take the target down to 40dp, and a quiet affordance is not a
+          // reason to put one below the 48dp floor.
           if (!isMine)
             IconButton(
               icon: const Icon(Icons.flag_outlined, size: 18),
               tooltip: 'Report comment',
-              visualDensity: VisualDensity.compact,
               color: theme.colorScheme.onSurfaceVariant,
               onPressed: () => showReportSheet(
                 context,

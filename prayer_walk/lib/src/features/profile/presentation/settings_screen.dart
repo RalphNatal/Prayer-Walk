@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/utils/app_haptics.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../scripture/presentation/scripture_settings_panel.dart';
@@ -20,6 +21,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  /// Seeded from the stored preference, which `main` has already read. Unlike
+  /// the notification switches below, this one is real and persists.
+  bool _haptics = AppHaptics.enabled;
+
   bool _encouragements = true;
   bool _comments = true;
   bool _newDevotionals = true;
@@ -71,6 +76,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 'from the record screen.',
           ),
           const ScriptureSettingsPanel(showHeader: false),
+
+          const SizedBox(height: AppSpacing.xxl),
+          const SectionHeader(
+            title: 'Touch',
+            subtitle: 'A small response when something happens, for the walks '
+                'where the phone stays in a pocket.',
+          ),
+          _SettingSwitch(
+            title: 'Haptic feedback',
+            subtitle: 'Start and finish, waypoints, encouragement, and when '
+                'something fails to save.',
+            value: _haptics,
+            onChanged: (v) {
+              setState(() => _haptics = v);
+              AppHaptics.setEnabled(v);
+            },
+          ),
 
           const SizedBox(height: AppSpacing.xxl),
           const SectionHeader(

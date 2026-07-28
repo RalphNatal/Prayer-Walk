@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prayer_walk/src/app.dart';
 import 'support/mock_backend/seed_data.dart';
-import 'package:prayer_walk/src/core/theme/app_typography.dart';
 import 'package:prayer_walk/src/core/widgets/pilgrimage_card.dart';
 import 'package:prayer_walk/src/features/activity/domain/activity.dart';
 import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
@@ -71,8 +70,6 @@ ProviderScope _signedInApp(UserRole role) => ProviderScope(
 void main() {
   // Resolve fonts by name rather than fetching them — no test touches the
   // network, and the map layer is never mounted by these flows.
-  setUpAll(AppTypography.useBundledFonts);
-  tearDownAll(AppTypography.useNetworkFonts);
 
   Future<void> settle(WidgetTester tester) async {
     await tester.pump();

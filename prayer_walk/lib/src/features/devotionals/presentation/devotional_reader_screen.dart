@@ -24,6 +24,7 @@ class DevotionalReaderScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Devotional')),
       body: AsyncView<Devotional>(
         value: devotional,
+        errorFallback: "This devotional couldn't be opened.",
         onRetry: () => ref.invalidate(devotionalProvider(devotionalId)),
         loading: const Padding(
           padding: EdgeInsets.all(AppSpacing.lg),

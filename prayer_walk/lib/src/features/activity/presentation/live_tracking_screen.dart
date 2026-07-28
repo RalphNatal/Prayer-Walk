@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/app_haptics.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../scripture/data/scripture_providers.dart';
@@ -87,6 +88,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   }
 
   void _toggleMute() {
+    AppHaptics.selection();
     final controller = ref.read(recordingControllerProvider.notifier);
     final wasMuted = ref.read(recordingControllerProvider).scriptureMuted;
     controller.setScriptureMuted(!wasMuted);
@@ -223,11 +225,17 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
               flex: 4,
               child: _LivePanel(
                 state: state,
-                onTogglePause: () =>
-                    ref.read(recordingControllerProvider.notifier).togglePause(),
+                // Pause, resume and finish are the controls most often used
+                // without looking — mid-stride, phone half out of a pocket. The
+                // heavier feedback is what confirms them by touch.
+                onTogglePause: () {
+                  AppHaptics.heavy();
+                  ref.read(recordingControllerProvider.notifier).togglePause();
+                },
                 onDropWaypoint: () => _openWaypointSheet(context, ref),
                 onToggleMute: _toggleMute,
                 onFinish: () {
+                  AppHaptics.heavy();
                   unawaited(_announcer.silence());
                   ref.read(recordingControllerProvider.notifier).finish();
                   context.goNamed(Routes.activitySummary);
@@ -279,6 +287,8 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       },
     );
     if (kind == null || !context.mounted) return;
+    // A small deliberate act with a result — the candle is now on the trail.
+    AppHaptics.light();
     ref.read(recordingControllerProvider.notifier).dropWaypoint(kind);
     showAppSnackBar(context, '${kind.label} — marked on your trail.');
   }

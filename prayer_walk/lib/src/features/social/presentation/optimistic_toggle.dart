@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/app_haptics.dart';
+
 /// A two-state social toggle that answers instantly and takes it back if the
 /// server disagrees.
 ///
@@ -67,6 +69,11 @@ class _OptimisticToggleState extends State<OptimisticToggle> {
   Future<void> _toggle() async {
     if (_pending != null) return; // A write is already in flight.
     final next = !_effective;
+
+    // Giving is a small act with a result; withdrawing is a correction. The
+    // asymmetry is the point — taking an encouragement back should not feel
+    // like the same event as sending one.
+    next ? AppHaptics.light() : AppHaptics.selection();
     setState(() => _pending = next);
 
     try {
@@ -81,6 +88,9 @@ class _OptimisticToggleState extends State<OptimisticToggle> {
       }
     } catch (error, stack) {
       if (!mounted) return;
+      // The button is about to move back under their thumb. Felt as well as
+      // read, because the revert is easy to miss on a phone held at hip height.
+      AppHaptics.failure();
       setState(() => _pending = null);
       widget.onFailure?.call(error, stack);
     }

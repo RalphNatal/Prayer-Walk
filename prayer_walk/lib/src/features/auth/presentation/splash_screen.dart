@@ -9,6 +9,12 @@ import 'widgets/brand_trail_mark.dart';
 /// It does not navigate. The router's redirect moves on the moment the session
 /// resolves, which means the splash lasts exactly as long as the work does —
 /// no arbitrary timer to sit through.
+///
+/// The mark arrives already drawn. The native splash — same mark, same pine
+/// ground, same size — has been on screen for the whole of process start, and
+/// re-drawing it here would announce the handover as two screens rather than
+/// one held moment. The only thing that moves is the wordmark settling in
+/// underneath it.
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
@@ -22,7 +28,13 @@ class SplashScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF2A4A3A), AppColors.pine, Color(0xFF16281F)],
+            // Centred on pine, which is what the native splash is painted in,
+            // so the handover does not change colour under the mark.
+            colors: [
+              AppColors.pineLift,
+              AppColors.pine,
+              AppColors.pineDeep,
+            ],
           ),
         ),
         child: SafeArea(
@@ -32,7 +44,7 @@ class SplashScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Spacer(),
-                const BrandTrailMark(size: 200),
+                const BrandTrailMark(size: 200, animate: false),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
                   'Prayer Walk',

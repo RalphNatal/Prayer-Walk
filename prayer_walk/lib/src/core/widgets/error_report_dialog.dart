@@ -7,14 +7,59 @@ import 'package:flutter/services.dart';
 /// failure can be read off the emulator without going back to the terminal —
 /// and copied out of it verbatim when it does need to travel.
 class ErrorReport {
-  const ErrorReport({
+  /// [title] is a heading, [message] the consequence. They are never allowed to
+  /// be the same sentence.
+  ///
+  /// A dialog headed "That didn't load" whose body reads "That didn't load."
+  /// has spent two lines saying one thing and left the person no better off —
+  /// which is what this dialog shipped doing. Callers should pass a real pair,
+  /// and most now do; this constructor is the floor under them, so a caller
+  /// that passes one string for both gets the generic heading back rather than
+  /// an echo. Enforced here rather than at the call sites because there is no
+  /// version of this that is worth re-checking in nine screens.
+  factory ErrorReport({
+    required String tag,
+    required String code,
+    required String message,
+    String title = defaultTitle,
+    String? details,
+    StackTrace? stackTrace,
+  }) {
+    final heading = _isSameSentence(title, message)
+        // Falling back to the generic heading only helps if it is not itself
+        // the echo. It never has been; this is here so the rule holds without
+        // depending on that.
+        ? (_isSameSentence(defaultTitle, message) ? 'Error details' : defaultTitle)
+        : title;
+    return ErrorReport._(
+      tag: tag,
+      code: code,
+      message: message,
+      title: heading,
+      details: details,
+      stackTrace: stackTrace,
+    );
+  }
+
+  const ErrorReport._({
     required this.tag,
     required this.code,
     required this.message,
-    this.title = 'What went wrong',
+    required this.title,
     this.details,
     this.stackTrace,
   });
+
+  /// The heading used when a caller has nothing more specific to say.
+  static const String defaultTitle = 'What went wrong';
+
+  /// Two strings that would read as the same line on screen. Trailing
+  /// punctuation and case are the only differences people write by accident.
+  static bool _isSameSentence(String a, String b) {
+    String normalise(String s) =>
+        s.trim().toLowerCase().replaceAll(RegExp(r'[.!\s]+$'), '');
+    return normalise(a) == normalise(b);
+  }
 
   /// The dialog's heading. Names the thing that failed — this report is shown
   /// for saves and posts as well as for sign-in.

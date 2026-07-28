@@ -58,6 +58,7 @@ class FeedScreen extends ConsumerWidget {
         onRefresh: () async => ref.refresh(feedProvider.future),
         child: AsyncView<List<FeedEntry>>(
           value: feed,
+          errorFallback: "The feed couldn't be loaded.",
           onRetry: () => ref.invalidate(feedProvider),
           isEmpty: (entries) => entries.isEmpty,
           loading: const SingleChildScrollView(

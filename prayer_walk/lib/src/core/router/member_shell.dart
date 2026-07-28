@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../constants/app_spacing.dart';
+import '../utils/app_haptics.dart';
+import 'page_transitions.dart';
 
 /// The member experience: five destinations, Record raised in the middle.
 ///
@@ -32,6 +34,7 @@ class MemberShell extends StatelessWidget {
   ];
 
   void _onDestinationSelected(int index) {
+    AppHaptics.selection();
     navigationShell.goBranch(
       index,
       // Tapping the tab you are already on returns to the top of that branch.
@@ -42,7 +45,9 @@ class MemberShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      // Peers crossfade rather than cut. The indexed stack underneath is
+      // untouched — each branch keeps its own navigator and scroll position.
+      body: BranchFade(index: navigationShell.currentIndex, child: navigationShell),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,

@@ -21,6 +21,7 @@ class AsyncView<T> extends StatelessWidget {
     this.isEmpty,
     this.empty,
     this.onRetry,
+    this.errorFallback = "That didn't load.",
   });
 
   final AsyncValue<T> value;
@@ -34,6 +35,12 @@ class AsyncView<T> extends StatelessWidget {
   final Widget Function()? empty;
   final VoidCallback? onRetry;
 
+  /// The line shown when the load fails for a reason the mapper cannot name.
+  /// Should say what this screen could not do — "Devotionals couldn't be
+  /// loaded." — so the failure identifies itself without the person having to
+  /// remember which screen they were on.
+  final String errorFallback;
+
   @override
   Widget build(BuildContext context) {
     if (value.hasValue) {
@@ -44,7 +51,11 @@ class AsyncView<T> extends StatelessWidget {
       return data(resolved);
     }
     if (value.hasError) {
-      return ErrorStateView(error: value.error!, onRetry: onRetry);
+      return ErrorStateView(
+        error: value.error!,
+        onRetry: onRetry,
+        fallback: errorFallback,
+      );
     }
     return loading;
   }

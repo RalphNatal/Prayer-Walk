@@ -113,6 +113,7 @@ class AdminModerationScreen extends ConsumerWidget {
           Expanded(
             child: AsyncView<List<ModerationReport>>(
               value: queue,
+              errorFallback: "The moderation queue couldn't be loaded.",
               onRetry: () => ref.invalidate(moderationQueueProvider),
               isEmpty: (items) => items.isEmpty,
               loading: const Padding(

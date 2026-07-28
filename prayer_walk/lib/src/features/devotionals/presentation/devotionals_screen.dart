@@ -24,6 +24,7 @@ class DevotionalsScreen extends ConsumerWidget {
         onRefresh: () async => ref.refresh(publishedDevotionalsProvider.future),
         child: AsyncView<List<Devotional>>(
           value: devotionals,
+          errorFallback: "Devotionals couldn't be loaded.",
           onRetry: () => ref.invalidate(publishedDevotionalsProvider),
           isEmpty: (items) => items.isEmpty,
           loading: const SingleChildScrollView(
@@ -35,9 +36,12 @@ class DevotionalsScreen extends ConsumerWidget {
             child: EmptyState(
               icon: Icons.auto_stories_outlined,
               title: 'The shelf is empty',
+              // An invitation, not an apology, and not a failure: the table is
+              // there and nobody has published to it yet. The not-set-up state
+              // in [ErrorStateView] is the one that means something is wrong.
               message:
                   'Nothing has been published yet. Check back after your '
-                  'parish adds the first prompt.',
+                  'parish adds the first devotional.',
             ),
           ),
           data: (items) {

@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'
         PostgrestException,
         StorageException;
 
+import '../diagnostics/schema_manifest.dart';
 import '../widgets/error_report_dialog.dart';
 import 'app_exception.dart';
 
@@ -31,6 +32,7 @@ class AppErrorInfo {
     this.details,
     this.isTransport = false,
     this.isMapped = false,
+    this.isSchemaMissing = false,
   });
 
   /// One line for the person holding the phone.
@@ -54,9 +56,19 @@ class AppErrorInfo {
   /// neutral fallback and the details affordance is doing the real work.
   final bool isMapped;
 
+  /// The database does not have something the app asked for by name — a table,
+  /// a column or an RPC that a migration in `supabase/migrations/` creates and
+  /// nobody has run yet.
+  ///
+  /// Distinct from a failure on purpose. Nothing the person does will fix it,
+  /// so a screen showing this must not offer a retry as if it might, and it is
+  /// emphatically not an empty list: the shelf isn't bare, the shelf isn't
+  /// there. `ErrorStateView` reads this to pick between the three.
+  final bool isSchemaMissing;
+
   ErrorReport toReport({
     required String tag,
-    String title = 'What went wrong',
+    String title = ErrorReport.defaultTitle,
     StackTrace? stackTrace,
   }) => ErrorReport(
         tag: tag,
@@ -156,18 +168,23 @@ AppErrorInfo _postgrest(
     if (error.hint != null) 'hint: ${error.hint}',
   ].join('\n');
 
+  // The database does not have something this app asked for by name. Handled
+  // ahead of the table below because all four codes share one diagnosis, one
+  // fix, and one extra paragraph of details — see [_missingSchema].
+  final missing = _kMissingSchemaCodes[code];
+  if (missing != null) {
+    return _missingSchema(
+      error,
+      code: code,
+      kind: missing,
+      diagnostic: diagnostic,
+      details: details,
+    );
+  }
+
   // The message is the caller's fallback unless the code says something
   // definite. Every branch below is a code Postgres or PostgREST sent.
   final (String message, bool mapped) = switch (code) {
-    // Undefined column: the app is asking for something this database does not
-    // have — a migration that has not been applied. Naming the column is what
-    // turns "it didn't save" into a one-line fix.
-    '42703' => (
-      'This app is out of date with the server. '
-          '(schema: ${_quotedName(error.message) ?? 'unknown column'})',
-      true,
-    ),
-    '42P01' => ("Something's missing on the server. Please contact support.", true),
     '42501' => ("You don't have permission to do that.", true),
     '23505' => (uniqueMessage ?? 'That already exists.', true),
     '23503' => ('That item no longer exists.', true),
@@ -186,11 +203,119 @@ AppErrorInfo _postgrest(
   );
 }
 
-/// The first `"quoted"` identifier in a Postgres message — for 42703 that is
-/// the column it could not find.
-String? _quotedName(String message) {
-  final match = RegExp(r'"([^"]+)"').firstMatch(message);
-  return match?.group(1);
+/// What kind of database object the server could not find.
+enum _MissingKind {
+  table('table', "This part of the app isn't set up on the server yet."),
+  column('column', 'The app is newer than the server.'),
+  function('function', "This part of the app isn't set up on the server yet.");
+
+  const _MissingKind(this.label, this.debugMessage);
+
+  /// The word for the thing, for the log line and the details block.
+  final String label;
+
+  /// What a developer reads. In release nobody sees this — see
+  /// [_releaseMissingMessage].
+  final String debugMessage;
+}
+
+/// The four codes that all mean "a migration has not been applied".
+///
+/// Two are PostgREST's — it keeps its own cache of the schema and answers from
+/// that — and two are raw Postgres, which is what comes back for an RPC that
+/// resolved but then touched something absent. Same cause, same fix, so they
+/// share a branch rather than drifting apart in four places.
+const Map<String, _MissingKind> _kMissingSchemaCodes = {
+  // PostgREST: the table is not in the schema cache. This is the one the
+  // Devotionals screen hit.
+  'PGRST205': _MissingKind.table,
+  // PostgREST: the RPC is not in the schema cache — `feed_for`, `admin_metrics`
+  // and friends exist in this repo and not in that database.
+  'PGRST202': _MissingKind.function,
+  // Raw Postgres: undefined table.
+  '42P01': _MissingKind.table,
+  // Raw Postgres: undefined column. The `place_name` failure, exactly.
+  '42703': _MissingKind.column,
+};
+
+/// What someone who is not a developer reads. It promises nothing, blames
+/// nobody, and above all does not tell them to check a connection that is
+/// working perfectly well.
+const String _releaseMissingMessage = "This isn't available right now.";
+
+/// The one actionable line: which file to run.
+const String _migrationHint =
+    "A database migration hasn't been applied. "
+    'See supabase/migrations/ and the README.';
+
+/// A missing table, column or function, described for both audiences at once.
+///
+/// [AppErrorInfo.message] is developer-facing in debug and neutral in release;
+/// [AppErrorInfo.details] always carries the object's name and the next step,
+/// because details are opt-in — nobody reads them by accident — and a support
+/// round trip that starts with the migration filename is a support round trip
+/// that ends immediately.
+///
+/// [AppErrorInfo.isTransport] stays false. Nothing here is the network.
+AppErrorInfo _missingSchema(
+  PostgrestException error, {
+  required String code,
+  required _MissingKind kind,
+  required String diagnostic,
+  required String details,
+}) {
+  final object = _missingObjectName(error.message);
+  final migration = migrationForObject(object);
+
+  final named = object == null ? '' : ' (${kind.label}: $object)';
+  return AppErrorInfo(
+    message: kDebugMode
+        ? '${kind.debugMessage}$named'
+        : _releaseMissingMessage,
+    code: 'postgres:$code',
+    diagnostic:
+        'schema missing — ${kind.label} ${object ?? 'unknown'} '
+        '${migration == null ? '' : '→ ${migrationPath(migration)} '}| $diagnostic',
+    details: [
+      details,
+      '',
+      'missing ${kind.label}: ${object ?? 'unknown'}',
+      _migrationHint,
+      // Only in debug: naming the file is developer guidance, and on a shipped
+      // build it is the internals of the server leaking into a dialog anyone
+      // can open.
+      if (kDebugMode && migration != null)
+        'apply: ${migrationPath(migration)}',
+      if (kDebugMode && migration != null)
+        "then reload PostgREST's cache: NOTIFY pgrst, 'reload schema';",
+    ].join('\n'),
+    isMapped: true,
+    isSchemaMissing: true,
+  );
+}
+
+/// The name of the object a Postgres or PostgREST message is complaining about.
+///
+/// Three shapes, because these four codes come from two different programs:
+///
+/// * PostgREST — `Could not find the table 'public.devotionals' in the schema
+///   cache`, single-quoted;
+/// * Postgres — `column "place_name" of relation "activities" does not exist`,
+///   double-quoted, offending name first;
+/// * PostgREST again — `Could not find the function public.feed_for(viewer) in
+///   the schema cache`, unquoted.
+///
+/// Returns null rather than guessing when none of the three match. An unnamed
+/// object still gets the migration hint; a wrongly named one would send someone
+/// to the wrong file.
+String? _missingObjectName(String message) {
+  final single = RegExp(r"'([^']+)'").firstMatch(message);
+  if (single != null) return single.group(1);
+  final double = RegExp(r'"([^"]+)"').firstMatch(message);
+  if (double != null) return double.group(1);
+  final bare = RegExp(r'\b(?:public|auth)\.([A-Za-z_][A-Za-z0-9_]*)')
+      .firstMatch(message);
+  return bare?.group(1);
 }
 
 /// A genuine transport failure: the request never reached the server, or never

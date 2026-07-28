@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../constants/app_spacing.dart';
+import '../utils/app_haptics.dart';
 import '../utils/app_logger.dart';
 import '../utils/error_messages.dart';
 import 'error_report_dialog.dart';
@@ -109,6 +110,10 @@ AppErrorInfo reportFailure(
     error,
     kDebugMode ? stackTrace : null,
   );
+  // Every failure in the app funnels through here, so this is the one place the
+  // failure pattern needs to fire. A walk is often held at hip height with the
+  // screen unread; a snack bar nobody looks at is a failure nobody notices.
+  AppHaptics.failure();
   if (context.mounted) {
     showFailureSnackBar(
       context,

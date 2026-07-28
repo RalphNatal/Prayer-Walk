@@ -222,6 +222,7 @@ class RecentActivitiesStrip extends ConsumerWidget {
 
     return AsyncView<List<Activity>>(
       value: activities,
+      errorFallback: "Recent walks couldn't be loaded.",
       onRetry: () => ref.invalidate(activitiesForUserProvider(userId)),
       isEmpty: (items) => items.isEmpty,
       // Same 178 height and the same horizontally-scrolling shape as the data

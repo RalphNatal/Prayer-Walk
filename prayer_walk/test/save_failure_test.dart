@@ -70,9 +70,6 @@ class _FinishedRecording extends RecordingController {
 }
 
 void main() {
-  setUpAll(AppTypography.useBundledFonts);
-  tearDownAll(AppTypography.useNetworkFonts);
-
   Future<_FailingRepository> pumpAndSave(
     WidgetTester tester,
     Object failure,
@@ -118,7 +115,7 @@ void main() {
     );
 
     expect(
-      find.textContaining('out of date with the server'),
+      find.textContaining('newer than the server'),
       findsOneWidget,
     );
     expect(find.textContaining('place_name'), findsOneWidget);

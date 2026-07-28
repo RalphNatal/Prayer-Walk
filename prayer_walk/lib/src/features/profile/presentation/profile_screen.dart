@@ -33,6 +33,7 @@ class ProfileScreen extends ConsumerWidget {
         onRefresh: () async => ref.refresh(currentProfileProvider.future),
         child: AsyncView<UserProfile>(
           value: profile,
+          errorFallback: "Your profile couldn't be loaded.",
           onRetry: () => ref.invalidate(currentProfileProvider),
           loading: const SingleChildScrollView(
             physics: AlwaysScrollableScrollPhysics(),

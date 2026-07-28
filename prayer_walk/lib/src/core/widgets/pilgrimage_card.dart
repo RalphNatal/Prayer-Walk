@@ -6,6 +6,7 @@ import '../constants/app_spacing.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import 'activity_type_chip.dart';
+import 'motion.dart';
 import 'route_trail_preview.dart';
 import 'trail_painter.dart';
 import 'user_avatar.dart';
@@ -303,18 +304,21 @@ class _CardActions extends StatelessWidget {
           // keeps them at their natural size until they would not both fit,
           // then each gives way inside its own half.
           Flexible(
-            child: _CardAction(
-              icon: encouraged
-                  ? Icons.local_fire_department_rounded
-                  : Icons.local_fire_department_outlined,
-              label: encouragementCount == 0
-                  ? 'Encourage'
-                  : '$encouragementCount',
-              semanticLabel: encouraged
-                  ? 'Withdraw encouragement. ${Fmt.plural(encouragementCount, 'encouragement')}'
-                  : 'Send encouragement. ${Fmt.plural(encouragementCount, 'encouragement')}',
-              color: encouraged ? scheme.tertiary : scheme.onSurfaceVariant,
-              onPressed: onEncourage,
+            child: Kindle(
+              lit: encouraged,
+              child: _CardAction(
+                icon: encouraged
+                    ? Icons.local_fire_department_rounded
+                    : Icons.local_fire_department_outlined,
+                label: encouragementCount == 0
+                    ? 'Encourage'
+                    : '$encouragementCount',
+                semanticLabel: encouraged
+                    ? 'Withdraw encouragement. ${Fmt.plural(encouragementCount, 'encouragement')}'
+                    : 'Send encouragement. ${Fmt.plural(encouragementCount, 'encouragement')}',
+                color: encouraged ? scheme.tertiary : scheme.onSurfaceVariant,
+                onPressed: onEncourage,
+              ),
             ),
           ),
           Flexible(

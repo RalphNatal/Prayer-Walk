@@ -14,7 +14,7 @@
     <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false"/>
     <uses-feature android:name="android.hardware.sensor.stepdetector" android:required="false"/>
     <application
-        android:label="prayer_walk"
+        android:label="Prayer Walk"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

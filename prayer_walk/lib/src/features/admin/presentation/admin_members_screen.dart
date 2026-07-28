@@ -106,6 +106,7 @@ class _AdminMembersScreenState extends ConsumerState<AdminMembersScreen> {
           Expanded(
             child: AsyncView<List<UserProfile>>(
               value: members,
+              errorFallback: "The member list couldn't be loaded.",
               onRetry: () => ref.invalidate(adminMembersProvider),
               isEmpty: (items) => items.isEmpty,
               loading: const Padding(
@@ -178,22 +179,24 @@ class _MemberRow extends StatelessWidget {
         initials: member.initials,
         accentIndex: member.accentIndex,
       ),
-      title: Row(
+      // A long name plus two pills is wider than a phone. The pills wrap under
+      // the name rather than being squeezed or clipped: "Suspended" is the
+      // single most important word in this row, and a truncated one would be
+      // worse than a second line.
+      title: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xxs,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Flexible(
-            child: Text(
-              member.displayName,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleSmall,
-            ),
+          Text(
+            member.displayName,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleSmall,
           ),
-          const SizedBox(width: AppSpacing.sm),
           if (member.role == UserRole.admin)
             const StatusPill(label: 'Admin', tone: PillTone.info),
-          if (member.status == MemberStatus.suspended) ...[
-            const SizedBox(width: AppSpacing.xs),
+          if (member.status == MemberStatus.suspended)
             const StatusPill(label: 'Suspended', tone: PillTone.danger),
-          ],
         ],
       ),
       subtitle: Text(

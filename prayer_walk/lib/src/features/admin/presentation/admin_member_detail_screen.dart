@@ -148,6 +148,7 @@ class AdminMemberDetailScreen extends ConsumerWidget {
       showBack: true,
       body: AsyncView<UserProfile>(
         value: member,
+        errorFallback: "That member's record couldn't be loaded.",
         onRetry: () => ref.invalidate(adminMemberProvider(memberId)),
         loading: const Padding(
           padding: EdgeInsets.all(AppSpacing.lg),
@@ -335,11 +336,17 @@ class _DetailTable extends StatelessWidget {
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.md,
               ),
-              child: Row(
+              // Label left, value right — until they no longer fit, at which
+              // point the value drops to its own line rather than running off
+              // the card. "San Roque Parish, Mandaluyong" beside "Parish" is
+              // wider than a 320dp phone before the text scale is touched.
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.xxs,
                 children: [
-                  Expanded(
-                    child: Text(rows[i].$1, style: theme.textTheme.bodyMedium),
-                  ),
+                  Text(rows[i].$1, style: theme.textTheme.bodyMedium),
                   Text(rows[i].$2, style: theme.textTheme.titleSmall),
                 ],
               ),

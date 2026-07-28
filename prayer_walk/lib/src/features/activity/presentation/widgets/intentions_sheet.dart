@@ -150,6 +150,7 @@ class _IntentionsSheetState extends ConsumerState<_IntentionsSheet> {
                 const SectionHeader(title: 'Suggestions', dense: true),
                 AsyncView<List<PrayerIntention>>(
                   value: suggestions,
+                  errorFallback: "Suggested intentions couldn't be loaded.",
                   onRetry: () => ref.invalidate(suggestedIntentionsProvider),
                   isEmpty: (items) => items.isEmpty,
                   loading: const ShimmerScope(

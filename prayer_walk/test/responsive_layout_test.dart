@@ -11,8 +11,20 @@ import 'package:prayer_walk/src/features/activity/domain/activity_repository.dar
 import 'package:prayer_walk/src/features/activity/presentation/activity_detail_screen.dart';
 import 'package:prayer_walk/src/features/activity/presentation/activity_summary_screen.dart';
 import 'package:prayer_walk/src/features/activity/presentation/live_tracking_screen.dart';
+import 'package:prayer_walk/src/features/admin/data/admin_providers.dart';
+import 'package:prayer_walk/src/features/admin/domain/admin_models.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_announcement_compose_screen.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_content_screen.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_dashboard_screen.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_member_detail_screen.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_members_screen.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_moderation_screen.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_scripture_form_screen.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_scripture_screen.dart';
 import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
+import 'package:prayer_walk/src/features/devotionals/data/devotional_providers.dart';
 import 'package:prayer_walk/src/features/devotionals/domain/devotional.dart';
+import 'package:prayer_walk/src/features/scripture/data/scripture_providers.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_settings.dart';
 import 'package:prayer_walk/src/features/profile/data/profile_providers.dart';
@@ -202,9 +214,6 @@ MaterialApp _app(Widget home, double scale) => MaterialApp(
 );
 
 void main() {
-  setUpAll(AppTypography.useBundledFonts);
-  tearDownAll(AppTypography.useNetworkFonts);
-
   /// Pumps [root] on a screen [width] logical pixels wide and returns having
   /// given animations a moment to start.
   ///
@@ -464,6 +473,188 @@ void main() {
         contains(const FontFeature.tabularFigures()),
       );
       expect(value.style?.fontFamily, AppTypography.displayFamily);
+    });
+  });
+
+  // ------------------------------------------------------------ the console ---
+  //
+  // The admin screens were built last and fastest, and they are the densest
+  // surfaces in the app: filter chip rows, member rows carrying two pills and a
+  // date, report cards whose "reason" is free text a member typed. Every one of
+  // those is a way to run off the side of a 320dp phone at 2× text.
+  //
+  // The console is reachable on a phone (it falls back to a drawer below the
+  // wide breakpoint), so these run at the same widths as everything else.
+
+  /// Two members, chosen to be awkward: one long name with both pills showing,
+  /// one ordinary.
+  List<UserProfile> members() => [
+    UserProfile(
+      id: _viewerId,
+      displayName: 'Maria Auxiliadora Reyes-Villanueva',
+      handle: '@mariaauxiliadorawalks',
+      role: UserRole.admin,
+      status: MemberStatus.suspended,
+      joinedAt: DateTime(2024, 3, 14),
+      accentIndex: 0,
+      parish: 'San Roque Parish, Mandaluyong',
+      bio: 'Out before the jeepneys. Six laps of the village, then coffee.',
+    ),
+    UserProfile(
+      id: 'b6f3e1a2-0000-4000-8000-0000000000bb',
+      displayName: 'Ben Ocampo',
+      handle: '@benocampo',
+      role: UserRole.member,
+      status: MemberStatus.active,
+      joinedAt: DateTime(2025, 1, 2),
+      accentIndex: 3,
+    ),
+  ];
+
+  /// One report with a long free-text reason, and one whose target is gone.
+  List<ModerationReport> reports() => [
+    ModerationReport(
+      id: 'r_1',
+      targetType: ReportTargetType.comment,
+      targetId: 'c_1',
+      targetExcerpt: 'Cheap shoes at half price, message me — best in Manila',
+      targetAuthorName: 'Pia Mendoza',
+      reportedByName: 'Daniel Cruz',
+      reason: 'Spam or advertising — they have posted this on four walks now',
+      createdAt: DateTime(2026, 7, 20),
+      status: ReportStatus.pending,
+    ),
+    ModerationReport(
+      id: 'r_2',
+      targetType: ReportTargetType.activity,
+      targetId: 'a_1',
+      targetExcerpt: 'This content has been removed.',
+      targetAuthorName: 'Unknown',
+      reportedByName: 'Grace Tan',
+      reason: 'Not appropriate here',
+      createdAt: DateTime(2026, 7, 18),
+      status: ReportStatus.pending,
+      targetRemoved: true,
+    ),
+  ];
+
+  ProviderScope console(Widget screen, double scale) => ProviderScope(
+    overrides: [
+      adminRepositoryProvider.overrideWithValue(
+        StubAdminRepository(memberRows: members(), reportRows: reports()),
+      ),
+      devotionalRepositoryProvider.overrideWith(
+        (ref) => StubDevotionalRepository(),
+      ),
+      scriptureRepositoryProvider.overrideWith(
+        (ref) => StubScriptureRepository(),
+      ),
+      profileRepositoryProvider.overrideWithValue(
+        const _StubProfileRepository(),
+      ),
+      currentAuthUserIdProvider.overrideWith((ref) => _viewerId),
+    ],
+    child: _app(screen, scale),
+  );
+
+  group('the admin dashboard', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminDashboardScreen(), scale),
+        width: width,
+      );
+      // The first metric card. Anything further down is below the fold at 2×
+      // text on a 320dp phone — a scroll position, not a layout fault, and the
+      // overflow assertion in `forEverySize` is what covers the rest.
+      expect(find.text('Total members'), findsOneWidget);
+    });
+  });
+
+  group('the admin members table', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminMembersScreen(), scale),
+        width: width,
+      );
+      // The long name is the case that overflows if the row is not flexible.
+      expect(find.textContaining('Maria Auxiliadora'), findsOneWidget);
+    });
+  });
+
+  group('the admin member detail', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminMemberDetailScreen(memberId: _viewerId), scale),
+        width: width,
+      );
+    });
+  });
+
+  group('the moderation queue', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminModerationScreen(), scale),
+        width: width,
+      );
+      // The first card, whose free-text reason is the longest string a member
+      // can put into this screen. The removed-target card below it is
+      // off-screen at the larger scales.
+      expect(find.textContaining('Spam or advertising'), findsOneWidget);
+    });
+  });
+
+  group('the admin content list', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminContentScreen(), scale),
+        width: width,
+      );
+      // Three wrapped actions per row plus a status pill — the row most likely
+      // to run off the side at 2×.
+      expect(find.text('Published'), findsWidgets);
+    });
+  });
+
+  group('the scripture prompt list', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminScriptureScreen(), scale),
+        width: width,
+      );
+      // The licensing note sits above the list and is the widest block of
+      // prose anywhere in the console.
+      expect(find.textContaining('Public-domain text only'), findsOneWidget);
+    });
+  });
+
+  group('the scripture prompt form', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminScriptureFormScreen(), scale),
+        width: width,
+      );
+      // The segmented Kind control at the head of the form. The six-chip theme
+      // wrap below it is the part the overflow assertion is really watching.
+      expect(find.text('Scripture'), findsWidgets);
+    });
+  });
+
+  group('the announcement composer', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminAnnouncementComposeScreen(), scale),
+        width: width,
+      );
+      // The page title — the send button is at the foot of a long form.
+      expect(find.text('Compose announcement'), findsOneWidget);
     });
   });
 }

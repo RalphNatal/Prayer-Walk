@@ -126,6 +126,7 @@ class AdminScriptureScreen extends ConsumerWidget {
       ),
       body: AsyncView<List<ScripturePrompt>>(
         value: prompts,
+        errorFallback: "Scripture prompts couldn't be loaded.",
         onRetry: () => ref.invalidate(allScripturePromptsProvider),
         isEmpty: (items) => items.isEmpty,
         loading: const Padding(

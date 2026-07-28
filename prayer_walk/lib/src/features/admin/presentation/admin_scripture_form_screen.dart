@@ -115,6 +115,7 @@ class _AdminScriptureFormScreenState
     final prompts = ref.watch(allScripturePromptsProvider);
     return AsyncView<List<ScripturePrompt>>(
       value: prompts,
+      errorFallback: "That prompt couldn't be opened for editing.",
       onRetry: () => ref.invalidate(allScripturePromptsProvider),
       loading: const AdminPage(
         title: 'Edit prompt',

@@ -32,6 +32,7 @@ class AdminDashboardScreen extends ConsumerWidget {
       ],
       body: AsyncView<AdminMetrics>(
         value: metrics,
+        errorFallback: "The dashboard figures couldn't be loaded.",
         onRetry: () => ref.invalidate(adminMetricsProvider),
         loading: const Padding(
           padding: EdgeInsets.all(AppSpacing.lg),

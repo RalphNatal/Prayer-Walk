@@ -7,6 +7,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/app.dart';
 import 'src/core/config/app_config.dart';
+import 'src/core/diagnostics/schema_preflight.dart';
+import 'src/core/theme/app_typography.dart';
+import 'src/core/utils/app_haptics.dart';
 import 'src/core/utils/app_logger.dart';
 
 /// Three nets, because an uncaught error can escape by three different routes
@@ -26,6 +29,15 @@ void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      // Both bundled families are OFL 1.1, which requires the licence to travel
+      // with them. Registered here so it reaches the app's licence page whether
+      // or not startup goes on to succeed.
+      AppTypography.registerFontLicences();
+
+      // Read once, so every later call site can fire synchronously. Failure
+      // leaves feedback on, which is the default anyone would expect.
+      await AppHaptics.restore();
 
       FlutterError.onError = (details) {
         AppLogger.fatal(
@@ -61,6 +73,13 @@ void main() {
         runApp(StartupErrorApp(error: error, stackTrace: stackTrace));
         return;
       }
+
+      // Deliberately not awaited. It asks the database whether it has the
+      // tables and RPCs this build expects, which is worth knowing at startup
+      // and never worth waiting for — a preflight that delays the first frame
+      // has become a worse problem than the drift it reports. Debug and
+      // internal builds only; a no-op in release.
+      unawaited(SchemaPreflight.run());
 
       runApp(const ProviderScope(child: PrayerWalkApp()));
     },

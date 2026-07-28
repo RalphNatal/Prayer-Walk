@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prayer_walk/src/app.dart';
 import 'support/mock_backend/mock_backend.dart';
 import 'support/mock_backend/seed_data.dart';
-import 'package:prayer_walk/src/core/theme/app_typography.dart';
 import 'package:prayer_walk/src/core/widgets/pilgrimage_card.dart';
 import 'package:prayer_walk/src/features/activity/data/activity_providers.dart';
 import 'package:prayer_walk/src/features/admin/data/admin_providers.dart';
@@ -59,9 +58,6 @@ ProviderScope _appAs(UserRole role) => ProviderScope(
 );
 
 void main() {
-  setUpAll(AppTypography.useBundledFonts);
-  tearDownAll(AppTypography.useNetworkFonts);
-
   Future<void> settle(WidgetTester tester) async {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));

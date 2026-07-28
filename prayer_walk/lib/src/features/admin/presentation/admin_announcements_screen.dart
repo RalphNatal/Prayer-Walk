@@ -29,6 +29,7 @@ class AdminAnnouncementsScreen extends ConsumerWidget {
       ),
       body: AsyncView<List<Announcement>>(
         value: announcements,
+        errorFallback: "Announcements couldn't be loaded.",
         onRetry: () => ref.invalidate(announcementsProvider),
         isEmpty: (items) => items.isEmpty,
         loading: const Padding(

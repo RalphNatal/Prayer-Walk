@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/app_spacing.dart';
@@ -82,17 +83,39 @@ class EmptyState extends StatelessWidget {
 }
 
 /// What happened, and what to do about it. No apology.
+///
+/// Two of the three states a list can be in that are not "here is your list".
+/// The third is [EmptyState], and keeping them visibly apart is the whole job
+/// of this widget:
+///
+/// * **failed** — a transport blip, an expired session, a policy refusal. The
+///   person can retry and it might work. Cloud-off icon, retry, details.
+/// * **not set up** — the table or RPC is not in the database, because a
+///   migration has not been applied. Retrying will fail identically forever, so
+///   there is no retry button; in debug the object and its migration file are
+///   named on screen. See `AppErrorInfo.isSchemaMissing`.
+/// * **empty** — [EmptyState], and nothing here. The shelf being bare is not a
+///   failure and must never be dressed as one.
 class ErrorStateView extends StatelessWidget {
   const ErrorStateView({
     super.key,
     required this.error,
     this.onRetry,
     this.compact = false,
+    this.fallback = "That didn't load.",
   });
 
   final Object error;
   final VoidCallback? onRetry;
   final bool compact;
+
+  /// What the person reads when the cause is not one the mapper recognises.
+  ///
+  /// Names *this* screen's action — "Devotionals couldn't be loaded." — rather
+  /// than the generic line, so a failure says which thing failed. It is also
+  /// the dialog's body, which is why the heading below is a separate, shorter
+  /// string: one statement of the problem per surface.
+  final String fallback;
 
   @override
   Widget build(BuildContext context) {
@@ -100,11 +123,10 @@ class ErrorStateView extends StatelessWidget {
     final appError = error is AppException ? error as AppException : null;
     // What actually failed, rather than the old assumption that every failed
     // read was the network. An [AppException] still speaks for itself; a
-    // Postgres code gets named; anything unrecognised gets a neutral line and
-    // the details button below.
-    final info = describeFailure(error, fallback: "That didn't load.");
-    final message = info.message;
-    final actionLabel = appError?.actionLabel ?? 'Try again';
+    // Postgres code gets named; anything unrecognised gets the caller's line
+    // and the details button below.
+    final info = describeFailure(error, fallback: fallback);
+    final notSetUp = info.isSchemaMissing;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -122,21 +144,38 @@ class ErrorStateView extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.cloud_off_rounded,
+              // Not a cloud with a line through it: nothing is disconnected.
+              notSetUp ? Icons.dns_outlined : Icons.cloud_off_rounded,
               size: 28,
               color: theme.colorScheme.onErrorContainer,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            message,
+            info.message,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge,
           ),
-          if (onRetry != null) ...[
+          // Only a developer can act on this, and only in a build where the
+          // name means something. Kept out of release by [kDebugMode] as well
+          // as by the mapper, which does not name objects on a shipped build.
+          if (notSetUp && kDebugMode) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'A migration has not been applied. '
+              'Open Details, or check the [PW-SCHEMA] block in the log.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          // No retry for a missing table. The button would be a promise that
+          // pressing it changes something, and it cannot.
+          if (onRetry != null && !notSetUp) ...[
             const SizedBox(height: AppSpacing.xl),
             SecondaryButton(
-              label: actionLabel,
+              label: appError?.actionLabel ?? 'Try again',
               icon: Icons.refresh_rounded,
               onPressed: onRetry,
             ),
@@ -149,7 +188,13 @@ class ErrorStateView extends StatelessWidget {
               label: 'Details',
               onPressed: () => showErrorReport(
                 context,
-                info.toReport(tag: 'PW-LOAD', title: "That didn't load"),
+                // A heading, not a second copy of the sentence already on
+                // screen. `ErrorReport` enforces this too, but a caller that
+                // relies on being corrected is a caller that says nothing.
+                info.toReport(
+                  tag: 'PW-LOAD',
+                  title: notSetUp ? 'Not set up on the server' : 'Load failed',
+                ),
               ),
             ),
           ],

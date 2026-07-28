@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
@@ -140,11 +141,14 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
         children: [
-          RouteMapView(
+          // The one place in the app where the trail draws itself in. This is
+          // the walk that has just been finished, and watching the line arrive
+          // is the closest thing the app has to a moment of arrival — so it is
+          // slow, quiet, and happens exactly once. A still frame under reduced
+          // motion: the route is the information, the drawing is not.
+          _RevealedRoute(
             points: draft.route,
             waypoints: draft.waypoints.toTrailWaypoints(theme.trail),
-            height: 260,
-            interactive: false,
             semanticLabel:
                 'Map of the walk you just finished, '
                 '${Fmt.distance(draft.distanceMeters)}',
@@ -368,6 +372,77 @@ class _WaypointRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The finished walk, drawing itself in once.
+///
+/// The camera still fits the whole route on first layout — only the line is
+/// revealed — so the map holds still while the trail arrives inside it.
+///
+/// Deliberately slower than anything else in the app at 1.4 seconds. Every
+/// other animation here is a response to a tap and has to get out of the way;
+/// this one is the thing being looked at.
+class _RevealedRoute extends StatefulWidget {
+  const _RevealedRoute({
+    required this.points,
+    required this.waypoints,
+    required this.semanticLabel,
+  });
+
+  final List<LatLng> points;
+  final List<TrailWaypoint> waypoints;
+  final String semanticLabel;
+
+  @override
+  State<_RevealedRoute> createState() => _RevealedRouteState();
+}
+
+class _RevealedRouteState extends State<_RevealedRoute>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  late final Animation<double> _reveal = CurvedAnimation(
+    parent: _controller,
+    // Out of the gate steadily, easing off at the end rather than stopping
+    // dead. Nothing accelerates — a trail that speeds up reads as impatient.
+    curve: Curves.easeOutSine,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (context.reduceMotion) {
+      _controller.value = 1;
+    } else if (!_controller.isAnimating && _controller.value == 0) {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _reveal,
+      builder: (context, _) => RouteMapView(
+        points: widget.points,
+        // The candles are already lit when the line reaches them; they were
+        // placed during the walk, not by this animation.
+        waypoints: widget.waypoints,
+        height: 260,
+        interactive: false,
+        revealProgress: _reveal.value,
+        semanticLabel: widget.semanticLabel,
       ),
     );
   }

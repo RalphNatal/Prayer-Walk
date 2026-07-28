@@ -34,12 +34,19 @@ import '../../features/profile/presentation/user_profile_screen.dart';
 import 'admin_shell.dart';
 import 'member_shell.dart';
 import 'not_found_screen.dart';
+import 'page_transitions.dart';
 import 'routes.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 /// One router for both experiences. Which shell you land in is decided by
 /// [redirect] reading the role provider — in this phase, the dev role switcher.
+///
+/// Routes that use `pageBuilder` rather than `builder` are opting into the
+/// app's transition vocabulary (see `page_transitions.dart`): a fade-through
+/// for anything pushed on top of what you were reading, and the one directional
+/// move for record → live → summary. The rest keep `builder`, which is correct
+/// for them — a shell branch's root has no transition of its own.
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh(ref);
   ref.onDispose(refresh.dispose);
@@ -71,30 +78,43 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.activityDetailPath,
         name: Routes.activityDetail,
-        builder: (context, state) => ActivityDetailScreen(
-          activityId: state.pathParameters['activityId']!,
+        pageBuilder: (context, state) => fadeThroughPage(
+          context,
+          state,
+          ActivityDetailScreen(activityId: state.pathParameters['activityId']!),
         ),
       ),
       GoRoute(
         path: Routes.userProfilePath,
         name: Routes.userProfile,
-        builder: (context, state) =>
-            UserProfileScreen(userId: state.pathParameters['userId']!),
+        pageBuilder: (context, state) => fadeThroughPage(
+          context,
+          state,
+          UserProfileScreen(userId: state.pathParameters['userId']!),
+        ),
         routes: [
           GoRoute(
             path: Routes.followersPath,
             name: Routes.followers,
-            builder: (context, state) => FollowListScreen(
-              userId: state.pathParameters['userId']!,
-              mode: FollowListMode.followers,
+            pageBuilder: (context, state) => fadeThroughPage(
+              context,
+              state,
+              FollowListScreen(
+                userId: state.pathParameters['userId']!,
+                mode: FollowListMode.followers,
+              ),
             ),
           ),
           GoRoute(
             path: Routes.followingPath,
             name: Routes.following,
-            builder: (context, state) => FollowListScreen(
-              userId: state.pathParameters['userId']!,
-              mode: FollowListMode.following,
+            pageBuilder: (context, state) => fadeThroughPage(
+              context,
+              state,
+              FollowListScreen(
+                userId: state.pathParameters['userId']!,
+                mode: FollowListMode.following,
+              ),
             ),
           ),
         ],
@@ -133,8 +153,12 @@ final _memberShell = StatefulShellRoute.indexedStack(
               name: Routes.devotionalReader,
               // Full screen: reading is not a tabbed activity.
               parentNavigatorKey: _rootNavigatorKey,
-              builder: (context, state) => DevotionalReaderScreen(
-                devotionalId: state.pathParameters['devotionalId']!,
+              pageBuilder: (context, state) => fadeThroughPage(
+                context,
+                state,
+                DevotionalReaderScreen(
+                  devotionalId: state.pathParameters['devotionalId']!,
+                ),
               ),
             ),
           ],
@@ -148,17 +172,23 @@ final _memberShell = StatefulShellRoute.indexedStack(
           name: Routes.record,
           builder: (context, state) => const RecordScreen(),
           routes: [
+            // The one forward-moving sequence in the app: choose what you
+            // carry, walk it, read it back. These two get the directional
+            // transition, and nothing else in the app does — which is what
+            // keeps the direction meaningful.
             GoRoute(
               path: Routes.liveTrackingPath,
               name: Routes.liveTracking,
               parentNavigatorKey: _rootNavigatorKey,
-              builder: (context, state) => const LiveTrackingScreen(),
+              pageBuilder: (context, state) =>
+                  forwardPage(context, state, const LiveTrackingScreen()),
             ),
             GoRoute(
               path: Routes.activitySummaryPath,
               name: Routes.activitySummary,
               parentNavigatorKey: _rootNavigatorKey,
-              builder: (context, state) => const ActivitySummaryScreen(),
+              pageBuilder: (context, state) =>
+                  forwardPage(context, state, const ActivitySummaryScreen()),
             ),
           ],
         ),
@@ -184,13 +214,15 @@ final _memberShell = StatefulShellRoute.indexedStack(
               path: Routes.editProfilePath,
               name: Routes.editProfile,
               parentNavigatorKey: _rootNavigatorKey,
-              builder: (context, state) => const EditProfileScreen(),
+              pageBuilder: (context, state) =>
+                  fadeThroughPage(context, state, const EditProfileScreen()),
             ),
             GoRoute(
               path: Routes.settingsPath,
               name: Routes.settings,
               parentNavigatorKey: _rootNavigatorKey,
-              builder: (context, state) => const SettingsScreen(),
+              pageBuilder: (context, state) =>
+                  fadeThroughPage(context, state, const SettingsScreen()),
             ),
           ],
         ),
@@ -224,8 +256,12 @@ final _adminShell = StatefulShellRoute.indexedStack(
             GoRoute(
               path: Routes.adminMemberDetailPath,
               name: Routes.adminMemberDetail,
-              builder: (context, state) => AdminMemberDetailScreen(
-                memberId: state.pathParameters['memberId']!,
+              pageBuilder: (context, state) => fadeThroughPage(
+                context,
+                state,
+                AdminMemberDetailScreen(
+                  memberId: state.pathParameters['memberId']!,
+                ),
               ),
             ),
           ],
@@ -242,30 +278,47 @@ final _adminShell = StatefulShellRoute.indexedStack(
             GoRoute(
               path: Routes.adminContentCreatePath,
               name: Routes.adminContentCreate,
-              builder: (context, state) => const AdminContentFormScreen(),
+              pageBuilder: (context, state) => fadeThroughPage(
+                context,
+                state,
+                const AdminContentFormScreen(),
+              ),
             ),
             GoRoute(
               path: Routes.adminContentEditPath,
               name: Routes.adminContentEdit,
-              builder: (context, state) => AdminContentFormScreen(
-                devotionalId: state.pathParameters['devotionalId'],
+              pageBuilder: (context, state) => fadeThroughPage(
+                context,
+                state,
+                AdminContentFormScreen(
+                  devotionalId: state.pathParameters['devotionalId'],
+                ),
               ),
             ),
             GoRoute(
               path: Routes.adminScripturePath,
               name: Routes.adminScripture,
-              builder: (context, state) => const AdminScriptureScreen(),
+              pageBuilder: (context, state) =>
+                  fadeThroughPage(context, state, const AdminScriptureScreen()),
               routes: [
                 GoRoute(
                   path: Routes.adminScriptureCreatePath,
                   name: Routes.adminScriptureCreate,
-                  builder: (context, state) => const AdminScriptureFormScreen(),
+                  pageBuilder: (context, state) => fadeThroughPage(
+                    context,
+                    state,
+                    const AdminScriptureFormScreen(),
+                  ),
                 ),
                 GoRoute(
                   path: Routes.adminScriptureEditPath,
                   name: Routes.adminScriptureEdit,
-                  builder: (context, state) => AdminScriptureFormScreen(
-                    promptId: state.pathParameters['promptId'],
+                  pageBuilder: (context, state) => fadeThroughPage(
+                    context,
+                    state,
+                    AdminScriptureFormScreen(
+                      promptId: state.pathParameters['promptId'],
+                    ),
                   ),
                 ),
               ],
@@ -293,8 +346,11 @@ final _adminShell = StatefulShellRoute.indexedStack(
             GoRoute(
               path: Routes.adminAnnouncementComposePath,
               name: Routes.adminAnnouncementCompose,
-              builder: (context, state) =>
-                  const AdminAnnouncementComposeScreen(),
+              pageBuilder: (context, state) => fadeThroughPage(
+                context,
+                state,
+                const AdminAnnouncementComposeScreen(),
+              ),
             ),
           ],
         ),

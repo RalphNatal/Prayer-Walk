@@ -5,6 +5,8 @@ import 'package:prayer_walk/src/features/devotionals/domain/devotional_repositor
 import 'package:prayer_walk/src/features/feed/domain/feed_entry.dart';
 import 'package:prayer_walk/src/features/feed/domain/feed_repository.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_repository.dart';
 import 'package:prayer_walk/src/features/social/domain/social_repository.dart';
 
 /// Repository doubles for widget tests.
@@ -171,8 +173,20 @@ class StubDevotionalRepository implements DevotionalRepository {
 /// Enough of the console to render its screens. The reads answer; the writes
 /// throw, because no test drives one and a silent no-op would be the wrong
 /// thing to discover later.
+///
+/// [memberRows] and [reportRows] default to empty so a reachability test gets
+/// the honest empty states. The responsive suite passes real ones — an empty
+/// list cannot overflow, so a layout test that sees no rows is testing nothing.
 class StubAdminRepository implements AdminRepository {
-  const StubAdminRepository();
+  const StubAdminRepository({
+    this.memberRows = const [],
+    this.reportRows = const [],
+    this.announcementRows = const [],
+  });
+
+  final List<UserProfile> memberRows;
+  final List<ModerationReport> reportRows;
+  final List<Announcement> announcementRows;
 
   @override
   Future<AdminMetrics> metrics() async {
@@ -191,14 +205,16 @@ class StubAdminRepository implements AdminRepository {
   }
 
   @override
-  Future<List<UserProfile>> members(MemberQuery query) async => const [];
+  Future<List<UserProfile>> members(MemberQuery query) async => memberRows;
 
   @override
-  Future<UserProfile> memberById(String id) async =>
-      throw UnimplementedError();
+  Future<UserProfile> memberById(String id) async => memberRows.firstWhere(
+    (m) => m.id == id,
+    orElse: () => throw StateError('no member $id'),
+  );
 
   @override
-  Future<int> activityCountFor(String userId) async => 0;
+  Future<int> activityCountFor(String userId) async => 42;
 
   @override
   Future<UserProfile> setRole(String userId, UserRole role) async =>
@@ -210,7 +226,9 @@ class StubAdminRepository implements AdminRepository {
 
   @override
   Future<List<ModerationReport>> reports({ReportStatus? status}) async =>
-      const [];
+      status == null
+      ? reportRows
+      : reportRows.where((r) => r.status == status).toList();
 
   @override
   Future<ModerationReport> resolveReport(
@@ -219,7 +237,7 @@ class StubAdminRepository implements AdminRepository {
   ) async => throw UnimplementedError();
 
   @override
-  Future<List<Announcement>> announcements() async => const [];
+  Future<List<Announcement>> announcements() async => announcementRows;
 
   @override
   Future<Announcement> sendAnnouncement({
@@ -246,4 +264,63 @@ class FailingSocialRepository extends FakeSocialRepository {
     required String viewerId,
     required String otherId,
   }) async => throw Exception('offline');
+}
+
+/// The prompt library in memory.
+///
+/// [publishedPrompts] never throws, matching the contract the real one keeps —
+/// a walk must get verses or an empty list, never an exception.
+class StubScriptureRepository implements ScriptureRepository {
+  StubScriptureRepository([List<ScripturePrompt>? prompts])
+    : prompts = prompts ?? defaultPrompts();
+
+  final List<ScripturePrompt> prompts;
+
+  static List<ScripturePrompt> defaultPrompts() => const [
+    ScripturePrompt(
+      id: 'p_1',
+      reference: 'Psalm 121:1-2',
+      body:
+          'I will lift up my eyes to the hills. Where does my help come from? '
+          'My help comes from the LORD, who made heaven and earth.',
+      translation: 'WEBBE',
+      category: DevotionalCategory.scriptureWalk,
+      sortOrder: 10,
+    ),
+    ScripturePrompt(
+      id: 'p_2',
+      reference: 'Before the first mile',
+      body:
+          'Lord, the day is not mine to command. Walk it with me, and let me '
+          'notice what you have already put in it.',
+      kind: ScripturePromptKind.prayer,
+      category: DevotionalCategory.morningLight,
+      sortOrder: 20,
+      isPublished: false,
+    ),
+  ];
+
+  @override
+  Future<List<ScripturePrompt>> publishedPrompts({
+    DevotionalCategory? category,
+  }) async => prompts
+      .where((p) => p.isPublished)
+      .where((p) => category == null || p.category == category)
+      .toList();
+
+  @override
+  Future<List<ScripturePrompt>> allPrompts() async => List.of(prompts);
+
+  @override
+  Future<ScripturePrompt> savePrompt(ScripturePromptDraft draft) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<ScripturePrompt> setPublished(
+    String id, {
+    required bool published,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<void> deletePrompt(String id) async => throw UnimplementedError();
 }

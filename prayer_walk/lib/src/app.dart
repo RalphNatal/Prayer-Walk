@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/diagnostics/schema_preflight_banner.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
@@ -18,6 +19,11 @@ class PrayerWalkApp extends ConsumerWidget {
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeModeControllerProvider),
       routerConfig: ref.watch(routerProvider),
+      // Above the router so it survives navigation, below `MaterialApp` so it
+      // has a Directionality and an Overlay. Compiles to a passthrough in
+      // release — see `SchemaPreflight.isEnabled`.
+      builder: (context, child) =>
+          SchemaPreflightBanner(child: child ?? const SizedBox.shrink()),
     );
   }
 }

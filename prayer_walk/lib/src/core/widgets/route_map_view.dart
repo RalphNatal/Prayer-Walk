@@ -42,6 +42,7 @@ class RouteMapView extends StatefulWidget {
     this.semanticLabel,
     this.borderRadius,
     this.locatingLabel = 'Finding you…',
+    this.revealProgress = 1,
   });
 
   /// The traced route. Empty renders the basemap around [center] — which is
@@ -85,6 +86,19 @@ class RouteMapView extends StatefulWidget {
   /// Shown instead of the map when there is no route, no centre and no
   /// position — see [_LocatingView].
   final String locatingLabel;
+
+  /// How much of [points] to draw, 0 to 1. Defaults to the whole route, which
+  /// is what every caller but one wants.
+  ///
+  /// The summary screen animates this from zero so the walk that was just
+  /// finished draws itself in rather than arriving fully formed. Only the line
+  /// is affected: the camera still fits the *complete* route on first layout,
+  /// so the map does not creep outwards as the trail grows, and the end marker
+  /// waits until there is an end to mark.
+  ///
+  /// Nothing about tiles, accuracy or the live camera reads this. A caller that
+  /// leaves it alone gets exactly the previous behaviour.
+  final double revealProgress;
 
   /// Fallback only. The public OSM tile server is community-funded and its
   /// usage policy does not permit production app traffic — a release build
@@ -136,6 +150,18 @@ class _RouteMapViewState extends State<RouteMapView> {
     final points = widget.points;
     final waypoints = widget.waypoints;
     final hasRoute = points.length >= 2;
+
+    // The portion of the route the line shows. At the default progress of 1
+    // this is the same list object, so the ordinary case allocates nothing.
+    // Always at least two points once there is a route, so a reveal starting
+    // from zero begins as a short stroke rather than a flicker of nothing.
+    final reveal = widget.revealProgress.clamp(0.0, 1.0);
+    final drawn = !hasRoute || reveal >= 1
+        ? points
+        : points.take(
+            (points.length * reveal).round().clamp(2, points.length),
+          ).toList(growable: false);
+    final fullyDrawn = drawn.length == points.length;
     final interactive = widget.interactive;
     final strokeWidth = widget.strokeWidth;
     final pulsePoint = widget.pulsePoint;
@@ -197,7 +223,7 @@ class _RouteMapViewState extends State<RouteMapView> {
           PolylineLayer<Object>(
             polylines: [
               Polyline(
-                points: points,
+                points: drawn,
                 strokeWidth: strokeWidth + 3,
                 color: trail.trailUnderlay,
                 strokeCap: StrokeCap.round,
@@ -208,7 +234,7 @@ class _RouteMapViewState extends State<RouteMapView> {
           PolylineLayer<Object>(
             polylines: [
               Polyline(
-                points: points,
+                points: drawn,
                 strokeWidth: strokeWidth,
                 gradientColors: trail.trailColors,
                 colorsStop: trail.trailStops,
@@ -243,12 +269,16 @@ class _RouteMapViewState extends State<RouteMapView> {
                 height: 22,
                 child: _EndpointMarker(color: trail.startMark, filled: false),
               ),
-              Marker(
-                point: points.last,
-                width: 22,
-                height: 22,
-                child: _EndpointMarker(color: trail.endMark, filled: true),
-              ),
+              // The end mark waits for the line to reach it. Sitting at the
+              // finish while the trail is still halfway there would give away
+              // the ending of the one animation in the app that has one.
+              if (fullyDrawn)
+                Marker(
+                  point: points.last,
+                  width: 22,
+                  height: 22,
+                  child: _EndpointMarker(color: trail.endMark, filled: true),
+                ),
             ],
           ),
         // The accuracy circle goes under the marker, so the dot still reads as

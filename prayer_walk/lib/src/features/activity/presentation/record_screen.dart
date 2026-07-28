@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/utils/app_haptics.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../scripture/data/scripture_providers.dart';
@@ -46,6 +47,9 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
 
   Future<void> _start() async {
     setState(() => _starting = true);
+    // Fired on the press, not on the result: the walk begins when the thumb
+    // lifts, and a permission prompt can sit in between.
+    AppHaptics.heavy();
     try {
       // Runs the OS permission gate. A denial is an ordinary answer, not an
       // error — it comes back as a [LocationAccess] the panel explains.
@@ -127,6 +131,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
           Expanded(
             child: AsyncView<LocationReading>(
               value: location,
+              errorFallback: "Your location couldn't be found.",
               onRetry: () => ref.invalidate(currentLocationProvider),
               loading: const RouteMapView(locatingLabel: 'Finding you…'),
               data: (reading) {
@@ -162,9 +167,10 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
             state: state,
             access: access,
             starting: _starting,
-            onSelectType: (type) => ref
-                .read(recordingControllerProvider.notifier)
-                .selectType(type),
+            onSelectType: (type) {
+              AppHaptics.selection();
+              ref.read(recordingControllerProvider.notifier).selectType(type);
+            },
             onEditIntentions: _openIntentions,
             onDropDevotional: () =>
                 ref.read(recordingControllerProvider.notifier).dropDevotional(),

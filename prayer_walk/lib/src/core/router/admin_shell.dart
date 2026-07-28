@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin/data/admin_providers.dart';
 import '../constants/app_spacing.dart';
+import '../utils/app_haptics.dart';
+import 'page_transitions.dart';
 
 /// Admin destinations, in nav order.
 enum AdminDestination {
@@ -77,17 +79,28 @@ class AdminShell extends StatelessWidget {
                       _AdminRail(
                         selectedIndex: navigationShell.currentIndex,
                         extended: isExtraWide,
-                        onSelected: (i) => navigationShell.goBranch(
-                          i,
-                          initialLocation: i == navigationShell.currentIndex,
-                        ),
+                        onSelected: (i) {
+                          AppHaptics.selection();
+                          navigationShell.goBranch(
+                            i,
+                            initialLocation: i == navigationShell.currentIndex,
+                          );
+                        },
                       ),
                       const VerticalDivider(width: 1),
-                      Expanded(child: navigationShell),
+                      Expanded(
+                        child: BranchFade(
+                          index: navigationShell.currentIndex,
+                          child: navigationShell,
+                        ),
+                      ),
                     ],
                   ),
                 )
-              : navigationShell,
+              : BranchFade(
+                  index: navigationShell.currentIndex,
+                  child: navigationShell,
+                ),
         );
       },
     );
@@ -299,6 +312,7 @@ class AdminDrawer extends ConsumerWidget {
                           ? pending
                           : 0,
                       onTap: () {
+                        AppHaptics.selection();
                         Navigator.of(context).pop();
                         scope?.go(i);
                       },

@@ -122,6 +122,7 @@ class AdminContentScreen extends ConsumerWidget {
       ),
       body: AsyncView<List<Devotional>>(
         value: devotionals,
+        errorFallback: "The devotional list couldn't be loaded.",
         onRetry: () => ref.invalidate(allDevotionalsProvider),
         isEmpty: (items) => items.isEmpty,
         loading: const Padding(

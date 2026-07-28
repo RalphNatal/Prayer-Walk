@@ -34,6 +34,7 @@ class HistoryScreen extends ConsumerWidget {
               onRefresh: () async => ref.refresh(historyProvider.future),
               child: AsyncView<List<Activity>>(
                 value: activities,
+                errorFallback: "Your walks couldn't be loaded.",
                 onRetry: () => ref.invalidate(historyProvider),
                 isEmpty: (items) => items.isEmpty,
                 loading: const SingleChildScrollView(

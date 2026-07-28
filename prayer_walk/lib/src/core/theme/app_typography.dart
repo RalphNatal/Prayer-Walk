@@ -1,8 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
-/// Applies one of the two families to a base style.
-typedef FontResolver = TextStyle Function(TextStyle base);
+import 'package:flutter/services.dart' show rootBundle;
 
 /// Type for Prayer Walk.
 ///
@@ -11,6 +9,16 @@ typedef FontResolver = TextStyle Function(TextStyle base);
 ///   stat numerals only. It carries the devotional warmth; it never sets body
 ///   copy, where it would read like a newspaper.
 /// * **Hanken Grotesk** (humanist sans) — everything else, legible down to 12.
+///
+/// Both are bundled as assets rather than fetched at runtime. They used to come
+/// from `google_fonts`, which downloads over HTTP on first launch and caches —
+/// meaning a first run in a dead zone rendered the entire app in the system
+/// fallback and the identity simply vanished. This app is used outdoors, often
+/// with no signal; its own typeface cannot be a network request.
+///
+/// Only the weights the theme actually asks for are shipped: Fraunces 600, and
+/// Hanken Grotesk 400/500/600/700. Every additional face is real download size
+/// for glyphs nothing draws.
 abstract final class AppTypography {
   /// Lining, fixed-width figures. Stat readouts must not jitter as they change,
   /// so every numeral that updates uses this.
@@ -19,44 +27,36 @@ abstract final class AppTypography {
     FontFeature.liningFigures(),
   ];
 
+  /// The family names declared in `pubspec.yaml`. Nothing resolves a family any
+  /// other way.
   static const String displayFamily = 'Fraunces';
   static const String textFamily = 'HankenGrotesk';
 
-  /// How the families are resolved.
+  /// Both families are SIL Open Font License 1.1, which requires the licence to
+  /// travel with the fonts. This puts them on the app's own licence page
+  /// (`showLicensePage`) alongside every package licence Flutter collects.
   ///
-  /// The default fetches from Google Fonts at runtime and caches on device,
-  /// which is fine for this phase but means first paint can wait on a
-  /// download. Two callers want to change that:
-  ///
-  /// * **Production** should bundle both families as assets and call
-  ///   [useBundledFonts], so the app renders correctly offline and on first
-  ///   launch. (`google_fonts` also picks up bundled assets automatically once
-  ///   they are in the pubspec, so either route works.)
-  /// * **Tests** call [useBundledFonts] so no test ever reaches for the
-  ///   network — `google_fonts` rethrows when it cannot resolve a family, and
-  ///   an unhandled failure there would fail every widget test that builds the
-  ///   theme.
-  static FontResolver display = _googleDisplay;
-  static FontResolver text = _googleText;
-
-  static TextStyle _googleDisplay(TextStyle base) =>
-      GoogleFonts.fraunces(textStyle: base);
-
-  static TextStyle _googleText(TextStyle base) =>
-      GoogleFonts.hankenGrotesk(textStyle: base);
-
-  /// Resolve both families by name, from bundled assets or the platform's
-  /// fallback. No network, no async load.
-  static void useBundledFonts() {
-    display = (base) => base.copyWith(fontFamily: displayFamily);
-    text = (base) => base.copyWith(fontFamily: textFamily);
+  /// Called from `main` before `runApp`. The callback is lazy — nothing is read
+  /// off disk unless someone opens the licence page.
+  static void registerFontLicences() {
+    LicenseRegistry.addLicense(() async* {
+      for (final entry in const {
+        'Fraunces': 'assets/fonts/OFL-Fraunces.txt',
+        'Hanken Grotesk': 'assets/fonts/OFL-HankenGrotesk.txt',
+      }.entries) {
+        yield LicenseEntryWithLineBreaks(
+          [entry.key],
+          await rootBundle.loadString(entry.value),
+        );
+      }
+    });
   }
 
-  /// Back to runtime fetching. Mostly here so a test can put things back.
-  static void useNetworkFonts() {
-    display = _googleDisplay;
-    text = _googleText;
-  }
+  static TextStyle display(TextStyle base) =>
+      base.copyWith(fontFamily: displayFamily);
+
+  static TextStyle text(TextStyle base) =>
+      base.copyWith(fontFamily: textFamily);
 
   static TextStyle _display(
     double size, {

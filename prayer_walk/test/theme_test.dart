@@ -27,8 +27,6 @@ double _contrast(Color a, Color b) {
 void main() {
   // Resolve families by name instead of fetching them, so the suite never
   // touches the network.
-  setUpAll(AppTypography.useBundledFonts);
-  tearDownAll(AppTypography.useNetworkFonts);
 
   /// Material 3's default seed. If it ever shows up, the theme was not applied.
   const materialDefaultPurple = Color(0xFF6750A4);
@@ -59,6 +57,63 @@ void main() {
       final dark = AppTheme.dark().colorScheme;
       expect(_contrast(dark.onSurface, dark.surface), greaterThan(4.5));
       expect(_contrast(dark.onSurfaceVariant, dark.surface), greaterThan(4.5));
+    });
+
+    test('amber on pine clears AA — the live screen depends on it', () {
+      // The live recording panel and the app bar both put amber type and amber
+      // icons on a pine ground, outdoors, in daylight. It is the one pairing in
+      // the app that is neither an `onSurface` nor a container pair, so no
+      // other assertion here would catch it drifting.
+      expect(
+        _contrast(AppColors.amber, AppColors.pine),
+        greaterThan(4.5),
+        reason: 'amber on pine carries text on the live screen',
+      );
+      expect(
+        _contrast(AppColors.parchment, AppColors.pine),
+        greaterThan(4.5),
+      );
+    });
+
+    test('the raw muted tokens never become text tokens', () {
+      // `stone` (2.7:1 on canvas) and `mist` (1.1:1) are surface and hairline
+      // colours. They read as "the muted one" and are exactly the tokens
+      // someone reaches for when they want grey text — which is why the scheme
+      // routes text through `stoneText` instead, and why this is asserted
+      // rather than left to a comment.
+      final light = AppTheme.light().colorScheme;
+      expect(light.onSurfaceVariant, AppColors.stoneText);
+      expect(light.onSurfaceVariant, isNot(AppColors.stone));
+      expect(_contrast(AppColors.stone, AppColors.canvas), lessThan(4.5));
+      expect(_contrast(light.onSurfaceVariant, light.surface), greaterThan(4.5));
+    });
+
+    test('status pill tones clear AA on their containers', () {
+      // Published / draft / resolved / pending. Each is a small bold label on a
+      // tinted chip, and each tone is chosen per theme.
+      expect(
+        _contrast(AppColors.verdantLight, AppColors.mossContainer),
+        greaterThan(4.5),
+      );
+      expect(
+        _contrast(AppColors.ochreLight, AppColors.amberContainer),
+        greaterThan(4.5),
+      );
+      expect(
+        _contrast(AppColors.verdantDark, AppColors.mossContainerDark),
+        greaterThan(4.5),
+      );
+      expect(
+        _contrast(AppColors.ochreDark, AppColors.amberContainerDark),
+        greaterThan(4.5),
+      );
+    });
+
+    test('interactive outlines clear the 3:1 non-text floor', () {
+      final light = AppTheme.light().colorScheme;
+      final dark = AppTheme.dark().colorScheme;
+      expect(_contrast(light.outline, light.surface), greaterThan(3.0));
+      expect(_contrast(dark.outline, dark.surface), greaterThan(3.0));
     });
 
     test('amber carries ink, never white', () {
