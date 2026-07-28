@@ -25,3 +25,13 @@ final scriptureRepositoryProvider = Provider<ScriptureRepository>(
 final scriptureLibraryProvider = FutureProvider<List<ScripturePrompt>>(
   (ref) => ref.watch(scriptureRepositoryProvider).publishedPrompts(),
 );
+
+/// The whole table, drafts included — what the admin curation screen lists.
+///
+/// Unlike [scriptureLibraryProvider] this one is allowed to fail: a curation
+/// screen with no network should say so, not quietly show the bundled asset as
+/// though it were the table.
+final allScripturePromptsProvider =
+    FutureProvider.autoDispose<List<ScripturePrompt>>(
+      (ref) => ref.watch(scriptureRepositoryProvider).allPrompts(),
+    );

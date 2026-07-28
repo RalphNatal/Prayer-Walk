@@ -5,10 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/admin_shell.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../devotionals/data/mock_devotional_repository.dart';
+import '../../devotionals/data/devotional_providers.dart';
 import '../../devotionals/domain/devotional.dart';
 import '../../profile/data/profile_providers.dart';
-import '../data/mock_admin_repository.dart';
+import '../data/admin_providers.dart';
 
 /// Log tag for this screen's failures.
 const _tag = 'PW-ADMINCONTENT';

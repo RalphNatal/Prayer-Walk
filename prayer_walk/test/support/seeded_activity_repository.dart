@@ -1,5 +1,5 @@
-import 'package:prayer_walk/src/core/mock_backend/mock_backend.dart';
-import 'package:prayer_walk/src/core/mock_backend/seed_data.dart';
+import 'mock_backend/mock_backend.dart';
+import 'mock_backend/seed_data.dart';
 import 'package:prayer_walk/src/features/activity/data/location_service.dart';
 import 'package:prayer_walk/src/features/activity/domain/activity.dart';
 import 'package:prayer_walk/src/features/activity/domain/activity_repository.dart';

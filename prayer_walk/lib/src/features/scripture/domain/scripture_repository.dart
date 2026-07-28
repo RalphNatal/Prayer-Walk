@@ -8,10 +8,9 @@ import 'scripture_prompt.dart';
 /// the network must cost verses at worst, never the recording. Implementations
 /// are expected to fall back rather than throw.
 ///
-/// The curation methods are declared here so the admin content screens have a
-/// seam to grow into. They are wired to real queries but nothing in the app
-/// calls them yet — scripture curation is part of the admin de-mock, which is
-/// still ahead.
+/// The curation methods are the admin content screens' seam. Until this phase
+/// the seed SQL was the only way to add a verse; they are now wired to a real
+/// screen, and scoped by the table's admin policy either way.
 abstract interface class ScriptureRepository {
   /// What a walk reads from. Never throws; returns the best set it can reach.
   Future<List<ScripturePrompt>> publishedPrompts({DevotionalCategory? category});
@@ -43,14 +42,15 @@ class ScripturePromptDraft {
     this.sortOrder = 0,
   });
 
-  ScripturePromptDraft.from(ScripturePrompt prompt, {this.isPublished = true})
+  ScripturePromptDraft.from(ScripturePrompt prompt)
     : id = prompt.id,
       reference = prompt.reference,
       body = prompt.body,
       translation = prompt.translation,
       kind = prompt.kind,
       category = prompt.category,
-      sortOrder = prompt.sortOrder;
+      sortOrder = prompt.sortOrder,
+      isPublished = prompt.isPublished;
 
   /// Null when creating.
   final String? id;

@@ -54,6 +54,7 @@ class ModerationReport {
     required this.reason,
     required this.createdAt,
     required this.status,
+    this.targetRemoved = false,
   });
 
   final String id;
@@ -66,6 +67,15 @@ class ModerationReport {
   final DateTime createdAt;
   final ReportStatus status;
 
+  /// The walk or comment this is about no longer exists — deleted by its
+  /// author, or removed by another admin, after the report was filed.
+  ///
+  /// `target_id` points at either table and carries no foreign key, so this is
+  /// an ordinary state rather than an error: the report still happened and
+  /// still has to be closed by somebody. The queue renders it as "content
+  /// removed" rather than dropping the row or failing the read.
+  final bool targetRemoved;
+
   ModerationReport copyWith({ReportStatus? status}) => ModerationReport(
     id: id,
     targetType: targetType,
@@ -76,6 +86,7 @@ class ModerationReport {
     reason: reason,
     createdAt: createdAt,
     status: status ?? this.status,
+    targetRemoved: targetRemoved,
   );
 }
 

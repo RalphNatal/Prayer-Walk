@@ -5,14 +5,22 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/admin_shell.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../auth/data/auth_providers.dart';
+import '../../profile/data/profile_providers.dart';
 import '../../profile/domain/user_profile.dart';
-import '../data/mock_admin_repository.dart';
+import '../data/admin_providers.dart';
 import 'widgets/status_pill.dart';
+
+/// Log tag for this screen's failures.
+const _tag = 'PW-ADMINMEMBER';
 
 /// One member, with the two levers an admin has: role and standing.
 ///
-/// Both are mocked — they mutate the in-memory store and confirm. Both ask
-/// first, because both change what another person can do.
+/// Both write to the real `profiles` row, and both ask first, because both
+/// change what another person can do. Neither is enforced here: the role
+/// trigger and the admin update policy decide, and this screen's job is to
+/// state the consequence beforehand and report the database's answer honestly
+/// afterwards.
 class AdminMemberDetailScreen extends ConsumerWidget {
   const AdminMemberDetailScreen({super.key, required this.memberId});
 
@@ -40,7 +48,23 @@ class AdminMemberDetailScreen extends ConsumerWidget {
     );
     if (!confirmed) return;
 
-    await ref.read(adminRepositoryProvider).setRole(member.id, target);
+    try {
+      await ref.read(adminRepositoryProvider).setRole(member.id, target);
+    } catch (error, stack) {
+      // The role trigger's own sentence comes through here — "You cannot change
+      // your own role", "Only an admin can change a member's role". Showing it
+      // verbatim is the point: it names the rule that refused.
+      if (context.mounted) {
+        reportFailure(
+          context,
+          error,
+          stack,
+          tag: _tag,
+          fallback: "That role change didn't go through.",
+        );
+      }
+      return;
+    }
     _refresh(ref, member.id);
     if (context.mounted) {
       showAppSnackBar(
@@ -65,15 +89,31 @@ class AdminMemberDetailScreen extends ConsumerWidget {
           ? 'Suspend ${member.displayName}?'
           : 'Restore ${member.displayName}?',
       message: target == MemberStatus.suspended
-          ? 'They keep their walks but cannot post, comment or encourage until '
-                'this is lifted.'
-          : 'They can post, comment and encourage again straight away.',
+          ? 'They keep their walks and can still read, but cannot record, '
+                'comment, encourage or follow until this is lifted.'
+          : 'They can record, comment, encourage and follow again straight '
+                'away.',
       confirmLabel: target == MemberStatus.suspended ? 'Suspend' : 'Restore',
       destructive: target == MemberStatus.suspended,
     );
     if (!confirmed) return;
 
-    await ref.read(adminRepositoryProvider).setStatus(member.id, target);
+    try {
+      await ref.read(adminRepositoryProvider).setStatus(member.id, target);
+    } catch (error, stack) {
+      if (context.mounted) {
+        reportFailure(
+          context,
+          error,
+          stack,
+          tag: _tag,
+          fallback: target == MemberStatus.suspended
+              ? "${member.displayName} wasn't suspended."
+              : "${member.displayName} wasn't restored.",
+        );
+      }
+      return;
+    }
     _refresh(ref, member.id);
     if (context.mounted) {
       showAppSnackBar(
@@ -85,19 +125,22 @@ class AdminMemberDetailScreen extends ConsumerWidget {
     }
   }
 
-  /// Console-only. The member screens read real `profiles` rows now, and the
-  /// members here are still seeded ones — there is no shared row to refresh.
+  /// The console and the member app read the same `profiles` row now, so both
+  /// have to be told it moved — a suspension that leaves the member's own
+  /// profile screen showing "Active" is the same lie by another route.
   void _refresh(WidgetRef ref, String id) {
     ref
       ..invalidate(adminMemberProvider(id))
       ..invalidate(adminMembersProvider)
-      ..invalidate(adminMetricsProvider);
+      ..invalidate(adminMetricsProvider)
+      ..invalidate(profileProvider(id));
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final member = ref.watch(adminMemberProvider(memberId));
     final activityCount = ref.watch(memberActivityCountProvider(memberId));
+    final isSelf = ref.watch(currentAuthUserIdProvider) == memberId;
 
     return AdminPage(
       title: member.value?.displayName ?? 'Member',
@@ -194,30 +237,77 @@ class AdminMemberDetailScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xxl),
             const SectionHeader(
               title: 'Actions',
-              subtitle: 'Preview build — these change local data only.',
+              subtitle: 'These take effect immediately, for this member.',
               dense: true,
             ),
-            SecondaryButton(
-              label: item.role == UserRole.admin
-                  ? 'Remove admin access'
-                  : 'Make admin',
-              icon: Icons.shield_outlined,
-              expand: true,
-              onPressed: () => _changeRole(context, ref, item),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            SecondaryButton(
-              label: item.status == MemberStatus.suspended
-                  ? 'Restore member'
-                  : 'Suspend member',
-              icon: item.status == MemberStatus.suspended
-                  ? Icons.lock_open_rounded
-                  : Icons.block_rounded,
-              expand: true,
-              onPressed: () => _changeStatus(context, ref, item),
-            ),
+
+            // Your own row offers no role control, because the database will
+            // not accept one. Nobody changes their own role — that is what
+            // keeps self-promotion impossible, and what stops the last admin
+            // demoting themselves and locking the console. Saying so here is
+            // cheaper than letting someone tap it and read an error.
+            if (isSelf)
+              _SelfNote(
+                text:
+                    "This is you. Role changes have to come from another "
+                    "admin — nobody can change their own, which is what keeps "
+                    "the console from ever being left without one.",
+              )
+            else ...[
+              SecondaryButton(
+                label: item.role == UserRole.admin
+                    ? 'Remove admin access'
+                    : 'Make admin',
+                icon: Icons.shield_outlined,
+                expand: true,
+                onPressed: () => _changeRole(context, ref, item),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SecondaryButton(
+                label: item.status == MemberStatus.suspended
+                    ? 'Restore member'
+                    : 'Suspend member',
+                icon: item.status == MemberStatus.suspended
+                    ? Icons.lock_open_rounded
+                    : Icons.block_rounded,
+                expand: true,
+                onPressed: () => _changeStatus(context, ref, item),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Why there are no controls here, in one sentence, where the controls would
+/// have been.
+class _SelfNote extends StatelessWidget {
+  const _SelfNote({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: AppRadius.control,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            size: 20,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
+        ],
       ),
     );
   }

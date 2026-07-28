@@ -7,12 +7,21 @@ import '../../../core/router/admin_shell.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../devotionals/data/mock_devotional_repository.dart';
+import '../../devotionals/data/devotional_providers.dart';
 import '../../devotionals/domain/devotional.dart';
-import '../data/mock_admin_repository.dart';
+import '../data/admin_providers.dart';
 import 'widgets/status_pill.dart';
 
-/// Devotionals and prayer prompts: what is live, what is still a draft.
+/// Log tag for this screen's failures.
+const _tag = 'PW-ADMINCONTENT';
+
+/// Devotionals: what is live, what is still a draft.
+///
+/// Scripture prompts — the in-motion counterpart, read on a walk rather than
+/// sitting down — are managed on their own screen, one tap from the top of this
+/// list. They are different enough in shape (a reference and one breath of
+/// text, versus a title, summary and reader body) that sharing a form would
+/// have made both worse.
 class AdminContentScreen extends ConsumerWidget {
   const AdminContentScreen({super.key});
 
@@ -33,9 +42,22 @@ class AdminContentScreen extends ConsumerWidget {
       if (!confirmed) return;
     }
 
-    await ref
-        .read(devotionalRepositoryProvider)
-        .setPublished(item.id, published: publish);
+    try {
+      await ref
+          .read(devotionalRepositoryProvider)
+          .setPublished(item.id, published: publish);
+    } catch (error, stack) {
+      if (context.mounted) {
+        reportFailure(
+          context,
+          error,
+          stack,
+          tag: _tag,
+          fallback: "\"${item.title}\" didn't change.",
+        );
+      }
+      return;
+    }
     _refresh(ref);
     if (context.mounted) {
       showAppSnackBar(
@@ -59,7 +81,20 @@ class AdminContentScreen extends ConsumerWidget {
     );
     if (!confirmed) return;
 
-    await ref.read(devotionalRepositoryProvider).delete(item.id);
+    try {
+      await ref.read(devotionalRepositoryProvider).delete(item.id);
+    } catch (error, stack) {
+      if (context.mounted) {
+        reportFailure(
+          context,
+          error,
+          stack,
+          tag: _tag,
+          fallback: "\"${item.title}\" wasn't deleted.",
+        );
+      }
+      return;
+    }
     _refresh(ref);
     if (context.mounted) {
       showAppSnackBar(context, '"${item.title}" deleted.');
@@ -93,12 +128,19 @@ class AdminContentScreen extends ConsumerWidget {
           padding: EdgeInsets.all(AppSpacing.lg),
           child: RowListLoading(count: 5, leadingSize: 48),
         ),
-        empty: () => EmptyState(
-          icon: Icons.article_outlined,
-          title: 'No devotionals yet',
-          message: 'Write the first one and publish it to the shelf.',
-          actionLabel: 'New devotional',
-          onAction: () => context.goNamed(Routes.adminContentCreate),
+        empty: () => Column(
+          children: [
+            const _ScriptureLink(),
+            Expanded(
+              child: EmptyState(
+                icon: Icons.article_outlined,
+                title: 'No devotionals yet',
+                message: 'Write the first one and publish it to the shelf.',
+                actionLabel: 'New devotional',
+                onAction: () => context.goNamed(Routes.adminContentCreate),
+              ),
+            ),
+          ],
         ),
         data: (items) => ListView.separated(
           padding: const EdgeInsets.fromLTRB(
@@ -107,10 +149,11 @@ class AdminContentScreen extends ConsumerWidget {
             AppSpacing.lg,
             AppSpacing.xxxl * 2,
           ),
-          itemCount: items.length,
+          itemCount: items.length + 1,
           separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (context, index) {
-            final item = items[index];
+            if (index == 0) return const _ScriptureLink();
+            final item = items[index - 1];
             return _ContentRow(
               devotional: item,
               onEdit: () => context.goNamed(
@@ -121,6 +164,55 @@ class AdminContentScreen extends ConsumerWidget {
               onDelete: () => _delete(context, ref, item),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// The way through to the other half of the curated library.
+class _ScriptureLink extends StatelessWidget {
+  const _ScriptureLink();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: AppRadius.control,
+        child: InkWell(
+          borderRadius: AppRadius.control,
+          onTap: () => context.goNamed(Routes.adminScripture),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.menu_book_outlined,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Scripture prompts',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      Text(
+                        'The verses and short prayers delivered on a walk.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
         ),
       ),
     );

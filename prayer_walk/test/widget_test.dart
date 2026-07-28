@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prayer_walk/src/app.dart';
-import 'package:prayer_walk/src/core/mock_backend/seed_data.dart';
+import 'support/mock_backend/seed_data.dart';
 import 'package:prayer_walk/src/core/theme/app_typography.dart';
 import 'package:prayer_walk/src/core/widgets/pilgrimage_card.dart';
 import 'package:prayer_walk/src/features/activity/domain/activity.dart';

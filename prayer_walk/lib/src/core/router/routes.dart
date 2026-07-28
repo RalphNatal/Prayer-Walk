@@ -78,6 +78,17 @@ abstract final class Routes {
   static const adminContentEdit = 'adminContentEdit';
   static const adminContentEditPath = ':devotionalId/edit';
 
+  /// Scripture prompts live under Content: both are curated text, and the
+  /// console has one place for that.
+  static const adminScripture = 'adminScripture';
+  static const adminScripturePath = 'scripture';
+
+  static const adminScriptureCreate = 'adminScriptureCreate';
+  static const adminScriptureCreatePath = 'new';
+
+  static const adminScriptureEdit = 'adminScriptureEdit';
+  static const adminScriptureEditPath = ':promptId/edit';
+
   static const adminModeration = 'adminModeration';
   static const adminModerationPath = '/admin/moderation';
 

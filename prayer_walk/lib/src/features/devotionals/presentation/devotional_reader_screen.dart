@@ -6,7 +6,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../activity/data/recording_controller.dart';
-import '../data/mock_devotional_repository.dart';
+import '../data/devotional_providers.dart';
 import '../domain/devotional.dart';
 
 /// Read a devotional, then take it out with you.

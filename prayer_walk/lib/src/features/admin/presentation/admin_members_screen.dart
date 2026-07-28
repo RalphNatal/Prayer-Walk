@@ -8,7 +8,7 @@ import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../profile/domain/user_profile.dart';
-import '../data/mock_admin_repository.dart';
+import '../data/admin_providers.dart';
 import 'widgets/status_pill.dart';
 
 /// The members table: search, filter, drill in.

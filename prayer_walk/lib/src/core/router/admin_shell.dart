@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/admin/data/mock_admin_repository.dart';
+import '../../features/admin/data/admin_providers.dart';
 import '../constants/app_spacing.dart';
 
 /// Admin destinations, in nav order.

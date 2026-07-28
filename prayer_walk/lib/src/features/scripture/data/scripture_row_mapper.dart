@@ -1,3 +1,5 @@
+import '../../devotionals/data/devotional_row_mapper.dart'
+    show devotionalCategoryFrom;
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
 import '../domain/scripture_prompt.dart';
 
@@ -11,7 +13,7 @@ import '../domain/scripture_prompt.dart';
 /// The `scripture_prompts` columns a read needs. Kept next to the mapper so the
 /// two cannot fall out of step.
 const scripturePromptColumns =
-    'id, reference, body, translation, kind, category, sort_order';
+    'id, reference, body, translation, kind, category, sort_order, is_published';
 
 ScripturePrompt scripturePromptFromRow(Map<String, dynamic> row) {
   return ScripturePrompt(
@@ -22,6 +24,10 @@ ScripturePrompt scripturePromptFromRow(Map<String, dynamic> row) {
     kind: _kindFrom(row['kind'] as String?),
     category: categoryFrom(row['category'] as String?),
     sortOrder: (row['sort_order'] as num?)?.toInt() ?? 0,
+    // Absent in a cache written before this key existed, and absent from the
+    // bundled asset — both of which only ever hold published prompts, so the
+    // missing key reads as true rather than hiding the offline library.
+    isPublished: row['is_published'] != false,
   );
 }
 
@@ -42,14 +48,15 @@ Map<String, dynamic> scripturePromptToRow(ScripturePrompt prompt) => {
   'kind': prompt.kind.name,
   'category': prompt.category.name,
   'sort_order': prompt.sortOrder,
+  'is_published': prompt.isPublished,
 };
 
 /// Shared with the settings store, which persists the chosen theme by name.
-DevotionalCategory categoryFrom(String? value) =>
-    DevotionalCategory.values.firstWhere(
-      (c) => c.name == value,
-      orElse: () => DevotionalCategory.stillness,
-    );
+///
+/// One definition, in the devotionals mapper, because a theme means the same
+/// thing on `devotionals` and `scripture_prompts` and a second copy is how the
+/// two would eventually disagree.
+DevotionalCategory categoryFrom(String? value) => devotionalCategoryFrom(value);
 
 ScripturePromptKind _kindFrom(String? value) =>
     ScripturePromptKind.values.firstWhere(

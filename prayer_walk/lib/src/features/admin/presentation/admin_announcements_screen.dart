@@ -7,7 +7,7 @@ import '../../../core/router/admin_shell.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../data/mock_admin_repository.dart';
+import '../data/admin_providers.dart';
 import '../domain/admin_models.dart';
 import 'widgets/status_pill.dart';
 

@@ -15,6 +15,8 @@ import '../../features/admin/presentation/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/admin_member_detail_screen.dart';
 import '../../features/admin/presentation/admin_members_screen.dart';
 import '../../features/admin/presentation/admin_moderation_screen.dart';
+import '../../features/admin/presentation/admin_scripture_form_screen.dart';
+import '../../features/admin/presentation/admin_scripture_screen.dart';
 import '../../features/admin/presentation/admin_settings_screen.dart';
 import '../../features/auth/data/auth_providers.dart';
 import '../../features/auth/presentation/auth_screen.dart';
@@ -248,6 +250,25 @@ final _adminShell = StatefulShellRoute.indexedStack(
               builder: (context, state) => AdminContentFormScreen(
                 devotionalId: state.pathParameters['devotionalId'],
               ),
+            ),
+            GoRoute(
+              path: Routes.adminScripturePath,
+              name: Routes.adminScripture,
+              builder: (context, state) => const AdminScriptureScreen(),
+              routes: [
+                GoRoute(
+                  path: Routes.adminScriptureCreatePath,
+                  name: Routes.adminScriptureCreate,
+                  builder: (context, state) => const AdminScriptureFormScreen(),
+                ),
+                GoRoute(
+                  path: Routes.adminScriptureEditPath,
+                  name: Routes.adminScriptureEdit,
+                  builder: (context, state) => AdminScriptureFormScreen(
+                    promptId: state.pathParameters['promptId'],
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prayer_walk/src/app.dart';
-import 'package:prayer_walk/src/core/mock_backend/mock_backend.dart';
-import 'package:prayer_walk/src/core/mock_backend/seed_data.dart';
+import 'support/mock_backend/mock_backend.dart';
+import 'support/mock_backend/seed_data.dart';
 import 'package:prayer_walk/src/core/theme/app_typography.dart';
 import 'package:prayer_walk/src/core/widgets/pilgrimage_card.dart';
 import 'package:prayer_walk/src/features/activity/data/activity_providers.dart';
+import 'package:prayer_walk/src/features/admin/data/admin_providers.dart';
 import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
 import 'package:prayer_walk/src/features/auth/domain/profile.dart';
+import 'package:prayer_walk/src/features/devotionals/data/devotional_providers.dart';
 import 'package:prayer_walk/src/features/feed/data/feed_providers.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
 
@@ -24,11 +26,11 @@ import 'support/stub_repositories.dart';
 /// summary, activity detail): mounting `flutter_map` fires tile requests that
 /// cannot succeed offline. Those screens are covered by walking the app.
 ///
-/// Activities, the feed and the social graph now come from Supabase, which a
-/// widget test also has no access to, so each is swapped at its repository
-/// interface — the point of the seam. History is therefore still asserted
-/// against seed data; what changed is that it arrives through an override
-/// rather than by default.
+/// Everything the app reads now comes from Supabase, which a widget test has no
+/// access to, so each feature is swapped at its repository interface — the point
+/// of the seam. History and the devotional shelf are therefore still asserted
+/// against fixtures; what changed is that they arrive through an override rather
+/// than by default.
 ProviderScope _appAs(UserRole role) => ProviderScope(
   overrides: [
     authPhaseProvider.overrideWith((ref) => AuthPhase.signedIn),
@@ -48,6 +50,10 @@ ProviderScope _appAs(UserRole role) => ProviderScope(
     // The member shell opens on the feed. It is empty here — this file is
     // about reachability, and the feed's own content is not what it checks.
     feedRepositoryProvider.overrideWith((ref) => const StubFeedRepository([])),
+    devotionalRepositoryProvider.overrideWith(
+      (ref) => StubDevotionalRepository(),
+    ),
+    adminRepositoryProvider.overrideWith((ref) => const StubAdminRepository()),
   ],
   child: const PrayerWalkApp(),
 );

@@ -8,8 +8,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../admin/domain/admin_models.dart' show ReportTargetType;
 import '../../auth/data/auth_providers.dart';
 import '../../feed/data/feed_providers.dart';
+import '../../moderation/presentation/report_sheet.dart';
 import '../../profile/data/profile_providers.dart';
 import '../../profile/domain/user_profile.dart';
 import '../../social/data/social_actions.dart';
@@ -191,16 +193,34 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
           pinned: true,
           expandedHeight: 320,
           actions: [
-            if (widget.isOwn)
-              PopupMenuButton<String>(
-                tooltip: 'More actions',
-                onSelected: (value) {
-                  if (value == 'delete') widget.onDelete();
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'delete', child: Text('Delete walk')),
-                ],
-              ),
+            // Your own walk offers Delete; someone else's offers Report. There
+            // is no case for both — you cannot report yourself, and you cannot
+            // delete another person's walk.
+            PopupMenuButton<String>(
+              tooltip: 'More actions',
+              onSelected: (value) => switch (value) {
+                'delete' => widget.onDelete(),
+                'report' => showReportSheet(
+                  context,
+                  ref,
+                  targetType: ReportTargetType.activity,
+                  targetId: activity.id,
+                ),
+                _ => null,
+              },
+              itemBuilder: (context) => [
+                if (widget.isOwn)
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete walk'),
+                  )
+                else
+                  const PopupMenuItem(
+                    value: 'report',
+                    child: Text('Report walk'),
+                  ),
+              ],
+            ),
             const SizedBox(width: AppSpacing.xs),
           ],
           flexibleSpace: FlexibleSpaceBar(
@@ -585,14 +605,16 @@ class _EncouragementBar extends ConsumerWidget {
   }
 }
 
-class _CommentTile extends StatelessWidget {
+class _CommentTile extends ConsumerWidget {
   const _CommentTile({required this.entry});
 
   final CommentWithAuthor entry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isMine = entry.author.id == ref.watch(currentAuthUserIdProvider);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Row(
@@ -629,6 +651,21 @@ class _CommentTile extends StatelessWidget {
               ],
             ),
           ),
+          // Small and unlabelled: an obvious Report button beside every comment
+          // changes how a comment thread reads. It is reachable, not loud.
+          if (!isMine)
+            IconButton(
+              icon: const Icon(Icons.flag_outlined, size: 18),
+              tooltip: 'Report comment',
+              visualDensity: VisualDensity.compact,
+              color: theme.colorScheme.onSurfaceVariant,
+              onPressed: () => showReportSheet(
+                context,
+                ref,
+                targetType: ReportTargetType.comment,
+                targetId: entry.comment.id,
+              ),
+            ),
         ],
       ),
     );

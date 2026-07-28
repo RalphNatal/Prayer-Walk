@@ -6,8 +6,9 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/admin_shell.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../feed/data/announcement_providers.dart';
 import '../../profile/data/profile_providers.dart';
-import '../data/mock_admin_repository.dart';
+import '../data/admin_providers.dart';
 import '../domain/admin_models.dart';
 
 /// Log tag for this screen's failures.
@@ -41,13 +42,26 @@ class _AdminAnnouncementComposeScreenState
   Future<void> _send() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final recipients = ref.read(audienceSizeProvider(_audience)).value ?? 0;
+    // Awaited rather than read off the cached AsyncValue: a confirm dialog that
+    // says "0 people" because the count had not landed yet would be worse than
+    // one that admits it does not know.
+    int? recipients;
+    try {
+      recipients = await ref.read(audienceSizeProvider(_audience).future);
+    } catch (_) {
+      recipients = null;
+    }
+    if (!mounted) return;
+
     final confirmed = await showConfirmDialog(
       context,
       title: 'Send to ${_audience.label.toLowerCase()}?',
-      message:
-          'This goes out to ${Fmt.plural(recipients, 'person', 'people')} '
-          'straight away. It cannot be recalled.',
+      message: recipients == null
+          ? "We couldn't count the audience just now. Sending goes out to "
+                '${_audience.label.toLowerCase()} straight away, and cannot be '
+                'recalled.'
+          : 'This goes out to ${Fmt.plural(recipients, 'person', 'people')} '
+                'straight away. It cannot be recalled.',
       confirmLabel: 'Send',
     );
     if (!confirmed) return;
@@ -56,17 +70,20 @@ class _AdminAnnouncementComposeScreenState
     try {
       final sentByName =
           ref.read(currentProfileProvider).value?.displayName ?? 'Admin';
-      await ref.read(adminRepositoryProvider).sendAnnouncement(
+      final sent = await ref.read(adminRepositoryProvider).sendAnnouncement(
         title: _title.text,
         body: _body.text,
         audience: _audience,
         sentByName: sentByName,
       );
-      ref.invalidate(announcementsProvider);
+      ref
+        ..invalidate(announcementsProvider)
+        ..invalidate(memberAnnouncementsProvider);
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Sent to ${Fmt.plural(recipients, 'person', 'people')}.',
+        // The count the row actually recorded, not the one the dialog guessed.
+        'Sent to ${Fmt.plural(sent.recipientCount, 'person', 'people')}.',
       );
       context.pop();
     } catch (error, stack) {
@@ -183,8 +200,10 @@ class _AdminAnnouncementComposeScreenState
             const SizedBox(height: AppSpacing.sm),
             Center(
               child: Text(
-                'Preview build — nothing is actually delivered.',
+                'Members see this at the top of their feed. There is no push '
+                'notification yet.',
                 style: theme.textTheme.bodySmall,
+                textAlign: TextAlign.center,
               ),
             ),
           ],

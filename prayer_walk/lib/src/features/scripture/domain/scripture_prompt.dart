@@ -31,6 +31,7 @@ class ScripturePrompt {
     this.translation = '',
     this.kind = ScripturePromptKind.scripture,
     this.sortOrder = 0,
+    this.isPublished = true,
   });
 
   final String id;
@@ -45,6 +46,14 @@ class ScripturePrompt {
   final ScripturePromptKind kind;
   final DevotionalCategory category;
   final int sortOrder;
+
+  /// Whether this is live on walks.
+  ///
+  /// Defaults to true because almost every prompt that reaches this class is
+  /// already published: `publishedPrompts` filters server-side, and the offline
+  /// cache and the bundled asset only ever hold published verses. It matters on
+  /// exactly one path — the admin list, which asks for drafts too.
+  final bool isPublished;
 
   /// Whether there is an edition to credit alongside the text.
   bool get hasTranslation => translation.trim().isNotEmpty;

@@ -6,7 +6,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../data/mock_devotional_repository.dart';
+import '../data/devotional_providers.dart';
 import '../domain/devotional.dart';
 
 /// Browse the admin-curated shelf, grouped by category.

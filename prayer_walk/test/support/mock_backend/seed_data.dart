@@ -1,32 +1,27 @@
 import 'package:latlong2/latlong.dart';
+import 'package:prayer_walk/src/features/activity/domain/activity.dart';
+import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
 
-import '../../features/activity/domain/activity.dart';
-import '../../features/admin/domain/admin_models.dart';
-import '../../features/devotionals/domain/devotional.dart';
-import '../../features/profile/domain/user_profile.dart';
 import 'route_shapes.dart';
 
-/// Everything the fake backend starts life holding.
+/// Walkers and walks, for widget tests.
 ///
-/// The social fixtures — follows, encouragements, comments — used to live here
-/// too. They are real rows in Postgres now, so there is nothing left to seed:
-/// a walker's followers are whoever actually followed them.
+/// This shipped in `lib/` for as long as the app had mock content. Nothing in
+/// the app reads it now — every feature is real Postgres — so it lives here,
+/// which is all it was ever for: a widget test has no Supabase, and the
+/// repository interface is the seam to swap at.
+///
+/// What it holds has shrunk with each de-mock. The social fixtures went when the
+/// follow graph became real; the devotionals, moderation reports and
+/// announcements went with the last of it. What is left is the two things a
+/// widget test still needs to render a screen: people, and walks they took.
 class MockSeed {
-  const MockSeed({
-    required this.users,
-    required this.activities,
-    required this.devotionals,
-    required this.reports,
-    required this.announcements,
-  });
+  const MockSeed({required this.users, required this.activities});
 
   final List<UserProfile> users;
   final List<Activity> activities;
-  final List<Devotional> devotionals;
-  final List<ModerationReport> reports;
-  final List<Announcement> announcements;
 
-  /// The seeded person the mock-backed screens resolve against.
+  /// The seeded person the test-backed screens resolve against.
   static const currentUserId = 'u_maria';
 
   static MockSeed build() {
@@ -485,250 +480,7 @@ class MockSeed {
       ),
     ];
 
-    // --------------------------------------------------------- devotionals ---
-    final devotionals = <Devotional>[
-      Devotional(
-        id: 'd_1',
-        title: 'Before the street wakes',
-        summary: 'A short prayer for the first hundred steps of the day.',
-        body:
-            'Begin before you have decided anything. Step out, and let the first '
-            'hundred steps be given away rather than used.\n\n'
-            'Notice the sound your feet make. Notice that you did not have to '
-            'ask for this morning; it arrived while you slept.\n\n'
-            'When the noise starts — the first engine, the first shutter going '
-            'up — do not resent it. Pray for whoever is behind it.',
-        scriptureRef: 'Lamentations 3:22-23',
-        scriptureText:
-            'The steadfast love of the Lord never ceases; his mercies never come '
-            'to an end; they are new every morning.',
-        category: DevotionalCategory.morningLight,
-        authorName: 'Ben Ocampo',
-        updatedAt: daysAgo(21),
-        publishedAt: daysAgo(21),
-        isPublished: true,
-        readMinutes: 2,
-      ),
-      Devotional(
-        id: 'd_2',
-        title: 'Count five things on this street',
-        summary: 'Gratitude at walking pace, one block at a time.',
-        body:
-            'Pick a block you know too well to see. Walk it slowly and find five '
-            'things you have never thanked anyone for.\n\n'
-            'The tree someone planted before you were born. The light that works. '
-            'The person who sweeps this corner at four in the morning.\n\n'
-            'Say each one out loud if you can. Gratitude that stays in the head '
-            'tends to evaporate.',
-        scriptureRef: 'Psalm 118:24',
-        scriptureText:
-            'This is the day that the Lord has made; let us rejoice and be glad in it.',
-        category: DevotionalCategory.gratitude,
-        authorName: 'Ben Ocampo',
-        updatedAt: daysAgo(14),
-        publishedAt: daysAgo(14),
-        isPublished: true,
-        readMinutes: 3,
-      ),
-      Devotional(
-        id: 'd_3',
-        title: 'Carry one name the whole way',
-        summary: 'One person, one route. Set them down only at the end.',
-        body:
-            'Choose one name before you start. Not a list — one.\n\n'
-            'Every time your mind wanders, and it will, come back to the name '
-            'rather than to yourself. Let the distance be for them.\n\n'
-            'At the end, mark the spot where you finished. You are allowed to '
-            'set them down there. You are not carrying them alone.',
-        scriptureRef: 'Galatians 6:2',
-        scriptureText: "Bear one another's burdens, and so fulfil the law of Christ.",
-        category: DevotionalCategory.intercession,
-        authorName: 'Ben Ocampo',
-        updatedAt: daysAgo(9),
-        publishedAt: daysAgo(9),
-        isPublished: true,
-        readMinutes: 2,
-      ),
-      Devotional(
-        id: 'd_4',
-        title: 'For the walk you did not want to take',
-        summary: 'When the route is heavy and the words have run out.',
-        body:
-            'Some days the walk is not devotion, it is escape. Take it anyway.\n\n'
-            'You do not owe anyone a well-formed prayer. Say the true thing, even '
-            'if the true thing is that you are tired of saying things.\n\n'
-            'Lament is not the absence of faith. It is faith that has stopped '
-            'pretending.',
-        scriptureRef: 'Psalm 13:1-2',
-        scriptureText:
-            'How long, O Lord? Will you forget me for ever? How long will you hide '
-            'your face from me?',
-        category: DevotionalCategory.lament,
-        authorName: 'Ana Villanueva',
-        updatedAt: daysAgo(6),
-        publishedAt: daysAgo(6),
-        isPublished: true,
-        readMinutes: 3,
-      ),
-      Devotional(
-        id: 'd_5',
-        title: 'Twenty minutes, no words',
-        summary: 'Walk the loop without asking for anything.',
-        body:
-            'Leave the phone in your pocket. Do not name a single intention.\n\n'
-            'Twenty minutes is long enough to get bored, and boredom is usually '
-            'where the noise finally drops.\n\n'
-            'If something surfaces, let it. You are not required to do anything '
-            'with it today.',
-        category: DevotionalCategory.stillness,
-        authorName: 'Ben Ocampo',
-        updatedAt: daysAgo(3),
-        publishedAt: daysAgo(3),
-        isPublished: true,
-        readMinutes: 1,
-      ),
-      Devotional(
-        id: 'd_6',
-        title: 'Psalm 121, one line per kilometre',
-        summary: 'A passage paced out across the route.',
-        body:
-            'Take one line at the start of each kilometre and carry it until the '
-            'next.\n\n'
-            'Do not analyse it. Repeat it until it stops sounding like words and '
-            'starts sounding like something you are walking through.\n\n'
-            'If the route is short, take fewer lines. The passage is not a target.',
-        scriptureRef: 'Psalm 121:1-2',
-        scriptureText:
-            'I lift up my eyes to the hills. From where does my help come? My help '
-            'comes from the Lord, who made heaven and earth.',
-        category: DevotionalCategory.scriptureWalk,
-        authorName: 'Ben Ocampo',
-        updatedAt: daysAgo(30),
-        publishedAt: daysAgo(30),
-        isPublished: true,
-        readMinutes: 4,
-      ),
-      Devotional(
-        id: 'd_7',
-        title: 'Walking the novena',
-        summary: 'Nine days, nine routes, one request.',
-        body:
-            'Draft — needs the nine daily prompts written out before this goes '
-            'live.\n\n'
-            'The shape: same request each day, different street each day, so the '
-            'asking does not calcify into a formula.',
-        category: DevotionalCategory.intercession,
-        authorName: 'Ben Ocampo',
-        updatedAt: daysAgo(1),
-        isPublished: false,
-        readMinutes: 5,
-      ),
-      Devotional(
-        id: 'd_8',
-        title: 'For the ones on night shift',
-        summary: 'A prayer for the walk home at 6am.',
-        body:
-            'Draft — Ana is writing this one. Needs a scripture pairing and a '
-            'shorter opening.',
-        category: DevotionalCategory.lament,
-        authorName: 'Ana Villanueva',
-        updatedAt: daysAgo(0, hour: 9),
-        isPublished: false,
-        readMinutes: 2,
-      ),
-    ];
-
-    // ---------------------------------------------------------- moderation ---
-    final reports = <ModerationReport>[
-      ModerationReport(
-        id: 'r_1',
-        targetType: ReportTargetType.comment,
-        targetId: 'c_x1',
-        targetExcerpt:
-            'Cheap shoes at half price, message me — best deal in Manila!!',
-        targetAuthorName: 'Pia Mendoza',
-        reportedByName: 'Daniel Cruz',
-        reason: 'Spam or advertising',
-        createdAt: now.subtract(const Duration(hours: 5)),
-        status: ReportStatus.pending,
-      ),
-      ModerationReport(
-        id: 'r_2',
-        targetType: ReportTargetType.activity,
-        targetId: 'a_x2',
-        targetExcerpt: 'Route appears to pass through a private residence.',
-        targetAuthorName: 'Rex Santiago',
-        reportedByName: 'Grace Tan',
-        reason: 'Privacy concern',
-        createdAt: now.subtract(const Duration(days: 1, hours: 2)),
-        status: ReportStatus.pending,
-      ),
-      ModerationReport(
-        id: 'r_3',
-        targetType: ReportTargetType.comment,
-        targetId: 'c_x3',
-        targetExcerpt: 'Nobody here actually prays, this app is a joke.',
-        targetAuthorName: 'Pia Mendoza',
-        reportedByName: 'Ana Villanueva',
-        reason: 'Harassment',
-        createdAt: now.subtract(const Duration(days: 3)),
-        status: ReportStatus.resolved,
-      ),
-      ModerationReport(
-        id: 'r_4',
-        targetType: ReportTargetType.activity,
-        targetId: 'a_x4',
-        targetExcerpt: 'Title contains a phone number.',
-        targetAuthorName: 'Rex Santiago',
-        reportedByName: 'Jonas Lim',
-        reason: 'Personal information',
-        createdAt: now.subtract(const Duration(days: 6)),
-        status: ReportStatus.dismissed,
-      ),
-    ];
-
-    // -------------------------------------------------------- announcements ---
-    final announcements = <Announcement>[
-      Announcement(
-        id: 'an_1',
-        title: 'Parish walk this Saturday, 5:30am',
-        body:
-            'We start at the San Roque gate and finish at the shrine. Bring water. '
-            'Log it in the app so we can see the whole route together afterwards.',
-        audience: AnnouncementAudience.everyone,
-        sentAt: daysAgo(2, hour: 10),
-        sentByName: 'Ben Ocampo',
-        recipientCount: 8,
-      ),
-      Announcement(
-        id: 'an_2',
-        title: 'New devotionals for the novena',
-        body:
-            'Three new prompts are up under Intercession. One per day for the '
-            'first three days.',
-        audience: AnnouncementAudience.activeMembers,
-        sentAt: daysAgo(11, hour: 15),
-        sentByName: 'Ben Ocampo',
-        recipientCount: 7,
-      ),
-      Announcement(
-        id: 'an_3',
-        title: 'Moderation queue is live',
-        body: 'Reports now land in the admin console. Please clear it weekly.',
-        audience: AnnouncementAudience.admins,
-        sentAt: daysAgo(19, hour: 9),
-        sentByName: 'Ben Ocampo',
-        recipientCount: 1,
-      ),
-    ];
-
-    return MockSeed(
-      users: users,
-      activities: activities,
-      devotionals: devotionals,
-      reports: reports,
-      announcements: announcements,
-    );
+    return MockSeed(users: users, activities: activities);
   }
 
   /// Prompts offered by the "Add intentions" sheet so it never opens blank.

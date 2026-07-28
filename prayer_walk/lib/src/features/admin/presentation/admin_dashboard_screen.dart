@@ -9,7 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../profile/domain/user_profile.dart';
-import '../data/mock_admin_repository.dart';
+import '../data/admin_providers.dart';
 import '../domain/admin_models.dart';
 
 /// The console's front page: four numbers, a trend, and who just arrived.
@@ -22,7 +22,7 @@ class AdminDashboardScreen extends ConsumerWidget {
 
     return AdminPage(
       title: 'Dashboard',
-      subtitle: 'Prayer Walk · preview data',
+      subtitle: 'Prayer Walk',
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh_rounded),
@@ -162,8 +162,10 @@ class _MetricCard extends StatelessWidget {
 
 /// Activities over the last fortnight.
 ///
-/// Drawn from the mock series rather than left as a grey rectangle, so the
-/// dashboard's proportions are honest about what a chart will take up.
+/// The series arrives from `admin_metrics` with every one of the fourteen days
+/// present, zero-count days included. That is the point: a chart assembled only
+/// from days that had walks redraws a quiet week as a busy one, which is the
+/// one thing a dashboard must not do.
 class _ActivityChart extends StatelessWidget {
   const _ActivityChart({required this.series});
 
@@ -188,7 +190,7 @@ class _ActivityChart extends StatelessWidget {
         children: [
           const SectionHeader(
             title: 'Activities over time',
-            subtitle: 'Last 14 days · preview data',
+            subtitle: 'Last 14 days',
             dense: true,
             padding: EdgeInsets.only(bottom: AppSpacing.lg),
           ),

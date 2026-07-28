@@ -5,11 +5,20 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/admin_shell.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../data/mock_admin_repository.dart';
+import '../data/admin_providers.dart';
 import '../domain/admin_models.dart';
 import 'widgets/status_pill.dart';
 
-/// Reported activities and comments, oldest concern first.
+/// Log tag for this screen's failures.
+const _tag = 'PW-MODERATION';
+
+/// Reported activities and comments, newest concern first.
+///
+/// Closing a report records a decision; it does not touch the content. Nothing
+/// in this console can delete another member's walk or comment yet — the
+/// delete policies on those tables belong to their author and, for a comment,
+/// the owner of the walk. The copy below says so rather than implying a takedown
+/// that does not happen.
 class AdminModerationScreen extends ConsumerWidget {
   const AdminModerationScreen({super.key});
 
@@ -19,27 +28,44 @@ class AdminModerationScreen extends ConsumerWidget {
     ModerationReport report,
     ReportStatus outcome,
   ) async {
-    final isRemoval = outcome == ReportStatus.resolved;
+    final upheld = outcome == ReportStatus.resolved;
+    final target = report.targetType.label.toLowerCase();
     final confirmed = await showConfirmDialog(
       context,
-      title: isRemoval ? 'Remove this content?' : 'Dismiss this report?',
-      message: isRemoval
-          ? 'The ${report.targetType.label.toLowerCase()} is taken down and '
-                '${report.targetAuthorName} is notified.'
-          : 'The content stays up and the report is closed.',
-      confirmLabel: isRemoval ? 'Remove' : 'Dismiss',
-      destructive: isRemoval,
+      title: upheld ? 'Uphold this report?' : 'Dismiss this report?',
+      message: upheld
+          ? 'The report is closed as upheld against '
+                '${report.targetAuthorName}, with your name and the time on '
+                'it. The $target itself stays up — take it down with its '
+                'author, or suspend them from their member page.'
+          : 'The $target stays up and the report is closed with no action '
+                'against ${report.targetAuthorName}.',
+      confirmLabel: upheld ? 'Uphold' : 'Dismiss',
+      destructive: upheld,
     );
     if (!confirmed) return;
 
-    await ref.read(adminRepositoryProvider).resolveReport(report.id, outcome);
+    try {
+      await ref.read(adminRepositoryProvider).resolveReport(report.id, outcome);
+    } catch (error, stack) {
+      if (context.mounted) {
+        reportFailure(
+          context,
+          error,
+          stack,
+          tag: _tag,
+          fallback: "That report wasn't closed.",
+        );
+      }
+      return;
+    }
     ref
       ..invalidate(moderationQueueProvider)
       ..invalidate(pendingReportCountProvider);
     if (context.mounted) {
       showAppSnackBar(
         context,
-        isRemoval ? 'Content removed.' : 'Report dismissed.',
+        upheld ? 'Report upheld.' : 'Report dismissed.',
       );
     }
   }
@@ -108,7 +134,7 @@ class AdminModerationScreen extends ConsumerWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
                 itemBuilder: (context, index) => _ReportCard(
                   report: items[index],
-                  onRemove: () => _resolve(
+                  onUphold: () => _resolve(
                     context,
                     ref,
                     items[index],
@@ -157,12 +183,12 @@ class _QueueFilter extends StatelessWidget {
 class _ReportCard extends StatelessWidget {
   const _ReportCard({
     required this.report,
-    required this.onRemove,
+    required this.onUphold,
     required this.onDismiss,
   });
 
   final ModerationReport report;
-  final VoidCallback onRemove;
+  final VoidCallback onUphold;
   final VoidCallback onDismiss;
 
   @override
@@ -188,10 +214,11 @@ class _ReportCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               StatusPill(label: report.targetType.label),
-              StatusPill(
-                label: report.reason,
-                tone: PillTone.warning,
-              ),
+              if (report.reason.isNotEmpty)
+                StatusPill(
+                  label: report.reason,
+                  tone: PillTone.warning,
+                ),
               StatusPill(
                 label: report.status.label,
                 tone: switch (report.status) {
@@ -200,6 +227,14 @@ class _ReportCard extends StatelessWidget {
                   ReportStatus.dismissed => PillTone.neutral,
                 },
               ),
+              // The walk or comment has been deleted since this was filed. The
+              // report stays in the queue — it still happened, and it still
+              // has to be closed by somebody.
+              if (report.targetRemoved)
+                const StatusPill(
+                  label: 'Content removed',
+                  tone: PillTone.neutral,
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -211,14 +246,28 @@ class _ReportCard extends StatelessWidget {
               borderRadius: AppRadius.control,
             ),
             child: Text(
-              '"${report.targetExcerpt}"',
-              style: theme.textTheme.bodyMedium,
+              // No quotation marks around a removed target: there is nothing
+              // being quoted, and dressing the absence up as content is how a
+              // console starts lying quietly.
+              report.targetRemoved
+                  ? report.targetExcerpt
+                  : '"${report.targetExcerpt}"',
+              style: report.targetRemoved
+                  ? theme.textTheme.bodyMedium?.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    )
+                  : theme.textTheme.bodyMedium,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'By ${report.targetAuthorName}  ·  reported by '
-            '${report.reportedByName}  ·  ${Fmt.relativeTime(report.createdAt)}',
+            report.targetRemoved
+                ? 'Reported by ${report.reportedByName}  ·  '
+                      '${Fmt.relativeTime(report.createdAt)}'
+                : 'By ${report.targetAuthorName}  ·  reported by '
+                      '${report.reportedByName}  ·  '
+                      '${Fmt.relativeTime(report.createdAt)}',
             style: theme.textTheme.labelSmall,
           ),
           if (isPending) ...[
@@ -228,7 +277,7 @@ class _ReportCard extends StatelessWidget {
               runSpacing: AppSpacing.sm,
               children: [
                 SecondaryButton(label: 'Dismiss', onPressed: onDismiss),
-                PrimaryButton(label: 'Remove content', onPressed: onRemove),
+                PrimaryButton(label: 'Uphold', onPressed: onUphold),
               ],
             ),
           ],
