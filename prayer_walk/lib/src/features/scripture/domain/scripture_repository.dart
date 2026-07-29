@@ -1,5 +1,6 @@
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
 import 'scripture_prompt.dart';
+import 'scripture_submission.dart';
 
 /// The prompt library.
 ///
@@ -26,6 +27,39 @@ abstract interface class ScriptureRepository {
   Future<ScripturePrompt> setPublished(String id, {required bool published});
 
   Future<void> deletePrompt(String id);
+
+  // ------------------------------------------------- member contributions ---
+
+  /// C1 · Sends a member's proposal into the queue.
+  ///
+  /// Always lands as `pending` and never published. That is enforced by the
+  /// insert policy rather than by this method: there is no member UPDATE policy
+  /// on `scripture_prompts` at all, so there is no path — bug, malice or
+  /// otherwise — by which a submission publishes itself into other people's
+  /// walks.
+  Future<void> submitPrompt(ScriptureSubmissionDraft draft);
+
+  /// What the signed-in member has sent, whatever became of it. Rejections
+  /// included, with their reason: a queue that swallows submissions silently
+  /// teaches people to stop sending them.
+  Future<List<ScriptureSubmission>> mySubmissions();
+
+  // ---------------------------------------------------------- admin queue ---
+
+  /// The submissions queue. Admin-only by RLS.
+  Future<List<ScriptureSubmission>> submissions({SubmissionStatus? status});
+
+  /// Approves or rejects, and — on approval — publishes.
+  ///
+  /// [reason] is recorded on a rejection so the contributor is told something
+  /// rather than nothing. `reviewed_by` and `reviewed_at` are stamped by a
+  /// trigger rather than sent from here, so a decision cannot end up in the
+  /// record with nobody's name on it.
+  Future<void> reviewSubmission(
+    String id, {
+    required SubmissionStatus outcome,
+    String reason = '',
+  });
 }
 
 /// The editable payload behind a future admin create/edit form. Mirrors

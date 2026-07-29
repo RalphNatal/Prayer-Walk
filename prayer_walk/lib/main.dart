@@ -11,6 +11,8 @@ import 'src/core/diagnostics/schema_preflight.dart';
 import 'src/core/theme/app_typography.dart';
 import 'src/core/utils/app_haptics.dart';
 import 'src/core/utils/app_logger.dart';
+import 'src/features/scripture/domain/bible_translation.dart';
+import 'src/features/scripture/presentation/scripture_credits.dart';
 
 /// Three nets, because an uncaught error can escape by three different routes
 /// and any one of them left open means a failure that reports nothing at all:
@@ -34,6 +36,13 @@ void main() {
       // with them. Registered here so it reaches the app's licence page whether
       // or not startup goes on to succeed.
       AppTypography.registerFontLicences();
+
+      // The scripture notices, on the same page and for the same reason: a
+      // translation's credit line is a condition of quoting it, and it has to
+      // reach the licence page whether or not startup goes on to succeed.
+      registerScriptureLicences(
+        BibleTranslation.of(AppConfig.scriptureTranslation),
+      );
 
       // Read once, so every later call site can fire synchronously. Failure
       // leaves feedback on, which is the default anyone would expect.

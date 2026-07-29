@@ -8,6 +8,8 @@ import '../../../core/widgets/widgets.dart';
 import '../../devotionals/data/devotional_providers.dart';
 import '../../devotionals/domain/devotional.dart';
 import '../../profile/data/profile_providers.dart';
+import '../../scripture/data/scripture_providers.dart';
+import '../../scripture/domain/bible_translation.dart';
 import '../data/admin_providers.dart';
 
 /// Log tag for this screen's failures.
@@ -34,11 +36,23 @@ class _AdminContentFormScreenState
   final _scriptureText = TextEditingController();
 
   DevotionalCategory _category = DevotionalCategory.morningLight;
+
+  /// The edition the quoted passage came from. Same explicit choice the
+  /// scripture form makes, for the same reason: a passage in a devotional owes
+  /// its copyright holder exactly what one on a walk owes.
+  late BibleTranslation _translation;
+
   bool _published = false;
   bool _seeded = false;
   bool _saving = false;
 
   bool get _isEdit => widget.devotionalId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _translation = ref.read(appTranslationProvider);
+  }
 
   @override
   void dispose() {
@@ -66,6 +80,7 @@ class _AdminContentFormScreenState
           body: _body.text,
           scriptureRef: _scriptureRef.text,
           scriptureText: _scriptureText.text,
+          translation: _translation.id,
           category: _category,
           isPublished: _published,
         ),
@@ -141,6 +156,12 @@ class _AdminContentFormScreenState
           _body.text = item.body;
           _scriptureRef.text = item.scriptureRef;
           _scriptureText.text = item.scriptureText;
+          // A row written before `devotionals.translation` existed carries no
+          // edition; it keeps the build's default rather than an empty choice,
+          // and the editor has to look at the field before saving either way.
+          if (item.translation.isNotEmpty) {
+            _translation = item.translationInfo;
+          }
           _category = item.category;
           _published = item.isPublished;
         }
@@ -148,6 +169,13 @@ class _AdminContentFormScreenState
       },
     );
   }
+
+  /// The editions this build carries terms for, plus the row's own if it is
+  /// neither — the same allowance the scripture form makes for an older row.
+  List<BibleTranslation> get _translationOptions => [
+    ...BibleTranslation.values,
+    if (!BibleTranslation.values.contains(_translation)) _translation,
+  ];
 
   Widget _form(BuildContext context, ThemeData theme) {
     return AdminPage(
@@ -235,6 +263,7 @@ class _AdminContentFormScreenState
                 labelText: 'Passage',
                 alignLabelWithHint: true,
               ),
+              onChanged: (_) => setState(() {}),
               validator: (value) {
                 final hasRef = _scriptureRef.text.trim().isNotEmpty;
                 final hasText = (value ?? '').trim().isNotEmpty;
@@ -244,6 +273,49 @@ class _AdminContentFormScreenState
                 return null;
               },
             ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // Only asked for once there is something to attribute. A devotional
+            // that quotes nothing stores no edition — see the migration.
+            if (_scriptureText.text.trim().isNotEmpty) ...[
+              DropdownButtonFormField<BibleTranslation>(
+                initialValue: _translation,
+                decoration: const InputDecoration(labelText: 'Translation'),
+                // As on the scripture form: the field owns the width, the name
+                // ellipsizes inside it.
+                isExpanded: true,
+                items: [
+                  for (final translation in _translationOptions)
+                    DropdownMenuItem(
+                      value: translation,
+                      child: Text(
+                        translation.isKnown
+                            ? '${translation.shortCode} · '
+                                  '${translation.displayName}'
+                            : '${translation.shortCode} · terms unknown',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _translation = value);
+                },
+                validator: (value) => value == null
+                    ? 'Choose the edition this passage came from.'
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _translation.isPublicDomain
+                    ? 'Public domain — no permission needed.'
+                    : 'Licensed. Paste ${_translation.shortCode} text only '
+                          'from an authorised source. It counts against the '
+                          '$kNltVerseCeiling-verse limit, and the reader shows '
+                          '${_translation.quotationMark} after the passage.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
             const SizedBox(height: AppSpacing.xl),
 
             SwitchListTile.adaptive(

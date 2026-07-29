@@ -10,9 +10,9 @@ import '../domain/devotional.dart';
 /// The `devotionals` columns every read selects. Kept next to the mapper so the
 /// two cannot fall out of step.
 const devotionalColumns =
-    'id, title, summary, body, scripture_ref, scripture_text, category, '
-    'author_id, author_name, read_minutes, is_published, published_at, '
-    'updated_at';
+    'id, title, summary, body, scripture_ref, scripture_text, translation, '
+    'category, author_id, author_name, read_minutes, is_published, '
+    'published_at, updated_at';
 
 Devotional devotionalFromRow(Map<String, dynamic> row) {
   final authorName = (row['author_name'] as String?)?.trim() ?? '';
@@ -24,6 +24,12 @@ Devotional devotionalFromRow(Map<String, dynamic> row) {
     body: (row['body'] as String?) ?? '',
     scriptureRef: (row['scripture_ref'] as String?)?.trim() ?? '',
     scriptureText: (row['scripture_text'] as String?)?.trim() ?? '',
+    // Nullable in the database and absent from a row read before
+    // `20260728070000_devotional_translation.sql` was applied. Empty means
+    // "nothing to credit", which is the right answer for a devotional with no
+    // passage and the safe answer for one written before the column existed —
+    // everything from that era is WEBBE, which owes nothing either way.
+    translation: (row['translation'] as String?)?.trim() ?? '',
     category: devotionalCategoryFrom(row['category'] as String?),
     // A devotional outlives the account that wrote it — `author_id` is set to
     // null on delete, and the byline falls back rather than going blank.

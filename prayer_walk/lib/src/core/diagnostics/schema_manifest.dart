@@ -31,6 +31,9 @@ const Map<String, String> kSchemaTables = {
   'devotionals': '20260728020000_devotionals.sql',
   'moderation_reports': '20260728030000_moderation_reports.sql',
   'announcements': '20260728040000_announcements.sql',
+  'privacy_zones': '20260728080000_visibility_zones_blocks.sql',
+  'blocks': '20260728080000_visibility_zones_blocks.sql',
+  'scripture_deliveries': '20260729000000_scripture_deliveries.sql',
 };
 
 /// RPCs the app calls, and the migration that creates each.
@@ -44,6 +47,16 @@ const Map<String, String> kSchemaFunctions = {
   'admin_reports': '20260728050000_admin_functions.sql',
   'admin_resolve_report': '20260728050000_admin_functions.sql',
   'audience_size': '20260728050000_admin_functions.sql',
+  'explore_feed': '20260728090000_visibility_rls_and_reads.sql',
+  // Not called by the app — called by `feed_for` and its siblings, which name
+  // them in the error when the visibility migration has not been applied. A
+  // half-applied pair of migrations shows up as "activity_trace_for_viewer
+  // does not exist" behind an ordinary feed read, and this is what turns that
+  // into a filename.
+  'activity_trace_for_viewer': '20260728090000_visibility_rls_and_reads.sql',
+  'pw_can_view_activity': '20260728090000_visibility_rls_and_reads.sql',
+  'search_members': '20260728100000_discovery.sql',
+  'suggested_members': '20260728100000_discovery.sql',
 };
 
 /// Every migration, in the order it must be applied.
@@ -62,6 +75,11 @@ final List<String> kMigrationOrder = <String>{
   '20260727000000_activity_place_name.sql',
   '20260728010000_admin_role_rules.sql',
   '20260728060000_suspension_enforcement.sql',
+  '20260728070000_devotional_translation.sql',
+  // Adds `submitted_by` / `status` and the member submission policies to
+  // `scripture_prompts`, which already exists — so it names no new object and
+  // would otherwise be missing from the order.
+  '20260728110000_scripture_submissions.sql',
 }.toList()..sort();
 
 /// The migration that creates [object], or null if the name is not one of ours.

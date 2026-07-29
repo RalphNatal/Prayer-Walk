@@ -43,6 +43,7 @@ class RouteMapView extends StatefulWidget {
     this.borderRadius,
     this.locatingLabel = 'Finding you…',
     this.revealProgress = 1,
+    this.onCentreChanged,
   });
 
   /// The traced route. Empty renders the basemap around [center] — which is
@@ -99,6 +100,16 @@ class RouteMapView extends StatefulWidget {
   /// Nothing about tiles, accuracy or the live camera reads this. A caller that
   /// leaves it alone gets exactly the previous behaviour.
   final double revealProgress;
+
+  /// Where the camera is now, as it moves. Null — the default — attaches no
+  /// listener at all.
+  ///
+  /// One caller: the privacy-zone picker, which is a map with a fixed crosshair
+  /// that the map slides underneath, so the point being chosen *is* the centre
+  /// of the camera. Nothing else in the app needs to know where the map is
+  /// looking, and this stays a callback rather than a controller so that the
+  /// only file importing `flutter_map` is still this one.
+  final ValueChanged<LatLng>? onCentreChanged;
 
   /// Fallback only. The public OSM tile server is community-funded and its
   /// usage policy does not permit production app traffic — a release build
@@ -205,6 +216,9 @@ class _RouteMapViewState extends State<RouteMapView> {
               ? InteractiveFlag.all & ~InteractiveFlag.rotate
               : InteractiveFlag.none,
         ),
+        onPositionChanged: widget.onCentreChanged == null
+            ? null
+            : (position, _) => widget.onCentreChanged!(position.center),
       ),
       children: [
         TileLayer(

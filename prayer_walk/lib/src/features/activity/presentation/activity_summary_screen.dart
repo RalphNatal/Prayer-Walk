@@ -8,6 +8,11 @@ import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../privacy/data/privacy_providers.dart';
+import '../../privacy/domain/activity_visibility.dart';
+import '../../privacy/domain/privacy_zone.dart';
+import '../../privacy/domain/zone_trimming.dart';
+import '../../privacy/presentation/visibility_picker.dart';
 import '../data/activity_providers.dart';
 import '../data/recording_controller.dart';
 import '../domain/activity.dart';
@@ -32,6 +37,15 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
   final _note = TextEditingController();
   bool _saving = false;
   bool _seeded = false;
+
+  /// Whether the standing default has been copied onto this draft yet.
+  ///
+  /// Separate from [_seeded] because it lands asynchronously: the draft starts
+  /// at [ActivityVisibility.standard] and is upgraded to the member's own
+  /// default when `profiles` answers. A walk saved in the gap is followers-only
+  /// rather than whatever the member last chose, which is the direction this
+  /// screen is allowed to be wrong in.
+  bool _visibilitySeeded = false;
 
   @override
   void dispose() {
@@ -123,6 +137,22 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
       _seeded = true;
       _title.text = draft.title;
       _note.text = draft.note;
+    }
+
+    // The member's standing choice, once it arrives. Applied after the frame so
+    // the controller is not written to during a build.
+    final standing = ref.watch(defaultVisibilityProvider).value;
+    if (!_visibilitySeeded && standing != null) {
+      _visibilitySeeded = true;
+      if (standing != draft.visibility) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref
+                .read(recordingControllerProvider.notifier)
+                .setDraftVisibility(standing);
+          }
+        });
+      }
     }
 
     final paceLabel = draft.type.usesSpeed
@@ -222,6 +252,22 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
 
+                // Asked before Save, not after it. This is the last moment
+                // before a route leaves the phone, and the first moment it is
+                // possible to decide anything about it.
+                const SectionHeader(
+                  title: 'Who can see this walk',
+                  subtitle: 'You can change this later from the walk itself.',
+                ),
+                VisibilityPicker(
+                  value: draft.visibility,
+                  onChanged: (chosen) => ref
+                      .read(recordingControllerProvider.notifier)
+                      .setDraftVisibility(chosen),
+                ),
+                _ZonePreview(draft: draft),
+                const SizedBox(height: AppSpacing.xl),
+
                 if (draft.waypoints.isNotEmpty) ...[
                   const SectionHeader(title: 'Prayer waypoints'),
                   for (final waypoint in draft.waypoints)
@@ -246,6 +292,104 @@ class _ActivitySummaryScreenState extends ConsumerState<ActivitySummaryScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What a privacy zone will do to this particular walk, before it is shared.
+///
+/// The trimming that matters happens in Postgres — see `zone_trimming.dart`,
+/// which says at length why the Dart copy is not the boundary. This is the one
+/// place that copy is used, and it is used for the one person entitled to both
+/// versions of the route: its owner, checking that the zone they set covers
+/// what they meant it to.
+///
+/// Shows nothing when the walk is private (nobody else will receive it), when
+/// there are no zones, or when this walk passes through none of them. A line of
+/// reassurance about a thing that is not happening is noise.
+class _ZonePreview extends ConsumerWidget {
+  const _ZonePreview({required this.draft});
+
+  final ActivityDraft draft;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (draft.visibility == ActivityVisibility.private) {
+      return const SizedBox.shrink();
+    }
+
+    final zones = ref.watch(privacyZonesProvider).value ?? const <PrivacyZone>[];
+    if (zones.isEmpty) return const _NoZonesHint();
+
+    final trimmed = trimRoute(draft.route, zones);
+    if (!trimmed.trimmed) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(top: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: AppRadius.control,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.shield_outlined,
+            size: 18,
+            color: theme.colorScheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              trimmed.route.isEmpty
+                  ? 'This whole walk is inside a privacy zone, so nobody else '
+                        'will see a route at all — just the distance and the '
+                        'time.'
+                  : 'A privacy zone covers '
+                        '${trimmed.removedFromStart > 0 ? 'the start' : ''}'
+                        '${trimmed.removedFromStart > 0 && trimmed.removedFromEnd > 0 ? ' and ' : ''}'
+                        '${trimmed.removedFromEnd > 0 ? 'the end' : ''}'
+                        ' of this walk. Others will see the middle of the '
+                        'route; you will always see all of it.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Offered once, quietly, on the screen where somebody is deciding to share.
+/// Not a modal and not a warning — a line and a link.
+class _NoZonesHint extends StatelessWidget {
+  const _NoZonesHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Text(
+              'Routes usually start where you live. A privacy zone trims that '
+              'off before anyone else sees it.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+          AppTextButton(
+            label: 'Set one',
+            onPressed: () => context.pushNamed(Routes.privacyZones),
           ),
         ],
       ),

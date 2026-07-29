@@ -32,6 +32,30 @@ class SupabaseFeedRepository implements FeedRepository {
 
     return feedEntriesFromRows(rows);
   }
+
+  @override
+  Future<List<FeedEntry>> exploreFor(
+    String viewerId, {
+    DateTime? before,
+    int limit = 30,
+  }) async {
+    final rows =
+        await supabase.rpc(
+              'explore_feed',
+              params: {
+                'viewer': viewerId,
+                'limit_count': limit,
+                'before': before?.toUtc().toIso8601String(),
+              },
+            )
+            as List<dynamic>;
+
+    // Same `activity_card` shape as the following feed, so an Explore card and
+    // a feed card are literally the same widget reading the same row — and so
+    // that a route trimmed by its owner's privacy zone arrives trimmed here
+    // too, which is the surface where that matters most.
+    return feedEntriesFromRows(rows);
+  }
 }
 
 /// `activity_card` rows → [FeedEntry]s.

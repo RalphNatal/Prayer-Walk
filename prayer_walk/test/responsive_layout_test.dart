@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:prayer_walk/src/core/theme/app_theme.dart';
 import 'package:prayer_walk/src/core/widgets/stat_tile.dart';
 import 'package:prayer_walk/src/features/activity/data/activity_providers.dart';
@@ -21,12 +22,21 @@ import 'package:prayer_walk/src/features/admin/presentation/admin_members_screen
 import 'package:prayer_walk/src/features/admin/presentation/admin_moderation_screen.dart';
 import 'package:prayer_walk/src/features/admin/presentation/admin_scripture_form_screen.dart';
 import 'package:prayer_walk/src/features/admin/presentation/admin_scripture_screen.dart';
+import 'package:prayer_walk/src/features/admin/presentation/admin_scripture_submissions_screen.dart';
 import 'package:prayer_walk/src/features/auth/data/auth_providers.dart';
 import 'package:prayer_walk/src/features/devotionals/data/devotional_providers.dart';
 import 'package:prayer_walk/src/features/devotionals/domain/devotional.dart';
+import 'package:prayer_walk/src/features/discovery/data/discovery_providers.dart';
+import 'package:prayer_walk/src/features/discovery/domain/member_card.dart';
+import 'package:prayer_walk/src/features/discovery/presentation/discover_screen.dart';
+import 'package:prayer_walk/src/features/privacy/data/privacy_providers.dart';
+import 'package:prayer_walk/src/features/privacy/domain/privacy_zone.dart';
+import 'package:prayer_walk/src/features/privacy/presentation/privacy_zones_screen.dart';
+import 'package:prayer_walk/src/features/privacy/presentation/safety_screen.dart';
 import 'package:prayer_walk/src/features/scripture/data/scripture_providers.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_settings.dart';
+import 'package:prayer_walk/src/features/scripture/presentation/submit_scripture_screen.dart';
 import 'package:prayer_walk/src/features/profile/data/profile_providers.dart';
 import 'package:prayer_walk/src/features/profile/domain/profile_repository.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
@@ -629,7 +639,10 @@ void main() {
       );
       // The licensing note sits above the list and is the widest block of
       // prose anywhere in the console.
-      expect(find.textContaining('Public-domain text only'), findsOneWidget);
+      expect(
+        find.textContaining('WEBBE is public domain'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -655,6 +668,108 @@ void main() {
       );
       // The page title — the send button is at the foot of a long form.
       expect(find.text('Compose announcement'), findsOneWidget);
+    });
+  });
+
+  // ------------------------------------------------- discovery and safety ---
+  //
+  // These are the most prose-heavy screens in the member app: a privacy control
+  // has to explain itself in whole sentences, and a paragraph is what overflows
+  // a 320 dp phone at 2× before anything else does.
+
+  ProviderScope member(Widget screen, double scale) => ProviderScope(
+    overrides: [
+      privacyRepositoryProvider.overrideWithValue(
+        StubPrivacyRepository(
+          zoneRows: [
+            PrivacyZone(
+              id: 'z_1',
+              label: 'Home',
+              centre: const LatLng(14.5794, 121.0359),
+              radiusMeters: 200,
+              createdAt: DateTime(2026, 7, 1),
+            ),
+          ],
+          blocked: [_profile()],
+        ),
+      ),
+      discoveryRepositoryProvider.overrideWithValue(
+        StubDiscoveryRepository(
+          suggestions: [
+            MemberCard(
+              profile: _profile(),
+              isFollowing: false,
+              followerCount: 12,
+              lastWalkedAt: DateTime(2026, 7, 26),
+            ),
+          ],
+        ),
+      ),
+      scriptureRepositoryProvider.overrideWith(
+        (ref) => StubScriptureRepository(),
+      ),
+      socialRepositoryProvider.overrideWithValue(FakeSocialRepository()),
+      currentAuthUserIdProvider.overrideWith((ref) => _viewerId),
+    ],
+    child: _app(screen, scale),
+  );
+
+  group('Discover', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(tester, member(const DiscoverScreen(), scale), width: width);
+      // The suggestion cards, which are fixed-width tiles in a horizontal
+      // strip — the one place in the member app where a long parish name has
+      // nowhere to wrap to.
+      expect(find.text('People to follow'), findsOneWidget);
+    });
+  });
+
+  group('the safety screen', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(tester, member(const SafetyScreen(), scale), width: width);
+      // All three visibility options with their sentences, stacked. The
+      // longest block of member-facing prose anywhere in the app.
+      expect(find.text('Followers'), findsOneWidget);
+      expect(find.textContaining('never met'), findsOneWidget);
+    });
+  });
+
+  group('the privacy zone list', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        member(const PrivacyZonesScreen(), scale),
+        width: width,
+      );
+      expect(find.textContaining('Walks you share are trimmed'), findsOneWidget);
+    });
+  });
+
+  group('the scripture submission form', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        member(const SubmitScriptureScreen(), scale),
+        width: width,
+      );
+      // The intro paragraph, at the top of a long form. The licence note is
+      // further down and off-screen at 320dp — a `ListView` does not build what
+      // it has not scrolled to, so asserting on it would be asserting on the
+      // viewport rather than on the layout.
+      expect(find.textContaining('read out on other people'), findsOneWidget);
+    });
+  });
+
+  group('the submissions queue', () {
+    forEverySize('lays out without overflowing', (tester, width, scale) async {
+      await pumpAt(
+        tester,
+        console(const AdminScriptureSubmissionsScreen(), scale),
+        width: width,
+      );
+      // The verse meter, which carries a number, a bar and two sentences in one
+      // bordered box.
+      expect(find.textContaining('Licensed verses'), findsOneWidget);
     });
   });
 }

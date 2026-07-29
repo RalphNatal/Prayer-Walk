@@ -44,6 +44,41 @@ abstract final class AppConfig {
 
   static bool get hasMapboxToken => mapboxAccessToken.isNotEmpty;
 
+  /// Which translation this build delivers on a walk — `WEBBE` or `NLT`.
+  ///
+  /// The whole app switches editions from here, without a content rewrite: both
+  /// sets can sit in `scripture_prompts` at once, each row carrying its own
+  /// `translation`, and this decides which of them a walk draws from. Prayers
+  /// are delivered whatever it says — they quote nobody.
+  ///
+  /// Deliberately **not** in [validate]'s required list, and deliberately
+  /// defaulted rather than empty: an unset value must mean the public-domain
+  /// set, never "no scripture" and never a licensed edition by accident. The
+  /// bundled offline set stays WEBBE regardless of this — see
+  /// `ScripturePromptStore`.
+  static const scriptureTranslation = String.fromEnvironment(
+    'SCRIPTURE_TRANSLATION',
+    defaultValue: 'WEBBE',
+  );
+
+  /// How many days a passage rests before it may be delivered again.
+  ///
+  /// The cooldown in "unseen first, then least recently seen": a prompt this
+  /// member received inside this window is skipped entirely while anything
+  /// else remains, so a verse from yesterday does not come back today. It is a
+  /// preference, not a bar — a walk long enough to exhaust everything else
+  /// falls back to oldest-first rather than going quiet.
+  ///
+  /// Configurable so a parish with a small library can shorten it rather than
+  /// spend the whole pool at once, and so a very large library can lengthen it.
+  /// Thirty days is the default because it is longer than the interval at which
+  /// anybody remembers a short passage, and short enough that a 300-prompt
+  /// library is not effectively halved by it.
+  static const scriptureCooldownDays = int.fromEnvironment(
+    'SCRIPTURE_COOLDOWN_DAYS',
+    defaultValue: 30,
+  );
+
   /// Throws a [StateError] naming **every** missing key at once if any required
   /// compile-time value is absent.
   ///

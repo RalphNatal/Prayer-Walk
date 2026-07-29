@@ -12,6 +12,8 @@ import '../../admin/domain/admin_models.dart' show ReportTargetType;
 import '../../auth/data/auth_providers.dart';
 import '../../feed/data/feed_providers.dart';
 import '../../moderation/presentation/report_sheet.dart';
+import '../../privacy/data/privacy_actions.dart';
+import '../../privacy/presentation/visibility_picker.dart';
 import '../../profile/data/profile_providers.dart';
 import '../../profile/domain/user_profile.dart';
 import '../../social/data/social_actions.dart';
@@ -143,6 +145,38 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   void dispose() {
     _comment.dispose();
     super.dispose();
+  }
+
+  Future<void> _changeVisibility() async {
+    final chosen = await showVisibilitySheet(
+      context,
+      current: widget.activity.visibility,
+    );
+    if (chosen == null || chosen == widget.activity.visibility) return;
+    if (!mounted) return;
+
+    try {
+      await ref
+          .read(privacyActionsProvider)
+          .setActivityVisibility(widget.activity.id, chosen);
+    } catch (error, stack) {
+      if (mounted) {
+        reportFailure(
+          context,
+          error,
+          stack,
+          tag: _tag,
+          fallback: "That didn't change.",
+        );
+      }
+      return;
+    }
+    if (mounted) {
+      showAppSnackBar(
+        context,
+        'This walk is now visible to ${chosen.label.toLowerCase()}.',
+      );
+    }
   }
 
   Future<void> _send() async {
@@ -283,6 +317,25 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                   ],
                 ],
               ),
+              // Who this walk is for, and — when the server shortened the line
+              // before sending it — why the map and the distance disagree.
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  VisibilityChip(
+                    visibility: activity.visibility,
+                    // Only its owner may change it, and only its owner is shown
+                    // the affordance. The update policy is the actual boundary.
+                    onTap: widget.isOwn ? () => _changeVisibility() : null,
+                  ),
+                ],
+              ),
+              if (activity.routeTrimmed) ...[
+                const SizedBox(height: AppSpacing.md),
+                const _TrimmedRouteNote(),
+              ],
               const SizedBox(height: AppSpacing.xl),
 
               StatStrip(
@@ -423,6 +476,51 @@ class _AuthorRow extends StatelessWidget {
                 pathParameters: {'userId': profile.id},
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// B3 · Why the line is shorter than the walk.
+///
+/// The server dropped the points at either end of this trace that fell inside
+/// one of the walker's privacy zones, before any of it was serialised. The
+/// distance above is deliberately *not* recomputed to match — it is the full
+/// recorded walk — so the two disagree, and the honest thing is to say why
+/// rather than let a viewer notice a 4 km number over a 3 km line and conclude
+/// the app cannot count.
+///
+/// Never shown to the owner, who receives their whole route and for whom
+/// `route_trimmed` is always false.
+class _TrimmedRouteNote extends StatelessWidget {
+  const _TrimmedRouteNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.control,
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.shield_outlined,
+            size: 16,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Part of this route is hidden by a privacy zone. The distance '
+              'and time are the full walk.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
         ],
       ),
     );

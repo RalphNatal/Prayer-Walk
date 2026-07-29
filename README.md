@@ -57,6 +57,7 @@ human runs the migration.
 | 10 | `20260728040000_announcements.sql` | `announcements` — console broadcasts, with `recipient_count` frozen at send time. |
 | 11 | `20260728050000_admin_functions.sql` | The console's reads, one round trip each: `admin_metrics`, `admin_members`, `admin_reports`, `admin_resolve_report`, `audience_size`. Each raises `42501` for a non-admin. |
 | 12 | `20260728060000_suspension_enforcement.sql` | ⚠️ **Changes existing security rules.** Adds six RESTRICTIVE policies so `profiles.status = 'suspended'` actually blocks writes. They are ANDed with the Phase-2 policies rather than replacing them — drop these six and the old rules stand unchanged. |
+| 13 | `20260728070000_devotional_translation.sql` | Adds `devotionals.translation` — which edition a quoted passage came from, the same provenance `scripture_prompts` already carried. Nullable; backfills existing rows that quote something to `'WEBBE'`. |
 
 **The two marked ⚠️ are the ones to read before running.** Everything else adds
 objects; those two change how existing ones behave.
@@ -74,6 +75,15 @@ and prune from the console.
 |------|-----------|----------|
 | `scripture_prompts_seed.sql` | migration 6 | The starting scripture library. Public-domain WEBBE text only. |
 | `devotionals_seed.sql` | migration 8 | The starting devotional shelf. |
+| `scripture_prompts_nlt_seed.sql.template` | migration 6 | ⚠️ **Template, not runnable as committed.** The same library restated as New Living Translation rows, with every verse left blank for the maintainer to paste from a licensed source. |
+| `devotionals_nlt_seed.sql.template` | migration 13 | ⚠️ **Template, not runnable as committed.** Swaps the seeded devotionals' quoted passages to NLT, in place. |
+
+The two NLT templates carry Tyndale's terms in full, the 500-verse ceiling, and
+a query that counts licensed verses across both tables. **NLT text is pasted by
+the maintainer from a licensed source — never scraped, fetched from an API, or
+supplied by an AI assistant.** See the "Scripture licensing" section of
+`prayer_walk/README.md` for the terms, the credit line, and how to switch the
+app between editions.
 
 ### After applying anything: reload the schema cache
 

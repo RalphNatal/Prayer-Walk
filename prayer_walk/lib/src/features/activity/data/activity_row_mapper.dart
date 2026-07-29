@@ -1,5 +1,6 @@
 import 'package:latlong2/latlong.dart';
 
+import '../../privacy/domain/activity_visibility.dart';
 import '../domain/activity.dart';
 
 /// Row ⇄ [Activity], in one place.
@@ -19,7 +20,7 @@ import '../domain/activity.dart';
 const activityColumns =
     'id, user_id, type, title, started_at, duration_seconds, distance_meters, '
     'elevation_gain_meters, route, waypoints, intentions, note, place_name, '
-    'created_at';
+    'visibility, created_at';
 
 Activity activityFromRow(Map<String, dynamic> row) {
   final id = row['id'] as String;
@@ -43,6 +44,11 @@ Activity activityFromRow(Map<String, dynamic> row) {
     placeName: (row['place_name'] as String?)?.trim().isNotEmpty ?? false
         ? (row['place_name'] as String).trim()
         : null,
+    visibility: ActivityVisibility.fromWire(row['visibility'] as String?),
+    // Only an `activity_card` carries this: a plain `activities` row is read
+    // straight from the table by its owner, who is never trimmed. Absent
+    // therefore means "this is your own untrimmed walk", which is false.
+    routeTrimmed: (row['route_trimmed'] as bool?) ?? false,
     // Absent on a plain `activities` row — a walk read straight from the table
     // reports no encouragement rather than an unknown amount of it.
     encouragementCount: (row['encouragement_count'] as num?)?.toInt() ?? 0,

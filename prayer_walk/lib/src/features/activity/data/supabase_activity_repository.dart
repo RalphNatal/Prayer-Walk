@@ -96,6 +96,12 @@ class SupabaseActivityRepository implements ActivityRepository {
       // the summary screen. Null is written as null — the save is never
       // delayed to go and look it up.
       'place_name': draft.placeName,
+      // Written explicitly rather than left to the column default. The default
+      // and the draft agree today, but a walk's audience is the one field on
+      // this row where "whatever the server decided" is not an acceptable
+      // answer — the walker chose it on the previous screen and the insert
+      // should carry their choice, not a coincidence.
+      'visibility': draft.visibility.wireName,
     };
 
     try {

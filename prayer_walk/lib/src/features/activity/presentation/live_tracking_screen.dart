@@ -13,20 +13,12 @@ import '../../../core/widgets/widgets.dart';
 import '../../scripture/data/scripture_providers.dart';
 import '../../scripture/domain/scripture_settings.dart';
 import '../../scripture/presentation/scripture_arrival_card.dart';
+import '../../scripture/presentation/scripture_quotation.dart';
 import '../../scripture/presentation/scripture_reading.dart';
 import '../data/recording_controller.dart';
 import '../domain/activity.dart';
 import 'trail_mapping.dart';
 
-/// The walk as it happens: the trail drawing itself, the numbers moving, and —
-/// when scripture is on — a verse arriving now and then.
-///
-/// Everything here reads [RecordingController]'s live state: the route, the
-/// distance, the clock and the verses are all being accumulated by the
-/// recorder. The screen owns no recording logic of its own. What it does own is
-/// the *announcement* — the chime, the haptic and the voice — because those are
-/// platform channels, and keeping them out of the controller is what lets the
-/// recorder be tested without a speaker.
 class LiveTrackingScreen extends ConsumerStatefulWidget {
   const LiveTrackingScreen({super.key});
 
@@ -38,8 +30,6 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   /// Whether the one-time "your phone has no step sensor" note has been shown.
   bool _toldAboutFallback = false;
 
-  /// Held in a field rather than read on demand: `dispose` needs it, and `ref`
-  /// is not safe to touch once the element is on its way out.
   late final ScriptureAnnouncer _announcer;
 
   @override
@@ -69,11 +59,6 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
     context.goNamed(Routes.record);
   }
 
-  /// A verse has landed. Chime, buzz, speak, and tell a screen reader.
-  ///
-  /// Fire-and-forget on purpose: nothing on this screen waits for audio, and
-  /// [ScriptureAnnouncer] swallows every platform failure, so a device with no
-  /// speech engine simply gets the card.
   void _announce(DeliveredPrompt delivered) {
     final settings = ref.read(recordingControllerProvider).scripture;
     unawaited(
@@ -101,8 +86,6 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(recordingControllerProvider);
 
-    // Each arrival is a fresh object, so identity is what separates "a verse
-    // has landed" from "this screen rebuilt".
     ref.listen<DeliveredPrompt?>(
       recordingControllerProvider.select((s) => s.currentPrompt),
       (previous, next) {
@@ -644,10 +627,10 @@ class _DeliveredRow extends StatelessWidget {
                     prompt.reference,
                     style: theme.textTheme.bodyMedium?.copyWith(color: onDark),
                   ),
-                  Text(
-                    prompt.body,
+                  ScriptureQuotation(
+                    text: prompt.body,
+                    translationId: prompt.translation,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(color: muted),
                   ),
                 ],

@@ -5,6 +5,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
 import '../data/scripture_settings_controller.dart';
 import '../domain/scripture_settings.dart';
+import 'scripture_library_progress.dart';
 
 /// The one place scripture on the trail is configured.
 ///
@@ -143,6 +144,11 @@ class ScriptureSettingsPanel extends ConsumerWidget {
             value: settings.showTranslation,
             onChanged: controller.setShowTranslation,
           ),
+
+          const SizedBox(height: AppSpacing.lg),
+          // The sheet draws its own title and is opened on the way out of the
+          // door; Settings is where an irreversible choice belongs.
+          ScriptureLibraryProgress(allowReset: !showHeader),
         ],
       ],
     );

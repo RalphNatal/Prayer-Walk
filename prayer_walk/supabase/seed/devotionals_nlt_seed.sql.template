@@ -1,0 +1,138 @@
+-- ===========================================================================
+-- TEMPLATE — NOT RUNNABLE AS COMMITTED. The maintainer fills it in.
+-- ===========================================================================
+--
+-- The eight seeded devotionals, with their quoted passages restated in the New
+-- Living Translation. Every passage is left blank; only the titles and the
+-- references are here, because those are what identifies the row and what was
+-- curated. The words are not here, and must not be added by anyone but the
+-- maintainer, from a licensed source.
+--
+-- Copy to `devotionals_nlt_seed.sql` (dropping `.template`) before filling it
+-- in.
+--
+-- This one **updates** rather than inserts, which is the difference between
+-- devotionals and prompts. A prompt library holds both editions at once and the
+-- build picks which is delivered; the devotional shelf is one shelf, and a
+-- member should find eight devotionals on it rather than sixteen. So the prose
+-- — which is Prayer Walk's own writing, not anybody's translation — stays where
+-- it is, and only the quoted passage and its `translation` change.
+--
+-- Devotionals written from the admin console are not touched by this file. The
+-- console asks for the edition on the form; change one there.
+--
+--
+-- COPYRIGHT
+-- ---------
+-- Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale
+-- House Foundation. All rights reserved.
+--
+-- WHAT MAY BE QUOTED WITHOUT EXPRESS WRITTEN PERMISSION
+-- -----------------------------------------------------
+--   * up to 500 verses, and
+--   * not more than 25% of the work in which they are quoted, and
+--   * no complete book of the Bible.
+--
+-- Written permission is required for quotations beyond those limits, and for
+-- commentary or Bible-reference works produced for commercial sale. Requests
+-- go to permission@tyndale.com.
+--
+-- THE CREDIT LINE, WHICH IS MANDATORY
+-- ------------------------------------
+-- The full notice must appear in the app, verbatim:
+--
+--   Scripture quotations are taken from the Holy Bible, New Living
+--   Translation, copyright © 1996, 2004, 2015 by Tyndale House Foundation.
+--   Used by permission of Tyndale House Publishers, Carol Stream, Illinois
+--   60188. All rights reserved.
+--
+-- For non-salable media the short form is acceptable, in which case the
+-- initials "(NLT)" must appear at the end of each quotation. Prayer Walk uses
+-- the short form: the reader appends "(NLT)" to the passage automatically once
+-- `translation` says 'NLT', and Settings → Scripture credits carries the full
+-- notice. Do not paste "(NLT)" into the text below — it would be doubled.
+--
+-- HOW TO FILL THIS IN
+-- --------------------
+--   1. Copy each passage from an authorised NLT source you are licensed to
+--      use. Not from memory, not from an unlicensed site, and not from an AI
+--      assistant.
+--   2. Replace every `<<PASTE LICENSED NLT TEXT HERE>>` with that passage.
+--   3. Double any apostrophe inside the text: `don''t`, not `don't`.
+--
+-- Rows still holding a placeholder are skipped by the `where` clause, so an
+-- unfilled run changes nothing.
+--
+-- VERSE COUNT
+-- -----------
+-- This file: 8 references, about 14 verses (ranges counted out).
+-- `scripture_prompts_nlt_seed.sql.template`: 41 references, about 46 verses.
+-- Combined: about 60 verses of the 500 that may be quoted without express
+-- written permission. The counting query lives in the scripture template and
+-- covers both tables; the admin scripture screen shows the same total running.
+--
+-- PREREQUISITE
+-- ------------
+-- `20260728070000_devotional_translation.sql` must be applied first — it is
+-- what adds the `translation` column this file writes to.
+
+update public.devotionals as d
+   set scripture_text = v.scripture_text,
+       translation    = 'NLT'
+  from (values
+
+  -- ---------------------------------------------------------- morning light --
+  ('Before the street wakes',
+   'Lamentations 3:22-23',
+   '<<PASTE LICENSED NLT TEXT HERE>>'),
+
+  -- -------------------------------------------------------------- gratitude --
+  ('Count five things on this street',
+   'Psalm 118:24',
+   '<<PASTE LICENSED NLT TEXT HERE>>'),
+  ('Thanks on the way home',
+   '1 Thessalonians 5:16-18',
+   '<<PASTE LICENSED NLT TEXT HERE>>'),
+
+  -- ----------------------------------------------------------- intercession --
+  ('Carry one name the whole way',
+   'Galatians 6:2',
+   '<<PASTE LICENSED NLT TEXT HERE>>'),
+
+  -- ----------------------------------------------------------------- lament --
+  ('For the walk you did not want to take',
+   'Psalm 13:1-2',
+   '<<PASTE LICENSED NLT TEXT HERE>>'),
+
+  -- -------------------------------------------------------------- stillness --
+  ('Twenty minutes, no words',
+   'Psalm 46:10',
+   '<<PASTE LICENSED NLT TEXT HERE>>'),
+  ('Walk until you are tired enough to stop talking',
+   'Matthew 11:28-29',
+   '<<PASTE LICENSED NLT TEXT HERE>>'),
+
+  -- --------------------------------------------------------- scripture walk --
+  ('Psalm 121, one line per kilometre',
+   'Psalm 121:1-2',
+   '<<PASTE LICENSED NLT TEXT HERE>>')
+
+) as v(title, scripture_ref, scripture_text)
+ where d.title = v.title
+   -- The reference has to match too: if the shelf has been edited and this
+   -- devotional now quotes something else, the safe outcome is to change
+   -- nothing and let the editor decide.
+   and d.scripture_ref = v.scripture_ref
+   and v.scripture_text not like '<<PASTE%';
+
+-- Verify before trusting it — every devotional that quotes anything should now
+-- name the edition it quotes:
+--
+--   select title, scripture_ref, translation
+--     from public.devotionals
+--    where coalesce(trim(scripture_text), '') <> ''
+--    order by translation nulls first, title;
+--
+-- A null `translation` on a row that quotes something is the one state to fix
+-- by hand: the app treats it as "nothing to credit", which is true of WEBBE and
+-- false of everything licensed.

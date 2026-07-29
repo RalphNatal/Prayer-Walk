@@ -17,6 +17,7 @@ import '../../features/admin/presentation/admin_members_screen.dart';
 import '../../features/admin/presentation/admin_moderation_screen.dart';
 import '../../features/admin/presentation/admin_scripture_form_screen.dart';
 import '../../features/admin/presentation/admin_scripture_screen.dart';
+import '../../features/admin/presentation/admin_scripture_submissions_screen.dart';
 import '../../features/admin/presentation/admin_settings_screen.dart';
 import '../../features/auth/data/auth_providers.dart';
 import '../../features/auth/presentation/auth_screen.dart';
@@ -24,13 +25,19 @@ import '../../features/auth/presentation/onboarding_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/devotionals/presentation/devotional_reader_screen.dart';
 import '../../features/devotionals/presentation/devotionals_screen.dart';
+import '../../features/discovery/presentation/discover_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
+import '../../features/privacy/presentation/blocked_members_screen.dart';
+import '../../features/privacy/presentation/privacy_zones_screen.dart';
+import '../../features/privacy/presentation/safety_screen.dart';
 import '../../features/profile/domain/user_profile.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/follow_list_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/profile/presentation/user_profile_screen.dart';
+import '../../features/scripture/presentation/my_submissions_screen.dart';
+import '../../features/scripture/presentation/submit_scripture_screen.dart';
 import 'admin_shell.dart';
 import 'member_shell.dart';
 import 'not_found_screen.dart';
@@ -118,6 +125,41 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+
+      // Discovery and the safety screens are pushed above the shell rather
+      // than given tabs. Finding people is a door out of an empty feed, not a
+      // fifth place to live; the zone and block screens are settings that
+      // happen to need a whole screen.
+      GoRoute(
+        path: Routes.discoverPath,
+        name: Routes.discover,
+        pageBuilder: (context, state) =>
+            fadeThroughPage(context, state, const DiscoverScreen()),
+      ),
+      GoRoute(
+        path: Routes.privacyZonesPath,
+        name: Routes.privacyZones,
+        pageBuilder: (context, state) =>
+            fadeThroughPage(context, state, const PrivacyZonesScreen()),
+      ),
+      GoRoute(
+        path: Routes.blockedMembersPath,
+        name: Routes.blockedMembers,
+        pageBuilder: (context, state) =>
+            fadeThroughPage(context, state, const BlockedMembersScreen()),
+      ),
+      GoRoute(
+        path: Routes.submitScripturePath,
+        name: Routes.submitScripture,
+        pageBuilder: (context, state) =>
+            fadeThroughPage(context, state, const SubmitScriptureScreen()),
+      ),
+      GoRoute(
+        path: Routes.myScriptureSubmissionsPath,
+        name: Routes.myScriptureSubmissions,
+        pageBuilder: (context, state) =>
+            fadeThroughPage(context, state, const MySubmissionsScreen()),
       ),
 
       _memberShell,
@@ -223,6 +265,15 @@ final _memberShell = StatefulShellRoute.indexedStack(
               parentNavigatorKey: _rootNavigatorKey,
               pageBuilder: (context, state) =>
                   fadeThroughPage(context, state, const SettingsScreen()),
+              routes: [
+                GoRoute(
+                  path: Routes.safetyPath,
+                  name: Routes.safety,
+                  parentNavigatorKey: _rootNavigatorKey,
+                  pageBuilder: (context, state) =>
+                      fadeThroughPage(context, state, const SafetyScreen()),
+                ),
+              ],
             ),
           ],
         ),
@@ -308,6 +359,18 @@ final _adminShell = StatefulShellRoute.indexedStack(
                     context,
                     state,
                     const AdminScriptureFormScreen(),
+                  ),
+                ),
+                // Before the `:promptId/edit` route, so the literal segment
+                // wins: `/admin/content/scripture/submissions` must not be
+                // matched as a prompt id.
+                GoRoute(
+                  path: Routes.adminScriptureSubmissionsPath,
+                  name: Routes.adminScriptureSubmissions,
+                  pageBuilder: (context, state) => fadeThroughPage(
+                    context,
+                    state,
+                    const AdminScriptureSubmissionsScreen(),
                   ),
                 ),
                 GoRoute(

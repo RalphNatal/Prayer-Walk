@@ -7,6 +7,7 @@ import '../../../core/router/admin_shell.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
 import '../../scripture/data/scripture_providers.dart';
+import '../../scripture/domain/bible_translation.dart';
 import '../../scripture/domain/scripture_prompt.dart';
 import '../../scripture/domain/scripture_repository.dart';
 
@@ -34,11 +35,18 @@ class _AdminScriptureFormScreenState
   final _formKey = GlobalKey<FormState>();
   final _reference = TextEditingController();
   final _body = TextEditingController();
-  final _translation = TextEditingController(text: 'WEBBE');
   final _sortOrder = TextEditingController(text: '0');
 
   ScripturePromptKind _kind = ScripturePromptKind.scripture;
   DevotionalCategory _category = DevotionalCategory.stillness;
+
+  /// An explicit choice, never free text: the edition decides what the app owes
+  /// whoever holds the copyright, and a typo used to be able to turn a licensed
+  /// quotation into an uncredited one. A new prompt starts at whatever the
+  /// build is configured to deliver, so curating for an NLT app does not mean
+  /// remembering to change a field forty times.
+  late BibleTranslation _translation;
+
   bool _published = false;
   bool _seeded = false;
   bool _saving = false;
@@ -46,10 +54,15 @@ class _AdminScriptureFormScreenState
   bool get _isEdit => widget.promptId != null;
 
   @override
+  void initState() {
+    super.initState();
+    _translation = ref.read(appTranslationProvider);
+  }
+
+  @override
   void dispose() {
     _reference.dispose();
     _body.dispose();
-    _translation.dispose();
     _sortOrder.dispose();
     super.dispose();
   }
@@ -69,7 +82,7 @@ class _AdminScriptureFormScreenState
               // A prayer credits nothing, because nothing is being quoted.
               translation: _kind == ScripturePromptKind.prayer
                   ? ''
-                  : _translation.text,
+                  : _translation.id,
               kind: _kind,
               category: _category,
               isPublished: _published,
@@ -154,7 +167,7 @@ class _AdminScriptureFormScreenState
           _seeded = true;
           _reference.text = existing.reference;
           _body.text = existing.body;
-          _translation.text = existing.translation;
+          _translation = existing.translationInfo;
           _sortOrder.text = existing.sortOrder.toString();
           _kind = existing.kind;
           _category = existing.category;
@@ -164,6 +177,15 @@ class _AdminScriptureFormScreenState
       },
     );
   }
+
+  /// What may be chosen: the editions this build carries terms for, plus the
+  /// row's own if it is neither — a prompt seeded as `WEB`, or one an earlier
+  /// build let somebody type by hand, must stay editable without being
+  /// quietly relabelled on the first save.
+  List<BibleTranslation> get _options => [
+    ...BibleTranslation.values,
+    if (!BibleTranslation.values.contains(_translation)) _translation,
+  ];
 
   Widget _form(ThemeData theme) {
     final isScripture = _kind == ScripturePromptKind.scripture;
@@ -237,18 +259,38 @@ class _AdminScriptureFormScreenState
             // licensing obligation, and the one an editor is most likely to
             // fill in without thinking.
             if (isScripture) ...[
-              TextFormField(
-                controller: _translation,
-                decoration: const InputDecoration(
-                  labelText: 'Translation',
-                  hintText: 'WEBBE',
-                ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Name the edition this text came from.'
-                    : null,
+              DropdownButtonFormField<BibleTranslation>(
+                initialValue: _translation,
+                decoration: const InputDecoration(labelText: 'Translation'),
+                // The full name of an edition is long, and the console is used
+                // on a phone at 2.0x text as readily as on a desktop. Let the
+                // field own the width and ellipsize inside it.
+                isExpanded: true,
+                items: [
+                  for (final translation in _options)
+                    DropdownMenuItem(
+                      value: translation,
+                      child: Text(
+                        translation.isKnown
+                            ? '${translation.shortCode} · '
+                                  '${translation.displayName}'
+                            // An edition seeded before this list existed. Kept
+                            // selectable so editing its row does not silently
+                            // relabel it.
+                            : '${translation.shortCode} · terms unknown',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _translation = value);
+                },
+                validator: (value) =>
+                    value == null ? 'Choose the edition this text came from.' : null,
               ),
               const SizedBox(height: AppSpacing.sm),
-              const _LicensingWarning(),
+              _LicensingWarning(translation: _translation),
               const SizedBox(height: AppSpacing.xl),
             ],
 
@@ -319,29 +361,47 @@ class _AdminScriptureFormScreenState
   }
 }
 
+/// What the chosen edition obliges, said next to the field that chose it.
+///
+/// Data-driven rather than a fixed paragraph: the warning an editor needs for
+/// WEBBE is not the warning they need for the NLT, and a stern note about
+/// translations nobody is using is a note that stops being read.
 class _LicensingWarning extends StatelessWidget {
-  const _LicensingWarning();
+  const _LicensingWarning({required this.translation});
+
+  final BibleTranslation translation;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final licensed = translation.requiresAttribution;
+    final message = translation.isPublicDomain
+        ? 'Public domain — no permission needed, and nothing is owed for '
+              'quoting it.'
+        : translation.isKnown
+        ? 'Licensed. Paste ${translation.shortCode} text only from an '
+              'authorised source — never typed from memory, and never copied '
+              'from an unlicensed site. Every verse counts against the '
+              '$kNltVerseCeiling-verse limit, no complete book may be quoted, '
+              'and each quotation carries ${translation.quotationMark} '
+              'automatically wherever it appears.'
+        : 'This build carries no licence terms for '
+              '${translation.shortCode}. Its text may not be published here '
+              'until its terms and credit line are added in '
+              'bible_translation.dart.';
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
           Icons.balance_outlined,
           size: 16,
-          color: theme.colorScheme.onSurfaceVariant,
+          color: licensed
+              ? theme.colorScheme.error
+              : theme.colorScheme.onSurfaceVariant,
         ),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            'Public domain only. WEBBE is the default and needs no permission. '
-            'NIV, ESV, NLT, NASB and CSB are licensed — do not paste their '
-            'text here.',
-            style: theme.textTheme.bodySmall,
-          ),
-        ),
+        Expanded(child: Text(message, style: theme.textTheme.bodySmall)),
       ],
     );
   }

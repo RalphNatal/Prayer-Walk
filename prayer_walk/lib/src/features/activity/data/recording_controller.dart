@@ -5,11 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../auth/data/auth_providers.dart';
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
+import '../../privacy/domain/activity_visibility.dart';
+import '../../scripture/data/scripture_history_controller.dart';
 import '../../scripture/data/scripture_providers.dart';
 import '../../scripture/domain/scripture_prompt.dart';
+import '../../scripture/domain/scripture_selector.dart';
 import '../../scripture/domain/scripture_settings.dart';
 import '../domain/activity.dart';
 import '../domain/cadence_trigger.dart';
@@ -258,12 +262,19 @@ class RecordingController extends Notifier<RecordingState> {
 
   /// The library this walk draws from, and the order it draws in.
   ///
-  /// [_pool] is the library shuffled without replacement: drawing walks the
-  /// cursor forward and never looks back, which is what stops a verse arriving
-  /// twice on one walk. Running off the end reshuffles rather than stopping —
-  /// an hour on the road should not go quiet because the library is short.
+  /// [_queue] is the whole library in draw order: drawing walks the cursor
+  /// forward and never looks back, which is what stops a verse arriving twice
+  /// on one walk. Running off the end re-ranks rather than stopping — an hour on
+  /// the road should not go quiet because the library is short.
+  ///
+  /// The ordering itself is [rankScripturePrompts], which reads the member's
+  /// delivery history: unseen passages first, then least recently seen, with
+  /// anything received in the last month held back. This used to be a plain
+  /// shuffle rebuilt from nothing at the start of every walk, which is why a
+  /// passage came back on the second walk almost every time. The queue is still
+  /// per-walk; what it is built *from* is no longer.
   List<ScripturePrompt> _library = const [];
-  List<ScripturePrompt> _pool = const [];
+  List<ScripturePrompt> _queue = const [];
   int _cursor = 0;
   final math.Random _shuffle = math.Random();
 
@@ -548,7 +559,7 @@ class RecordingController extends Notifier<RecordingState> {
     _cadence?.dispose();
     _cadence = null;
     _library = const [];
-    _pool = const [];
+    _queue = const [];
     _cursor = 0;
 
     if (!settings.enabled) return;
@@ -585,7 +596,7 @@ class RecordingController extends Notifier<RecordingState> {
     }
     if (_disposed || !state.isLive) return;
     _library = prompts;
-    _refillPool();
+    _rebuildQueue();
   }
 
   /// Tries to upgrade the walk from distance to steps.
@@ -647,11 +658,26 @@ class RecordingController extends Notifier<RecordingState> {
     // An ordinary waypoint, through the ordinary path — the reference as the
     // label, the text as the note. Nothing about persistence, the map or the
     // summary needs to know these ones arrived by themselves.
+    //
+    // The note is the *attributed* text: a waypoint outlives the prompt it came
+    // from — it is JSONB on `activities`, with no translation of its own — so
+    // the required mark is written into it here, at the one moment the edition
+    // is still known. That is what makes the verse lists on the summary and
+    // detail screens carry the mark without either screen knowing about
+    // licensing.
     dropWaypoint(
       WaypointKind.scripture,
       label: prompt.reference,
-      note: prompt.body,
+      note: prompt.attributedBody,
     );
+
+    // Remembered the moment it is handed over, so the next walk — and the next
+    // rebuild of this walk's queue — can rank it as seen. Deliberately after
+    // the waypoint and before nothing: it updates state synchronously, writes
+    // to disk in the background and reaches the server when the walk ends. A
+    // failure at any of those points costs the memory of the verse, never the
+    // verse and never the recording.
+    ref.read(scriptureHistoryProvider.notifier).record(prompt.id);
 
     final delivered = DeliveredPrompt(
       prompt: prompt,
@@ -664,38 +690,44 @@ class RecordingController extends Notifier<RecordingState> {
     );
   }
 
-  /// The next unseen verse, or null when there is nothing to draw from.
+  /// The next verse to deliver, or null when there is nothing to draw from.
   ScripturePrompt? _draw() {
     if (_library.isEmpty) return null;
-    if (_cursor >= _pool.length) {
-      final last = _pool.isEmpty ? null : _pool.last;
-      _refillPool();
-      // A reshuffle that opens on the verse that just went by reads as a
-      // repeat even though the pool was genuinely exhausted.
-      if (_pool.length > 1 && last != null && _pool.first.id == last.id) {
-        _pool = [..._pool.sublist(1, 2), _pool.first, ..._pool.sublist(2)];
+    if (_cursor >= _queue.length) {
+      final last = _queue.isEmpty ? null : _queue.last;
+      // Re-ranked, not reshuffled — and against a history that now includes
+      // everything this walk has already delivered, so the second pass through
+      // a short library is ordered oldest-first rather than at random.
+      _rebuildQueue();
+      // A rebuild that opens on the verse that just went by reads as a repeat
+      // even though the library was genuinely exhausted.
+      if (_queue.length > 1 && last != null && _queue.first.id == last.id) {
+        _queue = [..._queue.sublist(1, 2), _queue.first, ..._queue.sublist(2)];
       }
     }
-    return _pool[_cursor++];
+    if (_queue.isEmpty) return null;
+    return _queue[_cursor++];
   }
 
-  /// Shuffles the library into a draw order, preferred theme first.
+  /// Puts the library in draw order for this member and this walk.
   ///
-  /// "Prefer" rather than "filter": a themed walk works through everything in
-  /// its theme before it reaches anything else, which on any ordinary walk
-  /// means it only ever sees its theme — but a long one keeps receiving verses
-  /// instead of going silent at the end of a short collection.
-  void _refillPool() {
-    final preferred = state.scripture.category ?? state.devotionalCategory;
-    final first = <ScripturePrompt>[];
-    final rest = <ScripturePrompt>[];
-    for (final prompt in _library) {
-      (preferred != null && prompt.category == preferred ? first : rest)
-          .add(prompt);
-    }
-    first.shuffle(_shuffle);
-    rest.shuffle(_shuffle);
-    _pool = [...first, ...rest];
+  /// The ranking itself is [rankScripturePrompts] — a pure function, so what
+  /// "fresh" means can be asserted directly rather than inferred from a
+  /// simulated walk. What this method owns is the three things only the
+  /// recorder knows: which theme was asked for, what the member has already
+  /// been given, and how long a passage should rest.
+  ///
+  /// Theme preference is unchanged from before — "prefer" rather than "filter",
+  /// so a themed walk works through its theme and then keeps going instead of
+  /// falling silent at the end of a short collection.
+  void _rebuildQueue() {
+    _queue = rankScripturePrompts(
+      library: _library,
+      history: ref.read(scriptureHistoryProvider),
+      preferred: state.scripture.category ?? state.devotionalCategory,
+      cooldown: Duration(days: AppConfig.scriptureCooldownDays),
+      random: _shuffle,
+    );
     _cursor = 0;
   }
 
@@ -785,6 +817,19 @@ class RecordingController extends Notifier<RecordingState> {
     );
   }
 
+  /// Who the finished walk will be for.
+  ///
+  /// Set on the summary screen, and seeded there from the member's standing
+  /// default rather than assumed here. [ActivityDraft] starts at
+  /// [ActivityVisibility.standard] so a walk that somehow reaches `save()`
+  /// without passing the picker is still followers-only — the failure mode of
+  /// this method never running has to be the private one.
+  void setDraftVisibility(ActivityVisibility visibility) {
+    final draft = state.draft;
+    if (draft == null) return;
+    state = state.copyWith(draft: draft.copyWith(visibility: visibility));
+  }
+
   /// Commits the draft and clears the flow. Returns the stored activity id.
   Future<String> save() async {
     final draft = state.draft;
@@ -807,6 +852,18 @@ class RecordingController extends Notifier<RecordingState> {
 
   void reset() {
     _stopStreams();
+
+    // The walk is over, so this is the safe moment to tell the server what it
+    // delivered — mirroring on the trail would put a network request at the
+    // exact moment a verse is due. Deliberately here rather than in
+    // [_stopStreams], which also runs while the notifier is being torn down,
+    // where reading a provider is not allowed. Unawaited and unable to fail in
+    // a way anyone sees: the device already holds the record, and whatever does
+    // not land here is picked up by the next reconcile.
+    if (!_disposed) {
+      unawaited(ref.read(scriptureHistoryProvider.notifier).flush());
+    }
+
     state = const RecordingState();
   }
 
@@ -823,7 +880,7 @@ class RecordingController extends Notifier<RecordingState> {
     _cadence?.dispose();
     _cadence = null;
     _library = const [];
-    _pool = const [];
+    _queue = const [];
     _cursor = 0;
   }
 

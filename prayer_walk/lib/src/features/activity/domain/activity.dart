@@ -1,5 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
+import '../../privacy/domain/activity_visibility.dart';
+
 /// The four ways a walk gets recorded.
 enum ActivityType {
   walk('Walk', 'Walking'),
@@ -93,6 +95,8 @@ class Activity {
     this.intentions = const [],
     this.note = '',
     this.placeName,
+    this.visibility = ActivityVisibility.standard,
+    this.routeTrimmed = false,
     this.encouragementCount = 0,
     this.commentCount = 0,
     this.encouragedByViewer = false,
@@ -120,6 +124,23 @@ class Activity {
   /// failed — it is a nicety, and nothing waits on it.
   final String? placeName;
 
+  /// Who this walk is for. Set on the summary screen when it is saved, and
+  /// changeable afterwards from the walk itself. The value on this object is a
+  /// copy of what the row says; the SELECT policy on `activities` is what
+  /// actually decides who reads it.
+  final ActivityVisibility visibility;
+
+  /// Whether the route on this object is shorter than the one that was
+  /// recorded, because the server dropped points falling inside one of the
+  /// walker's privacy zones before sending it.
+  ///
+  /// Always false for the owner, who receives their whole trace. For everyone
+  /// else it is what lets the map say so out loud — [distanceMeters] is still
+  /// the full recorded walk, deliberately, so the number and the line disagree
+  /// and the card has to explain why rather than quietly showing a distance
+  /// that contradicts what is drawn.
+  final bool routeTrimmed;
+
   final int encouragementCount;
   final int commentCount;
   final bool encouragedByViewer;
@@ -128,6 +149,7 @@ class Activity {
     String? title,
     String? note,
     String? placeName,
+    ActivityVisibility? visibility,
     List<PrayerIntention>? intentions,
     List<Waypoint>? waypoints,
     int? encouragementCount,
@@ -148,6 +170,8 @@ class Activity {
       intentions: intentions ?? this.intentions,
       note: note ?? this.note,
       placeName: placeName ?? this.placeName,
+      visibility: visibility ?? this.visibility,
+      routeTrimmed: routeTrimmed,
       encouragementCount: encouragementCount ?? this.encouragementCount,
       commentCount: commentCount ?? this.commentCount,
       encouragedByViewer: encouragedByViewer ?? this.encouragedByViewer,
@@ -171,6 +195,7 @@ class ActivityDraft {
     required this.intentions,
     this.note = '',
     this.placeName,
+    this.visibility = ActivityVisibility.standard,
   });
 
   final ActivityType type;
@@ -188,6 +213,11 @@ class ActivityDraft {
   /// before the walker saves. Null is entirely ordinary — see
   /// [Activity.placeName].
   final String? placeName;
+
+  /// Who the finished walk will be for. Seeded from the member's standing
+  /// default and changeable on the summary screen, which is the last moment
+  /// before a route leaves the phone and therefore the right one to ask.
+  final ActivityVisibility visibility;
 
   /// The partial state shown on the live screen: the first [fraction] of the
   /// traced route with stats scaled to match, so the mock reads as a walk in
@@ -208,6 +238,7 @@ class ActivityDraft {
       intentions: intentions,
       note: note,
       placeName: placeName,
+      visibility: visibility,
     );
   }
 
@@ -215,6 +246,7 @@ class ActivityDraft {
     String? title,
     String? note,
     String? placeName,
+    ActivityVisibility? visibility,
     List<PrayerIntention>? intentions,
     List<Waypoint>? waypoints,
   }) {
@@ -230,6 +262,7 @@ class ActivityDraft {
       intentions: intentions ?? this.intentions,
       note: note ?? this.note,
       placeName: placeName ?? this.placeName,
+      visibility: visibility ?? this.visibility,
     );
   }
 }

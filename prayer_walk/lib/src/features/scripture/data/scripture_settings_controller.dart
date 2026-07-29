@@ -8,19 +8,7 @@ import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
 import '../domain/scripture_settings.dart';
 import 'scripture_row_mapper.dart' show categoryFrom;
 
-/// What the walker has decided about scripture on the trail, remembered.
-///
-/// Deliberately a plain [Notifier] over an [AsyncNotifier]: every reader wants
-/// a usable answer synchronously — the record screen paints a control, the
-/// recorder decides whether to arm a trigger — and the honest default (on,
-/// gentle cadence, sound and voice) is a fine answer for the handful of frames
-/// before the stored one arrives. The alternative makes every reader handle a
-/// loading state for a preference.
-///
-/// Stored in `shared_preferences` rather than on the profile row. It is a
-/// device-shaped choice — this phone's speaker, this phone's pocket — and it
-/// must be readable with no session and no network, which a profile column is
-/// not.
+
 class ScriptureSettingsController extends Notifier<ScriptureSettings> {
   static const _tag = 'PW-SCRIP';
 

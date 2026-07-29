@@ -1,15 +1,33 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/app_config.dart';
+import '../domain/bible_translation.dart';
 import '../domain/scripture_prompt.dart';
 import '../domain/scripture_repository.dart';
+import '../domain/scripture_submission.dart';
+import 'scripture_prompt_store.dart';
 import 'supabase_scripture_repository.dart';
 
 export 'scripture_announcer.dart'
     show ScriptureAnnouncer, scriptureAnnouncerProvider;
 export 'scripture_settings_controller.dart' show scriptureSettingsProvider;
 
+/// The edition this build delivers, and the default an admin form starts from.
+///
+/// One provider rather than a config read scattered through the app, so the
+/// whole thing — delivery, the admin form's default, the credits section —
+/// switches together, and so a test can run the app as an NLT build without a
+/// rebuild. The value itself comes from `--dart-define`; see
+/// [AppConfig.scriptureTranslation].
+final appTranslationProvider = Provider<BibleTranslation>(
+  (ref) => BibleTranslation.of(AppConfig.scriptureTranslation),
+);
+
 final scriptureRepositoryProvider = Provider<ScriptureRepository>(
-  (ref) => const SupabaseScriptureRepository(),
+  (ref) => SupabaseScriptureRepository(
+    const ScripturePromptStore(),
+    ref.watch(appTranslationProvider).id,
+  ),
 );
 
 /// The whole published library, fetched once per app run.
@@ -34,4 +52,44 @@ final scriptureLibraryProvider = FutureProvider<List<ScripturePrompt>>(
 final allScripturePromptsProvider =
     FutureProvider.autoDispose<List<ScripturePrompt>>(
       (ref) => ref.watch(scriptureRepositoryProvider).allPrompts(),
+    );
+
+// ------------------------------------------------------------ submissions ---
+
+/// Which slice of the submissions queue is showing. Pending first, because a
+/// queue exists to be emptied.
+class SubmissionFilter extends Notifier<SubmissionStatus?> {
+  @override
+  SubmissionStatus? build() => SubmissionStatus.pending;
+
+  void set(SubmissionStatus? status) => state = status;
+}
+
+final submissionFilterProvider =
+    NotifierProvider<SubmissionFilter, SubmissionStatus?>(
+      SubmissionFilter.new,
+    );
+
+/// The admin queue. Admin-only by RLS — nothing in Dart gates it, for the
+/// reason `admin_providers.dart` gives: a second gate is a second place for the
+/// answer to live, and the only one that can be wrong.
+final scriptureSubmissionsProvider =
+    FutureProvider.autoDispose<List<ScriptureSubmission>>(
+      (ref) => ref
+          .watch(scriptureRepositoryProvider)
+          .submissions(status: ref.watch(submissionFilterProvider)),
+    );
+
+/// Drives the badge on the admin Scripture screen.
+final pendingSubmissionCountProvider = FutureProvider<int>((ref) async {
+  final pending = await ref
+      .watch(scriptureRepositoryProvider)
+      .submissions(status: SubmissionStatus.pending);
+  return pending.length;
+});
+
+/// What the signed-in member has sent, and what became of it.
+final myScriptureSubmissionsProvider =
+    FutureProvider.autoDispose<List<ScriptureSubmission>>(
+      (ref) => ref.watch(scriptureRepositoryProvider).mySubmissions(),
     );

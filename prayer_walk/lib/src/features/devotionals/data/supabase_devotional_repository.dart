@@ -70,6 +70,12 @@ class SupabaseDevotionalRepository implements DevotionalRepository {
       'body': draft.body.trim(),
       'scripture_ref': draft.scriptureRef.trim(),
       'scripture_text': draft.scriptureText.trim(),
+      // Null rather than '' when nothing is quoted: the column is nullable
+      // precisely so "no passage" and "a passage from an unnamed edition" stay
+      // distinguishable in the table.
+      'translation': draft.scriptureText.trim().isEmpty
+          ? null
+          : draft.translation.trim(),
       'category': draft.category.name,
       'is_published': draft.isPublished,
       'read_minutes': estimateReadMinutes(draft.body),

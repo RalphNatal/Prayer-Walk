@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/utils/app_exception.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
+import '../domain/bible_translation.dart';
 import '../domain/scripture_prompt.dart';
 import '../domain/scripture_repository.dart';
+import '../domain/scripture_submission.dart';
 import 'scripture_prompt_store.dart';
 import 'scripture_row_mapper.dart';
 
@@ -21,9 +24,20 @@ import 'scripture_row_mapper.dart';
 /// only the requested theme. A themed query would leave airplane mode holding
 /// one theme's worth of verses, which is the walk most likely to run out.
 class SupabaseScriptureRepository implements ScriptureRepository {
-  const SupabaseScriptureRepository([this._store = const ScripturePromptStore()]);
+  const SupabaseScriptureRepository([
+    this._store = const ScripturePromptStore(),
+    this._translationId,
+  ]);
 
   final ScripturePromptStore _store;
+
+  /// Which edition a walk draws from. Null defers to the build's configured
+  /// default, which is what every caller outside a test does — the provider
+  /// passes it explicitly so switching the default rebuilds the repository.
+  final String? _translationId;
+
+  BibleTranslation get _translation =>
+      BibleTranslation.of(_translationId ?? AppConfig.scriptureTranslation);
 
   static const _tag = 'PW-SCRIP';
 
@@ -38,19 +52,67 @@ class SupabaseScriptureRepository implements ScriptureRepository {
     final fresh = await _fetch();
     if (fresh.isNotEmpty) {
       // Write-through, unawaited: the verses are already in hand and a cache
-      // write is not something a walk should wait on.
+      // write is not something a walk should wait on. The *whole* library is
+      // cached, both editions included, so switching the default translation
+      // does not have to wait for a re-sync.
       unawaited(_store.writeCache(fresh));
-      return _inCategory(fresh, category);
+      return _select(fresh, category);
     }
 
     final cached = await _store.readCache();
     if (cached.isNotEmpty) {
       AppLogger.info(_tag, 'using the cached prompt library');
-      return _inCategory(cached, category);
+      return _select(cached, category);
     }
 
-    AppLogger.info(_tag, 'using the bundled prompt library');
-    return _inCategory(await _store.readBundled(), category);
+    // The offline floor, and the one place the configured translation does not
+    // get its way: what is bundled in the binary is public-domain WEBBE, and
+    // shipping a licensed translation inside the app is a wider distribution
+    // question than a row on a server. Said out loud in the log because a
+    // walker on an NLT build reading WEBBE verses is a thing worth being able
+    // to explain. The verses still carry their own credit — each bundled row
+    // says 'WEBBE', so nothing inherits NLT's mark.
+    final bundled = await _store.readBundled();
+    AppLogger.info(
+      _tag,
+      'using the bundled prompt library (WEBBE) — '
+      '${_translation.id} is not shipped offline',
+    );
+    return _select(bundled, category);
+  }
+
+  /// Theme first, then edition — the two filters a walk applies to the library.
+  List<ScripturePrompt> _select(
+    List<ScripturePrompt> prompts,
+    DevotionalCategory? category,
+  ) => _inTranslation(_inCategory(prompts, category));
+
+  /// Only the configured edition is delivered, so both sets can live in the
+  /// table at once and the build decides which is heard. Prayers come through
+  /// whatever is configured: they quote nobody, so they belong to every
+  /// edition rather than to none.
+  ///
+  /// If that leaves no scripture at all — an NLT build whose licensed rows have
+  /// not been seeded yet — the whole library is delivered instead. A walk with
+  /// the wrong edition is a disappointment; a walk with nothing to read is the
+  /// failure this feature exists to avoid.
+  List<ScripturePrompt> _inTranslation(List<ScripturePrompt> prompts) {
+    final wanted = _translation;
+    final selected = [
+      for (final prompt in prompts)
+        if (!prompt.translationInfo.isQuotation ||
+            prompt.translationInfo == wanted)
+          prompt,
+    ];
+    if (selected.any((p) => p.translationInfo.isQuotation)) return selected;
+
+    if (prompts.any((p) => p.translationInfo.isQuotation)) {
+      AppLogger.info(
+        _tag,
+        'no ${wanted.id} prompts in the library — delivering every edition',
+      );
+    }
+    return prompts;
   }
 
   /// Supabase, or an empty list. Deliberately swallows: every failure here has
@@ -90,9 +152,17 @@ class SupabaseScriptureRepository implements ScriptureRepository {
 
   @override
   Future<List<ScripturePrompt>> allPrompts() async {
+    // The curated library: drafts included, unreviewed submissions excluded.
+    //
+    // A pending submission cannot be published — the check constraint
+    // `scripture_prompts_published_is_approved` refuses it — so listing one
+    // here would put a Publish button on a row that answers with a 23514. It
+    // belongs in the submissions queue, which is where the decision that makes
+    // it publishable is taken.
     final rows = await supabase
         .from('scripture_prompts')
         .select(scripturePromptColumns)
+        .eq('status', 'approved')
         .order('sort_order');
     return scripturePromptsFromRows(rows);
   }
@@ -142,5 +212,100 @@ class SupabaseScriptureRepository implements ScriptureRepository {
   @override
   Future<void> deletePrompt(String id) async {
     await supabase.from('scripture_prompts').delete().eq('id', id);
+  }
+
+  // ------------------------------------------------- member contributions ---
+
+  @override
+  Future<void> submitPrompt(ScriptureSubmissionDraft draft) async {
+    final me = supabase.auth.currentUser?.id;
+    if (me == null) {
+      throw const AppException('Sign in again, then send your submission.');
+    }
+
+    final reference = draft.reference.trim();
+    if (reference.isEmpty) {
+      throw const AppException(
+        'Name the passage or the prayer — "Psalm 121:1-2" is enough.',
+      );
+    }
+    if (draft.reflection.trim().isEmpty) {
+      throw const AppException(
+        'Add a line of your own about why this one. That part is the point.',
+      );
+    }
+
+    await supabase.from('scripture_prompts').insert({
+      'reference': reference,
+      'body': draft.body.trim(),
+      // ⚖️ Hard-wired, not taken from the draft. A member's submission carries
+      // the public-domain edition or nothing; the insert policy refuses
+      // anything else outright, and there is no field on the form that could
+      // send a different value. Text with no body quotes nobody and credits
+      // nobody, which is why an empty body drops the translation with it.
+      'translation': draft.body.trim().isEmpty
+          ? ''
+          : ScriptureSubmissionDraft.allowedTranslation.id,
+      'kind': draft.kind.name,
+      'category': draft.category.name,
+      'contributor_note': draft.reflection.trim(),
+      'submitted_by': me,
+      // Sent explicitly so the row that reaches the policy says what it is,
+      // rather than relying on two column defaults to agree with it.
+      'status': 'pending',
+      'is_published': false,
+    });
+  }
+
+  @override
+  Future<List<ScriptureSubmission>> mySubmissions() async {
+    final me = supabase.auth.currentUser?.id;
+    if (me == null) return const [];
+
+    final rows = await supabase
+        .from('scripture_prompts')
+        .select(scripturePromptColumns)
+        .eq('submitted_by', me)
+        .order('created_at', ascending: false);
+
+    return [for (final row in rows) scriptureSubmissionFromRow(row)];
+  }
+
+  @override
+  Future<List<ScriptureSubmission>> submissions({
+    SubmissionStatus? status,
+  }) async {
+    // Member submissions only — `submitted_by` not null. The admin-curated
+    // library has its own screen and does not belong in a review queue.
+    var query = supabase
+        .from('scripture_prompts')
+        .select(scripturePromptColumns)
+        .not('submitted_by', 'is', null);
+    if (status != null) query = query.eq('status', status.name);
+
+    final rows = await query.order('created_at', ascending: false);
+    return [for (final row in rows) scriptureSubmissionFromRow(row)];
+  }
+
+  @override
+  Future<void> reviewSubmission(
+    String id, {
+    required SubmissionStatus outcome,
+    String reason = '',
+  }) async {
+    final approving = outcome == SubmissionStatus.approved;
+    final rows = await supabase
+        .from('scripture_prompts')
+        .update({
+          'status': outcome.name,
+          // Approval publishes. The check constraint
+          // `scripture_prompts_published_is_approved` refuses the other
+          // combination, so a rejected row cannot be left live by accident.
+          'is_published': approving,
+          'rejection_reason': approving ? '' : reason.trim(),
+        })
+        .eq('id', id)
+        .select('id');
+    if (rows.isEmpty) throw AppException.notFound;
   }
 }

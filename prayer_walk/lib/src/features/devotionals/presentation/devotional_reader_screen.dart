@@ -6,6 +6,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../activity/data/recording_controller.dart';
+import '../../scripture/presentation/scripture_quotation.dart';
 import '../data/devotional_providers.dart';
 import '../domain/devotional.dart';
 
@@ -79,10 +80,7 @@ class DevotionalReaderScreen extends ConsumerWidget {
                         ),
                         if (item.hasScripture) ...[
                           const SizedBox(height: AppSpacing.xl),
-                          _ScriptureBlock(
-                            reference: item.scriptureRef,
-                            text: item.scriptureText,
-                          ),
+                          _ScriptureBlock(devotional: item),
                         ],
                         const SizedBox(height: AppSpacing.xl),
                         for (final paragraph in item.body.split('\n\n'))
@@ -109,11 +107,16 @@ class DevotionalReaderScreen extends ConsumerWidget {
   }
 }
 
+/// The passage, pulled out of the page.
+///
+/// The quotation goes through [ScriptureQuotation] rather than a bare [Text]
+/// for the same reason the arrival card does: a licensed edition's mark travels
+/// with the words, and the reader is the one screen where a passage is quoted at
+/// full size.
 class _ScriptureBlock extends StatelessWidget {
-  const _ScriptureBlock({required this.reference, required this.text});
+  const _ScriptureBlock({required this.devotional});
 
-  final String reference;
-  final String text;
+  final Devotional devotional;
 
   @override
   Widget build(BuildContext context) {
@@ -130,16 +133,37 @@ class _ScriptureBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            text,
+          ScriptureQuotation(
+            text: devotional.scriptureText,
+            translationId: devotional.translation,
             style: theme.textTheme.headlineSmall?.copyWith(height: 1.45),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            reference,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.secondary,
-            ),
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  devotional.scriptureRef,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+              ),
+              if (devotional.translation.isNotEmpty) ...[
+                Text(
+                  '  ·  ',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+                TranslationCredit(
+                  translationId: devotional.translation,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),

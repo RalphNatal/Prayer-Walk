@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../core/utils/app_haptics.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../privacy/data/privacy_providers.dart';
+import '../../privacy/domain/activity_visibility.dart';
+import '../../scripture/presentation/scripture_credits.dart';
 import '../../scripture/presentation/scripture_settings_panel.dart';
 
 /// Appearance, notifications, and the way out.
@@ -69,6 +74,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 .set(selection.first),
           ),
 
+          // Directly under Appearance and above everything else, because it is
+          // the section with a consequence outside the phone. A privacy control
+          // nobody scrolls to protects nobody.
+          const SizedBox(height: AppSpacing.xxl),
+          const SectionHeader(
+            title: 'Safety and privacy',
+            subtitle:
+                'Who sees your walks, where your routes are trimmed, and who '
+                'is blocked.',
+          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final visibility = ref.watch(defaultVisibilityProvider).value;
+              final zones = ref.watch(privacyZonesProvider).value;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.shield_outlined),
+                title: Text('Safety', style: theme.textTheme.titleSmall),
+                subtitle: Text(
+                  'New walks: '
+                  '${(visibility ?? ActivityVisibility.standard).label.toLowerCase()}'
+                  '${zones == null ? '' : '  ·  ${zones.isEmpty ? 'no privacy zones' : '${zones.length} privacy zone${zones.length == 1 ? '' : 's'}'}'}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.pushNamed(Routes.safety),
+              );
+            },
+          ),
+
           const SizedBox(height: AppSpacing.xxl),
           const SectionHeader(
             title: 'Scripture on the trail',
@@ -122,6 +157,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: 'A note on Sunday with the week behind you.',
             value: _weeklySummary,
             onChanged: (v) => setState(() => _weeklySummary = v),
+          ),
+
+          // Below the scripture settings, above everything administrative: the
+          // credits belong next to the feature they are a condition of, not on
+          // a page nobody opens.
+          const SizedBox(height: AppSpacing.xxl),
+          const SectionHeader(
+            title: 'Contribute',
+            subtitle:
+                'A verse or a prayer that carried you through something is '
+                'worth passing on.',
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.menu_book_outlined),
+            title: Text(
+              'Suggest a scripture prompt',
+              style: theme.textTheme.titleSmall,
+            ),
+            subtitle: Text(
+              'A moderator reads every suggestion before it goes on a walk.',
+              style: theme.textTheme.bodySmall,
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.pushNamed(Routes.submitScripture),
+          ),
+
+          const SizedBox(height: AppSpacing.xxl),
+          const ScriptureCreditsSection(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.description_outlined),
+            title: Text('Open-source licences', style: theme.textTheme.titleSmall),
+            subtitle: Text(
+              'Fonts, packages, and the scripture notices above.',
+              style: theme.textTheme.bodySmall,
+            ),
+            onTap: () => showLicensePage(
+              context: context,
+              applicationName: 'Prayer Walk',
+            ),
           ),
 
           const SizedBox(height: AppSpacing.xxl),

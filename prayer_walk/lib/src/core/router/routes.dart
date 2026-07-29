@@ -46,6 +46,29 @@ abstract final class Routes {
   static const settings = 'settings';
   static const settingsPath = 'settings';
 
+  /// Who sees your walks, where they are trimmed, and who is shut out.
+  /// Reachable from Settings and from the first-public-walk explanation.
+  static const safety = 'safety';
+  static const safetyPath = 'safety';
+
+  static const privacyZones = 'privacyZones';
+  static const privacyZonesPath = '/privacy-zones';
+
+  static const blockedMembers = 'blockedMembers';
+  static const blockedMembersPath = '/blocked';
+
+  /// Finding people. Pushed above the shell rather than given a tab: it is a
+  /// door out of an empty feed, not a fifth place to live.
+  static const discover = 'discover';
+  static const discoverPath = '/discover';
+
+  /// A member proposing a scripture prompt for review.
+  static const submitScripture = 'submitScripture';
+  static const submitScripturePath = '/submit-scripture';
+
+  static const myScriptureSubmissions = 'myScriptureSubmissions';
+  static const myScriptureSubmissionsPath = '/my-submissions';
+
   // ------------------------------------------------- pushed, above the shell ---
   static const activityDetail = 'activityDetail';
   static const activityDetailPath = '/activity/:activityId';
@@ -88,6 +111,11 @@ abstract final class Routes {
 
   static const adminScriptureEdit = 'adminScriptureEdit';
   static const adminScriptureEditPath = ':promptId/edit';
+
+  /// The member submissions queue. Under Scripture, because approving one is
+  /// the same act as writing one — it puts text into other people's walks.
+  static const adminScriptureSubmissions = 'adminScriptureSubmissions';
+  static const adminScriptureSubmissionsPath = 'submissions';
 
   static const adminModeration = 'adminModeration';
   static const adminModerationPath = '/admin/moderation';

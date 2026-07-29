@@ -12,4 +12,20 @@ abstract interface class FeedRepository {
     DateTime? before,
     int limit,
   });
+
+  /// Public walks from members [viewerId] does not follow, newest first.
+  ///
+  /// The one read in the app that deliberately reaches past the follow graph,
+  /// which is exactly why it is the one place a visibility mistake would
+  /// publish a stranger's route to the whole membership. `explore_feed` filters
+  /// on `visibility = 'public'` explicitly rather than trusting recency, and
+  /// the SELECT policy on `activities` has already removed everything else.
+  ///
+  /// Empty is an ordinary result: it means nobody has chosen to walk publicly
+  /// yet, not that anything failed.
+  Future<List<FeedEntry>> exploreFor(
+    String viewerId, {
+    DateTime? before,
+    int limit,
+  });
 }

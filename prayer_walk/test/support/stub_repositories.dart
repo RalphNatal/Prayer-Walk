@@ -2,11 +2,17 @@ import 'package:prayer_walk/src/features/admin/domain/admin_models.dart';
 import 'package:prayer_walk/src/features/admin/domain/admin_repository.dart';
 import 'package:prayer_walk/src/features/devotionals/domain/devotional.dart';
 import 'package:prayer_walk/src/features/devotionals/domain/devotional_repository.dart';
+import 'package:prayer_walk/src/features/discovery/domain/discovery_repository.dart';
+import 'package:prayer_walk/src/features/discovery/domain/member_card.dart';
 import 'package:prayer_walk/src/features/feed/domain/feed_entry.dart';
 import 'package:prayer_walk/src/features/feed/domain/feed_repository.dart';
+import 'package:prayer_walk/src/features/privacy/domain/activity_visibility.dart';
+import 'package:prayer_walk/src/features/privacy/domain/privacy_repository.dart';
+import 'package:prayer_walk/src/features/privacy/domain/privacy_zone.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_repository.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_submission.dart';
 import 'package:prayer_walk/src/features/social/domain/social_repository.dart';
 
 /// Repository doubles for widget tests.
@@ -17,16 +23,35 @@ import 'package:prayer_walk/src/features/social/domain/social_repository.dart';
 /// there talks to Postgres, and these exist only so a test can pump frames.
 
 class StubFeedRepository implements FeedRepository {
-  const StubFeedRepository(this.entries);
+  const StubFeedRepository(this.entries) : exploreOnly = false;
+
+  /// The shape of a brand-new account: it follows nobody and has walked
+  /// nowhere, so Following is empty while Explore still has public walks in it.
+  /// That combination is the one the empty-feed fix exists for, so a test needs
+  /// to be able to produce it.
+  const StubFeedRepository.explore(this.entries) : exploreOnly = true;
 
   final List<FeedEntry> entries;
+
+  /// Whether [feedFor] should come back empty — the shape of a brand-new
+  /// account, which follows nobody and has walked nowhere, while Explore still
+  /// has public walks in it. That combination is the one the empty-feed fix
+  /// exists for, so a test needs to be able to produce it.
+  final bool exploreOnly;
 
   @override
   Future<List<FeedEntry>> feedFor(
     String viewerId, {
     DateTime? before,
     int limit = 50,
-  }) async => entries;
+  }) async => exploreOnly ? const [] : entries;
+
+  @override
+  Future<List<FeedEntry>> exploreFor(
+    String viewerId, {
+    DateTime? before,
+    int limit = 30,
+  }) async => exploreOnly ? entries : const [];
 }
 
 /// A social graph in a map. Enough to satisfy the screens under test, and
@@ -323,4 +348,144 @@ class StubScriptureRepository implements ScriptureRepository {
 
   @override
   Future<void> deletePrompt(String id) async => throw UnimplementedError();
+
+  // ------------------------------------------------- member contributions ---
+
+  /// Submissions accepted so far, so a test can assert that sending one wrote
+  /// something rather than merely not throwing.
+  final List<ScriptureSubmissionDraft> submitted = [];
+
+  @override
+  Future<void> submitPrompt(ScriptureSubmissionDraft draft) async {
+    submitted.add(draft);
+  }
+
+  /// One pending suggestion, with a long reflection and a long contributor
+  /// name — the row the queue has to fit, and the reason the responsive suite
+  /// passes real rows rather than an empty list, which cannot overflow.
+  static List<ScriptureSubmission> defaultSubmissions() => [
+    ScriptureSubmission(
+      prompt: const ScripturePrompt(
+        id: 'sub_1',
+        reference: '1 Thessalonians 5:16-18',
+        body:
+            'Always rejoice. Pray without ceasing. In everything give thanks, '
+            'for this is the will of God in Christ Jesus toward you.',
+        translation: 'WEBBE',
+        category: DevotionalCategory.gratitude,
+        isPublished: false,
+        contributorName: 'Maria Reyes',
+      ),
+      status: SubmissionStatus.pending,
+      contributorId: 'b6f3e1a2-0000-4000-8000-00000000000a',
+      contributorName: 'Maria Reyes',
+      reflection:
+          'I read this on the hill behind the parish the week my father was '
+          'in hospital, and it is the only thing I could hold on to for a '
+          'while. It belongs on a gratitude walk.',
+      submittedAt: DateTime(2026, 7, 27),
+    ),
+  ];
+
+  final List<ScriptureSubmission> submissionRows = defaultSubmissions();
+
+  @override
+  Future<List<ScriptureSubmission>> mySubmissions() async => submissionRows;
+
+  @override
+  Future<List<ScriptureSubmission>> submissions({
+    SubmissionStatus? status,
+  }) async => status == null
+      ? submissionRows
+      : submissionRows.where((s) => s.status == status).toList();
+
+  @override
+  Future<void> reviewSubmission(
+    String id, {
+    required SubmissionStatus outcome,
+    String reason = '',
+  }) async => throw UnimplementedError();
+}
+
+/// Zones, blocks and the visibility default, in memory.
+///
+/// Enough for a layout test to pump the safety screens, and enough for a test
+/// to assert that a zone was written rather than merely that nothing threw.
+class StubPrivacyRepository implements PrivacyRepository {
+  StubPrivacyRepository({
+    this.zoneRows = const [],
+    this.blocked = const [],
+    this.standing = ActivityVisibility.followers,
+    this.noticeSeen = false,
+  });
+
+  final List<PrivacyZone> zoneRows;
+  final List<UserProfile> blocked;
+
+  /// The member-level default, which [setDefaultVisibility] moves so a test can
+  /// assert that changing it changed something.
+  ActivityVisibility standing;
+  bool noticeSeen;
+
+  /// Visibility changes applied to individual walks, `(activityId, setting)`.
+  final List<(String, ActivityVisibility)> visibilityWrites = [];
+
+  @override
+  Future<ActivityVisibility> defaultVisibility() async => standing;
+
+  @override
+  Future<void> setDefaultVisibility(ActivityVisibility visibility) async =>
+      standing = visibility;
+
+  @override
+  Future<bool> publicWalkNoticeSeen() async => noticeSeen;
+
+  @override
+  Future<void> markPublicWalkNoticeSeen() async => noticeSeen = true;
+
+  @override
+  Future<void> setActivityVisibility(
+    String activityId,
+    ActivityVisibility visibility,
+  ) async => visibilityWrites.add((activityId, visibility));
+
+  @override
+  Future<List<PrivacyZone>> zones() async => zoneRows;
+
+  @override
+  Future<PrivacyZone> saveZone(PrivacyZoneDraft draft) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> deleteZone(String id) async => throw UnimplementedError();
+
+  @override
+  Future<List<UserProfile>> blockedMembers() async => blocked;
+
+  @override
+  Future<bool> isBlocked(String otherId) async =>
+      blocked.any((p) => p.id == otherId);
+
+  @override
+  Future<bool> toggleBlock(String otherId) async =>
+      throw UnimplementedError();
+}
+
+/// Search results and suggestions, fixed.
+class StubDiscoveryRepository implements DiscoveryRepository {
+  const StubDiscoveryRepository({
+    this.results = const [],
+    this.suggestions = const [],
+  });
+
+  final List<MemberCard> results;
+  final List<MemberCard> suggestions;
+
+  @override
+  Future<List<MemberCard>> searchMembers(String query, {int limit = 20}) async =>
+      query.trim().isEmpty ? const [] : results;
+
+  @override
+  Future<List<MemberCard>> suggestedMembers({int limit = 8}) async =>
+      suggestions;
 }

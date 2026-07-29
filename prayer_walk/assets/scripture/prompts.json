@@ -1,430 +1,2878 @@
 {
   "note": "The offline floor for scripture on the trail. Shipped with the app so a walk with no signal and no cached sync still has something to read. Refreshed from public.scripture_prompts whenever the device is online.",
-  "licence": "Scripture text is the World English Bible, British Edition (WEBBE) — public domain, no licence fee and no attribution obligation. The British edition is used rather than the base WEB because it renders the divine name as 'the LORD', which is the form Catholic usage expects. Prayers marked kind='prayer' are either ancient formulas long in the public domain or written for this app. Nothing here is drawn from NIV, ESV, NLT, NASB or CSB.",
+  "licence": "Scripture text is the World English Bible, British Edition (WEBBE) — public domain, no licence fee and no attribution obligation. The British edition is used rather than the base WEB because it renders the divine name as 'the LORD', which is the form Catholic usage expects. Prayers marked kind='prayer' are either ancient formulas long in the public domain or written for this app. Nothing here is drawn from NIV, ESV, NLT, NASB or CSB. This set stays WEBBE whatever SCRIPTURE_TRANSLATION says the app delivers: bundling a licensed translation inside the binary is a wider distribution question than a row on a server, and it is unanswered. A device that falls back this far reads WEBBE and is credited WEBBE — each prompt carries its own translation, so nothing here inherits another edition's mark.",
   "source": "https://ebible.org/webbe/ — re-pull from there if byte-exact text is wanted.",
   "prompts": [
     {
-      "id": "sp_ps_5_3",
+      "id": "sp_001",
       "reference": "Psalm 5:3",
       "body": "LORD, in the morning you will hear my voice. In the morning I will lay my requests before you, and will watch expectantly.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "morningLight",
-      "sort_order": 10
+      "sort_order": 1010
     },
     {
-      "id": "sp_lam_3_22",
+      "id": "sp_002",
       "reference": "Lamentations 3:22-23",
-      "body": "It is because of the LORD's loving kindnesses that we are not consumed, because his compassion doesn't fail. They are new every morning. Great is your faithfulness.",
+      "body": "It is because of the LORD's loving kindnesses that we are not consumed, because his compassion doesn't fail. They are new every morning.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "morningLight",
-      "sort_order": 20
+      "sort_order": 1020
     },
     {
-      "id": "sp_ps_143_8",
+      "id": "sp_003",
       "reference": "Psalm 143:8",
-      "body": "Cause me to hear your loving kindness in the morning, for I trust in you. Cause me to know the way in which I should walk, for I lift up my soul to you.",
+      "body": "Cause me to hear your loving kindness in the morning, for I trust in you. Cause me to know the way in which I should walk.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "morningLight",
-      "sort_order": 30
+      "sort_order": 1030
     },
     {
-      "id": "sp_mark_1_35",
+      "id": "sp_004",
       "reference": "Mark 1:35",
       "body": "Early in the morning, while it was still dark, he rose up and went out, and departed into a deserted place, and prayed there.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "morningLight",
-      "sort_order": 40
+      "sort_order": 1040
     },
     {
-      "id": "sp_ps_118_24",
+      "id": "sp_005",
       "reference": "Psalm 118:24",
       "body": "This is the day that the LORD has made. We will rejoice and be glad in it.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "morningLight",
-      "sort_order": 50
+      "sort_order": 1050
     },
     {
-      "id": "sp_isa_40_31",
+      "id": "sp_006",
       "reference": "Isaiah 40:31",
-      "body": "But those who wait for the LORD will renew their strength. They will mount up with wings like eagles. They will run, and not be weary. They will walk, and not faint.",
+      "body": "But those who wait for the LORD will renew their strength. They will mount up with wings like eagles. They will run, and not be weary.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "morningLight",
-      "sort_order": 60
+      "sort_order": 1060
     },
     {
-      "id": "sp_prayer_first_light",
+      "id": "sp_007",
+      "reference": "Psalm 30:5",
+      "body": "Weeping may stay for the night, but joy comes in the morning.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1070
+    },
+    {
+      "id": "sp_008",
+      "reference": "Psalm 90:14",
+      "body": "Satisfy us in the morning with your loving kindness, that we may rejoice and be glad all our days.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1080
+    },
+    {
+      "id": "sp_009",
+      "reference": "Psalm 59:16",
+      "body": "But I will sing of your strength. Yes, I will sing aloud of your loving kindness in the morning.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1090
+    },
+    {
+      "id": "sp_010",
+      "reference": "Joshua 3:5",
+      "body": "Sanctify yourselves; for tomorrow the LORD will do wonders amongst you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1100
+    },
+    {
+      "id": "sp_011",
+      "reference": "Genesis 1:5",
+      "body": "God called the light \"day\", and the darkness he called \"night\". There was evening and there was morning, the first day.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1110
+    },
+    {
+      "id": "sp_012",
+      "reference": "Job 38:12",
+      "body": "Have you commanded the morning in your days, and caused the dawn to know its place?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1120
+    },
+    {
+      "id": "sp_013",
+      "reference": "Luke 1:78-79",
+      "body": "Because of the tender mercy of our God, by which the dawn from on high will visit us, to shine on those who sit in darkness.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1130
+    },
+    {
+      "id": "sp_014",
+      "reference": "Zephaniah 3:5",
+      "body": "Morning by morning he brings his justice to light. He does not fail.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1140
+    },
+    {
+      "id": "sp_015",
+      "reference": "Isaiah 50:4",
+      "body": "He awakens morning by morning, he awakens my ear to hear as those who are taught.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1150
+    },
+    {
+      "id": "sp_016",
+      "reference": "Psalm 63:1",
+      "body": "God, you are my God. I will seek you earnestly. My soul thirsts for you. My flesh longs for you, in a dry and weary land.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1160
+    },
+    {
+      "id": "sp_017",
+      "reference": "Psalm 88:13",
+      "body": "But to you, LORD, I have cried. In the morning, my prayer comes before you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1170
+    },
+    {
+      "id": "sp_018",
+      "reference": "Psalm 19:1",
+      "body": "The heavens declare the glory of God. The expanse shows his handiwork.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1180
+    },
+    {
+      "id": "sp_019",
+      "reference": "Daniel 6:10",
+      "body": "He knelt on his knees three times a day, and prayed and gave thanks before his God, as he did before.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1190
+    },
+    {
+      "id": "sp_020",
+      "reference": "Hosea 6:3",
+      "body": "His going out is as sure as the dawn. He will come to us like the rain, like the spring rain that waters the earth.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1200
+    },
+    {
+      "id": "sp_021",
+      "reference": "Malachi 4:2",
+      "body": "But to you who fear my name, the sun of righteousness will arise with healing in its wings.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1210
+    },
+    {
+      "id": "sp_022",
+      "reference": "2 Peter 1:19",
+      "body": "You do well that you heed it, as to a lamp shining in a dark place, until the day dawns and the morning star arises in your hearts.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1220
+    },
+    {
+      "id": "sp_023",
+      "reference": "Proverbs 4:18",
+      "body": "But the path of the righteous is like the dawning light that shines more and more until the perfect day.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1230
+    },
+    {
+      "id": "sp_024",
+      "reference": "Psalm 92:1-2",
+      "body": "It is a good thing to give thanks to the LORD, to proclaim your loving kindness in the morning, and your faithfulness every night.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1240
+    },
+    {
+      "id": "sp_025",
+      "reference": "Exodus 16:7",
+      "body": "In the morning you shall see the glory of the LORD.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1250
+    },
+    {
+      "id": "sp_026",
+      "reference": "Psalm 108:2",
+      "body": "Wake up, lute and harp! I will wake up the dawn.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1260
+    },
+    {
+      "id": "sp_027",
+      "reference": "Deuteronomy 6:7",
+      "body": "You shall talk of them when you sit in your house, and when you walk by the way, and when you lie down, and when you rise up.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1270
+    },
+    {
+      "id": "sp_028",
+      "reference": "1 Samuel 3:10",
+      "body": "The LORD came and stood, and called as at other times, \"Samuel! Samuel!\" Then Samuel said, \"Speak; for your servant hears.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1280
+    },
+    {
+      "id": "sp_029",
+      "reference": "Psalm 139:9-10",
+      "body": "If I take the wings of the dawn, and settle in the uttermost parts of the sea, even there your hand will lead me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1290
+    },
+    {
+      "id": "sp_030",
+      "reference": "Isaiah 43:19",
+      "body": "Behold, I will do a new thing. It springs out now. Don’t you know it? I will even make a way in the wilderness.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1300
+    },
+    {
+      "id": "sp_031",
+      "reference": "Ecclesiastes 11:6",
+      "body": "In the morning sow your seed, and in the evening don’t withhold your hand.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1310
+    },
+    {
+      "id": "sp_032",
+      "reference": "Song of Songs 2:11-12",
+      "body": "For behold, the winter is past. The rain is over and gone. The flowers appear on the earth. The time of the singing has come.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1320
+    },
+    {
+      "id": "sp_033",
+      "reference": "Mark 16:2",
+      "body": "Very early on the first day of the week, they came to the tomb when the sun had risen.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1330
+    },
+    {
+      "id": "sp_034",
+      "reference": "John 21:4",
+      "body": "But when day had already come, Jesus stood on the beach.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1340
+    },
+    {
+      "id": "sp_035",
+      "reference": "Psalm 46:5",
+      "body": "God is within her. She shall not be moved. God will help her at dawn.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1350
+    },
+    {
+      "id": "sp_036",
+      "reference": "Job 11:17",
+      "body": "Life will be clearer than the noonday. Though there is darkness, it will be as the morning.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1360
+    },
+    {
+      "id": "sp_037",
+      "reference": "Amos 5:8",
+      "body": "Seek him who made the Pleiades and Orion, and turns the shadow of death into the morning.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1370
+    },
+    {
+      "id": "sp_038",
+      "reference": "Nehemiah 8:10",
+      "body": "Don't be grieved, for the joy of the LORD is your strength.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1380
+    },
+    {
+      "id": "sp_039",
+      "reference": "Psalm 143:10",
+      "body": "Teach me to do your will, for you are my God. Your Spirit is good. Lead me in the land of uprightness.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1390
+    },
+    {
+      "id": "sp_040",
+      "reference": "Isaiah 60:1",
+      "body": "Arise, shine; for your light has come, and the glory of the LORD has risen on you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1400
+    },
+    {
+      "id": "sp_041",
+      "reference": "Matthew 6:34",
+      "body": "Therefore don't be anxious for tomorrow, for tomorrow will be anxious for itself. Each day's own evil is sufficient.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1410
+    },
+    {
+      "id": "sp_042",
+      "reference": "Zechariah 14:7",
+      "body": "It will happen that at evening time there will be light.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1420
+    },
+    {
+      "id": "sp_043",
+      "reference": "Lamentations 3:25",
+      "body": "The LORD is good to those who wait for him, to the soul who seeks him.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1430
+    },
+    {
+      "id": "sp_044",
+      "reference": "Psalm 27:1",
+      "body": "The LORD is my light and my salvation. Whom shall I fear?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1440
+    },
+    {
+      "id": "sp_045",
+      "reference": "Micah 7:8",
+      "body": "When I sit in darkness, the LORD will be a light to me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1450
+    },
+    {
+      "id": "sp_046",
+      "reference": "Romans 13:12",
+      "body": "The night is far gone, and the day is near. Let’s therefore throw off the deeds of darkness, and let’s put on the armour of light.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1460
+    },
+    {
+      "id": "sp_047",
+      "reference": "2 Corinthians 5:17",
+      "body": "Therefore if anyone is in Christ, he is a new creation. The old things have passed away. Behold, all things have become new.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1470
+    },
+    {
+      "id": "sp_048",
+      "reference": "Isaiah 33:2",
+      "body": "LORD, be gracious to us. We have waited for you. Be our strength every morning, our salvation also in the time of trouble.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1480
+    },
+    {
+      "id": "sp_049",
+      "reference": "Psalm 104:23",
+      "body": "Man goes out to his work, to his labour until the evening.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1490
+    },
+    {
+      "id": "sp_050",
+      "reference": "James 4:14",
+      "body": "For what is your life? For you are a vapour that appears for a little time, and then vanishes away.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "morningLight",
+      "sort_order": 1500
+    },
+    {
+      "id": "sp_051",
       "reference": "Before the first mile",
-      "body": "Lord, the day is not mine to command. Walk it with me, and let me notice what you have already put in it.",
+      "body": "Lord, before the first mile: settle my breathing, slow my thoughts, and let me notice what you have already put in front of me.",
       "translation": "",
       "kind": "prayer",
       "category": "morningLight",
-      "sort_order": 70
+      "sort_order": 1510
     },
     {
-      "id": "sp_ps_100_4",
+      "id": "sp_052",
+      "reference": "At the door",
+      "body": "God of the morning, I am going out. Go with me, go before me, and be waiting when I come back.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "morningLight",
+      "sort_order": 1520
+    },
+    {
+      "id": "sp_053",
+      "reference": "The first step",
+      "body": "For this day I have not yet spent, and this road I have not yet walked: thank you. Keep me awake to both.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "morningLight",
+      "sort_order": 1530
+    },
+    {
+      "id": "sp_054",
       "reference": "Psalm 100:4",
       "body": "Enter into his gates with thanksgiving, and into his courts with praise. Give thanks to him, and bless his name.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "gratitude",
-      "sort_order": 110
+      "sort_order": 2010
     },
     {
-      "id": "sp_1thess_5_16",
+      "id": "sp_055",
       "reference": "1 Thessalonians 5:16-18",
-      "body": "Always rejoice. Pray without ceasing. In everything give thanks, for this is the will of God in Christ Jesus toward you.",
+      "body": "Always rejoice. Pray without ceasing. In everything give thanks, for this is the will of God in Christ Jesus towards you.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "gratitude",
-      "sort_order": 120
+      "sort_order": 2020
     },
     {
-      "id": "sp_ps_107_1",
+      "id": "sp_056",
       "reference": "Psalm 107:1",
       "body": "Give thanks to the LORD, for he is good, for his loving kindness endures forever.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "gratitude",
-      "sort_order": 130
+      "sort_order": 2030
     },
     {
-      "id": "sp_james_1_17",
+      "id": "sp_057",
       "reference": "James 1:17",
-      "body": "Every good gift and every perfect gift is from above, coming down from the Father of lights, with whom can be no variation, nor turning shadow.",
+      "body": "Every good gift and every perfect gift is from above, coming down from the Father of lights.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "gratitude",
-      "sort_order": 140
+      "sort_order": 2040
     },
     {
-      "id": "sp_ps_103_2",
+      "id": "sp_058",
       "reference": "Psalm 103:2",
       "body": "Praise the LORD, my soul, and don't forget all his benefits.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "gratitude",
-      "sort_order": 150
+      "sort_order": 2050
     },
     {
-      "id": "sp_col_3_15",
+      "id": "sp_059",
       "reference": "Colossians 3:15",
       "body": "And let the peace of God rule in your hearts, to which also you were called in one body, and be thankful.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "gratitude",
-      "sort_order": 160
+      "sort_order": 2060
     },
     {
-      "id": "sp_prayer_counting",
+      "id": "sp_060",
+      "reference": "Psalm 136:1",
+      "body": "Give thanks to the LORD, for he is good, for his loving kindness endures forever.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2070
+    },
+    {
+      "id": "sp_061",
+      "reference": "Psalm 34:8",
+      "body": "Oh taste and see that the LORD is good. Blessed is the man who takes refuge in him.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2080
+    },
+    {
+      "id": "sp_062",
+      "reference": "Philippians 4:8",
+      "body": "Whatever things are true, whatever things are honourable, whatever things are lovely — think about these things.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2090
+    },
+    {
+      "id": "sp_063",
+      "reference": "Ephesians 5:20",
+      "body": "Giving thanks always concerning all things in the name of our Lord Jesus Christ to God, even the Father.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2100
+    },
+    {
+      "id": "sp_064",
+      "reference": "Ruth 2:12",
+      "body": "May the LORD repay your work, and a full reward be given to you from the LORD, under whose wings you have come to take refuge.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2110
+    },
+    {
+      "id": "sp_065",
+      "reference": "Colossians 2:7",
+      "body": "Rooted and built up in him and established in the faith, abounding in it in thanksgiving.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2120
+    },
+    {
+      "id": "sp_066",
+      "reference": "2 Samuel 7:18",
+      "body": "Who am I, Lord GOD, and what is my house, that you have brought me this far?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2130
+    },
+    {
+      "id": "sp_067",
+      "reference": "Titus 3:5",
+      "body": "Not by works of righteousness which we did ourselves, but according to his mercy, he saved us.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2140
+    },
+    {
+      "id": "sp_068",
+      "reference": "1 Chronicles 16:34",
+      "body": "Oh give thanks to the LORD, for he is good, for his loving kindness endures forever.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2150
+    },
+    {
+      "id": "sp_069",
+      "reference": "Luke 17:15-16",
+      "body": "One of them, when he saw that he was healed, turned back, glorifying God with a loud voice, and he fell on his face at Jesus’ feet, giving him thanks.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2160
+    },
+    {
+      "id": "sp_070",
+      "reference": "Psalm 126:3",
+      "body": "The LORD has done great things for us, and we are glad.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2170
+    },
+    {
+      "id": "sp_071",
+      "reference": "2 Corinthians 9:15",
+      "body": "Now thanks be to God for his unspeakable gift!",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2180
+    },
+    {
+      "id": "sp_072",
+      "reference": "Nehemiah 9:6",
+      "body": "You are the LORD, even you alone. You have made heaven, the earth and all things that are on it. You preserve them all.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2190
+    },
+    {
+      "id": "sp_073",
+      "reference": "Deuteronomy 8:10",
+      "body": "You shall eat and be full, and you shall bless the LORD your God for the good land which he has given you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2200
+    },
+    {
+      "id": "sp_074",
+      "reference": "Psalm 65:11",
+      "body": "You crown the year with your bounty. Your carts overflow with abundance.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2210
+    },
+    {
+      "id": "sp_075",
+      "reference": "Psalm 104:14",
+      "body": "He causes the grass to grow for the livestock, and plants for man to cultivate, that he may produce food out of the earth.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2220
+    },
+    {
+      "id": "sp_076",
+      "reference": "1 Timothy 4:4",
+      "body": "For every creature of God is good, and nothing is to be rejected if it is received with thanksgiving.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2230
+    },
+    {
+      "id": "sp_077",
+      "reference": "Joel 2:26",
+      "body": "You will have plenty to eat and be satisfied, and will praise the name of the LORD your God, who has dealt wondrously with you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2240
+    },
+    {
+      "id": "sp_078",
+      "reference": "Acts 14:17",
+      "body": "He gave you rains from the sky and fruitful seasons, filling our hearts with food and gladness.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2250
+    },
+    {
+      "id": "sp_079",
+      "reference": "2 Corinthians 4:15",
+      "body": "For all things are for your sakes, that the grace, being multiplied through the many, may cause the thanksgiving to abound.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2260
+    },
+    {
+      "id": "sp_080",
+      "reference": "Job 1:21",
+      "body": "The LORD gave, and the LORD has taken away. Blessed be the LORD’s name.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2270
+    },
+    {
+      "id": "sp_081",
+      "reference": "Haggai 2:9",
+      "body": "In this place I will give peace, says the LORD of Armies.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2280
+    },
+    {
+      "id": "sp_082",
+      "reference": "Revelation 7:12",
+      "body": "Blessing, glory, wisdom, thanksgiving, honour, power, and might be to our God forever and ever!",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2290
+    },
+    {
+      "id": "sp_083",
+      "reference": "Philemon 1:7",
+      "body": "For I had much joy and comfort in your love, because the hearts of the saints have been refreshed through you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2300
+    },
+    {
+      "id": "sp_084",
+      "reference": "1 Timothy 6:6",
+      "body": "But godliness with contentment is great gain.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2310
+    },
+    {
+      "id": "sp_085",
+      "reference": "Ecclesiastes 3:13",
+      "body": "Also that every man should eat and drink, and enjoy good in all his labour — this is the gift of God.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2320
+    },
+    {
+      "id": "sp_086",
+      "reference": "Psalm 16:6",
+      "body": "The lines have fallen to me in pleasant places. Yes, I have a good inheritance.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2330
+    },
+    {
+      "id": "sp_087",
+      "reference": "Psalm 8:3-4",
+      "body": "When I consider your heavens, the work of your fingers, the moon and the stars, which you have ordained, what is man, that you think of him?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2340
+    },
+    {
+      "id": "sp_088",
+      "reference": "Hebrews 12:28",
+      "body": "Let’s have grace, through which we serve God acceptably, with reverence and awe.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2350
+    },
+    {
+      "id": "sp_089",
+      "reference": "Psalm 23:5",
+      "body": "You prepare a table before me. You anoint my head with oil. My cup runs over.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2360
+    },
+    {
+      "id": "sp_090",
+      "reference": "Isaiah 12:4",
+      "body": "Give thanks to the LORD! Call on his name! Declare his doings among the peoples!",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2370
+    },
+    {
+      "id": "sp_091",
+      "reference": "Psalm 147:7-8",
+      "body": "Sing to the LORD with thanksgiving. He covers the sky with clouds, prepares rain for the earth, and makes grass grow on the mountains.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2380
+    },
+    {
+      "id": "sp_092",
+      "reference": "1 Corinthians 15:57",
+      "body": "But thanks be to God, who gives us the victory through our Lord Jesus Christ.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2390
+    },
+    {
+      "id": "sp_093",
+      "reference": "1 Peter 1:3",
+      "body": "Blessed be the God and Father of our Lord Jesus Christ, who according to his great mercy caused us to be born again to a living hope.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2400
+    },
+    {
+      "id": "sp_094",
+      "reference": "Jonah 2:9",
+      "body": "But I will sacrifice to you with the voice of thanksgiving. Salvation belongs to the LORD.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2410
+    },
+    {
+      "id": "sp_095",
+      "reference": "Psalm 150:6",
+      "body": "Let everything that has breath praise the LORD! Praise the LORD!",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2420
+    },
+    {
+      "id": "sp_096",
+      "reference": "Matthew 6:26",
+      "body": "See the birds of the sky, that they don’t sow, neither do they reap. Your heavenly Father feeds them. Aren’t you of much more value than they?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2430
+    },
+    {
+      "id": "sp_097",
+      "reference": "Psalm 34:1",
+      "body": "I will bless the LORD at all times. His praise will always be in my mouth.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2440
+    },
+    {
+      "id": "sp_098",
+      "reference": "Romans 8:32",
+      "body": "He who didn’t spare his own Son, but delivered him up for us all, how would he not also with him freely give us all things?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2450
+    },
+    {
+      "id": "sp_099",
+      "reference": "Psalm 145:16",
+      "body": "You open your hand, and satisfy the desire of every living thing.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2460
+    },
+    {
+      "id": "sp_100",
+      "reference": "1 Chronicles 29:14",
+      "body": "For all things come from you, and we have given you of your own.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2470
+    },
+    {
+      "id": "sp_101",
+      "reference": "Psalm 66:5",
+      "body": "Come and see God’s deeds — awesome work on behalf of the children of men.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2480
+    },
+    {
+      "id": "sp_102",
+      "reference": "Numbers 6:24-26",
+      "body": "The LORD bless you and keep you. The LORD make his face to shine on you, and be gracious to you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2490
+    },
+    {
+      "id": "sp_103",
+      "reference": "Psalm 30:11-12",
+      "body": "You have turned my mourning into dancing for me. To the end that my heart may sing praise to you, and not be silent.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "gratitude",
+      "sort_order": 2500
+    },
+    {
+      "id": "sp_104",
       "reference": "On the way home",
-      "body": "For the road under me, the breath in me, and the people waiting at the end of it — thank you.",
+      "body": "For the road behind me and the people on it — thank you. Let me carry home what I was given, and not only what I noticed.",
       "translation": "",
       "kind": "prayer",
       "category": "gratitude",
-      "sort_order": 170
+      "sort_order": 2510
     },
     {
-      "id": "sp_phil_4_6",
+      "id": "sp_105",
+      "reference": "Counting slowly",
+      "body": "Before I ask for anything: three things you have already given me today. Let me name them, and mean them.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "gratitude",
+      "sort_order": 2520
+    },
+    {
+      "id": "sp_106",
+      "reference": "For small mercies",
+      "body": "For the ordinary and unremarkable things that held today together — I did not make any of them. Thank you.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "gratitude",
+      "sort_order": 2530
+    },
+    {
+      "id": "sp_107",
       "reference": "Philippians 4:6",
       "body": "In nothing be anxious, but in everything, by prayer and petition with thanksgiving, let your requests be made known to God.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "intercession",
-      "sort_order": 210
+      "sort_order": 3010
     },
     {
-      "id": "sp_gal_6_2",
+      "id": "sp_108",
       "reference": "Galatians 6:2",
-      "body": "Bear one another's burdens, and so fulfil the law of Christ.",
+      "body": "Bear one another’s burdens, and so fulfil the law of Christ.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "intercession",
-      "sort_order": 220
+      "sort_order": 3020
     },
     {
-      "id": "sp_james_5_16",
+      "id": "sp_109",
       "reference": "James 5:16",
       "body": "Confess your sins to one another and pray for one another, that you may be healed. The insistent prayer of a righteous person is powerfully effective.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "intercession",
-      "sort_order": 230
+      "sort_order": 3030
     },
     {
-      "id": "sp_1tim_2_1",
+      "id": "sp_110",
       "reference": "1 Timothy 2:1",
       "body": "I exhort therefore, first of all, that petitions, prayers, intercessions, and givings of thanks be made for all people.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "intercession",
-      "sort_order": 240
+      "sort_order": 3040
     },
     {
-      "id": "sp_matt_7_7",
+      "id": "sp_111",
       "reference": "Matthew 7:7",
       "body": "Ask, and it will be given you. Seek, and you will find. Knock, and it will be opened for you.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "intercession",
-      "sort_order": 250
+      "sort_order": 3050
     },
     {
-      "id": "sp_rom_12_12",
+      "id": "sp_112",
       "reference": "Romans 12:12",
       "body": "Rejoicing in hope; enduring in troubles; continuing steadfastly in prayer.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "intercession",
-      "sort_order": 260
+      "sort_order": 3060
     },
     {
-      "id": "sp_eph_6_18",
+      "id": "sp_113",
       "reference": "Ephesians 6:18",
-      "body": "With all prayer and requests, praying at all times in the Spirit, and being watchful to this end in all perseverance and requests for all the saints.",
+      "body": "With all prayer and requests, praying at all times in the Spirit, and being watchful with all perseverance and requests for all the saints.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "intercession",
-      "sort_order": 270
+      "sort_order": 3070
     },
     {
-      "id": "sp_prayer_carrying",
+      "id": "sp_114",
+      "reference": "Colossians 4:2",
+      "body": "Continue steadfastly in prayer, watching in it with thanksgiving.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3080
+    },
+    {
+      "id": "sp_115",
+      "reference": "Luke 18:1",
+      "body": "He also spoke a parable to them that they must always pray and not give up.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3090
+    },
+    {
+      "id": "sp_116",
+      "reference": "1 John 5:14",
+      "body": "This is the boldness which we have towards him, that if we ask anything according to his will, he listens to us.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3100
+    },
+    {
+      "id": "sp_117",
+      "reference": "Romans 8:26",
+      "body": "The Spirit also helps our weaknesses, for we don’t know how to pray as we ought.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3110
+    },
+    {
+      "id": "sp_118",
+      "reference": "Hebrews 4:16",
+      "body": "Let’s therefore draw near with boldness to the throne of grace, that we may receive mercy and may find grace for help in time of need.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3120
+    },
+    {
+      "id": "sp_119",
+      "reference": "Matthew 18:20",
+      "body": "For where two or three are gathered together in my name, there I am in the middle of them.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3130
+    },
+    {
+      "id": "sp_120",
+      "reference": "John 15:12",
+      "body": "This is my commandment, that you love one another, even as I have loved you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3140
+    },
+    {
+      "id": "sp_121",
+      "reference": "1 Peter 5:7",
+      "body": "Casting all your worries on him, because he cares for you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3150
+    },
+    {
+      "id": "sp_122",
+      "reference": "Exodus 17:12",
+      "body": "Aaron and Hur held up his hands, one on one side, and the other on the other side. His hands were steady until sunset.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3160
+    },
+    {
+      "id": "sp_123",
+      "reference": "Job 42:10",
+      "body": "The LORD restored Job’s prosperity when he prayed for his friends.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3170
+    },
+    {
+      "id": "sp_124",
+      "reference": "Acts 12:5",
+      "body": "Peter therefore was kept in the prison, but constant prayer was made by the assembly to God for him.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3180
+    },
+    {
+      "id": "sp_125",
+      "reference": "2 Corinthians 1:11",
+      "body": "You also helping together on our behalf by your supplication.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3190
+    },
+    {
+      "id": "sp_126",
+      "reference": "Ephesians 3:14-15",
+      "body": "For this cause, I bow my knees to the Father of our Lord Jesus Christ, from whom every family in heaven and on earth is named.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3200
+    },
+    {
+      "id": "sp_127",
+      "reference": "Psalm 122:6",
+      "body": "Pray for the peace of Jerusalem. Those who love you will prosper.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3210
+    },
+    {
+      "id": "sp_128",
+      "reference": "Matthew 5:44",
+      "body": "But I tell you, love your enemies, bless those who curse you, and pray for those who mistreat you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3220
+    },
+    {
+      "id": "sp_129",
+      "reference": "Luke 22:32",
+      "body": "But I prayed for you, that your faith wouldn’t fail.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3230
+    },
+    {
+      "id": "sp_130",
+      "reference": "Romans 15:1",
+      "body": "Now we who are strong ought to bear the weaknesses of the weak, and not to please ourselves.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3240
+    },
+    {
+      "id": "sp_131",
+      "reference": "Philippians 2:4",
+      "body": "Each of you not just looking to his own things, but each of you also to the things of others.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3250
+    },
+    {
+      "id": "sp_132",
+      "reference": "1 Samuel 12:23",
+      "body": "Far be it from me that I should sin against the LORD in ceasing to pray for you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3260
+    },
+    {
+      "id": "sp_133",
+      "reference": "Isaiah 58:7",
+      "body": "Isn’t it to share your bread with the hungry, and that you bring the poor who are cast out to your house?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3270
+    },
+    {
+      "id": "sp_134",
+      "reference": "Matthew 25:40",
+      "body": "Most certainly I tell you, because you did it to one of the least of these my brothers, you did it to me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3280
+    },
+    {
+      "id": "sp_135",
+      "reference": "Hebrews 13:3",
+      "body": "Remember those who are in bonds, as bound with them, and those who are ill-treated, since you are also in the body.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3290
+    },
+    {
+      "id": "sp_136",
+      "reference": "Galatians 6:10",
+      "body": "So then, as we have opportunity, let’s do what is good towards all men, and especially towards those who are of the household of the faith.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3300
+    },
+    {
+      "id": "sp_137",
+      "reference": "James 2:15-16",
+      "body": "If a brother or sister is naked and in lack of daily food, and one of you tells them, \"Go in peace,\" what good is it?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3310
+    },
+    {
+      "id": "sp_138",
+      "reference": "Proverbs 31:8",
+      "body": "Open your mouth for the mute, in the cause of all who are left desolate.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3320
+    },
+    {
+      "id": "sp_139",
+      "reference": "1 John 3:18",
+      "body": "My little children, let’s not love in word only, or with the tongue only, but in deed and truth.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3330
+    },
+    {
+      "id": "sp_140",
+      "reference": "Romans 12:15",
+      "body": "Rejoice with those who rejoice. Weep with those who weep.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3340
+    },
+    {
+      "id": "sp_141",
+      "reference": "Colossians 1:9",
+      "body": "We don’t cease praying and making requests for you, that you may be filled with the knowledge of his will.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3350
+    },
+    {
+      "id": "sp_142",
+      "reference": "2 Thessalonians 1:11",
+      "body": "To this end we also pray always for you, that our God may count you worthy of your calling.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3360
+    },
+    {
+      "id": "sp_143",
+      "reference": "Psalm 20:1",
+      "body": "May the LORD answer you in the day of trouble. May the name of the God of Jacob set you up on high.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3370
+    },
+    {
+      "id": "sp_144",
+      "reference": "Luke 10:33-34",
+      "body": "But a certain Samaritan, as he travelled, came where he was. When he saw him, he was moved with compassion.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3380
+    },
+    {
+      "id": "sp_145",
+      "reference": "Genesis 18:32",
+      "body": "He said, \"Oh don’t let the Lord be angry, and I will speak just once more.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3390
+    },
+    {
+      "id": "sp_146",
+      "reference": "Numbers 14:19",
+      "body": "Please pardon the iniquity of this people according to the greatness of your loving kindness.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3400
+    },
+    {
+      "id": "sp_147",
+      "reference": "Ezekiel 22:30",
+      "body": "I sought for a man among them who would build up the wall and stand in the gap before me for the land.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3410
+    },
+    {
+      "id": "sp_148",
+      "reference": "Daniel 9:18",
+      "body": "For we do not present our petitions before you for our righteousness, but for your great mercies’ sake.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3420
+    },
+    {
+      "id": "sp_149",
+      "reference": "John 17:20",
+      "body": "Not for these only do I pray, but for those also who will believe in me through their word.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3430
+    },
+    {
+      "id": "sp_150",
+      "reference": "Romans 8:34",
+      "body": "It is Christ who died, yes rather, who was raised from the dead, who is at the right hand of God, who also makes intercession for us.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3440
+    },
+    {
+      "id": "sp_151",
+      "reference": "Hebrews 7:25",
+      "body": "He is also able to save to the uttermost those who draw near to God through him, seeing that he lives forever to make intercession for them.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3450
+    },
+    {
+      "id": "sp_152",
+      "reference": "Matthew 9:36-38",
+      "body": "When he saw the multitudes, he was moved with compassion for them. He said, \"Pray therefore that the Lord of the harvest will send out labourers.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3460
+    },
+    {
+      "id": "sp_153",
+      "reference": "1 Thessalonians 5:11",
+      "body": "Therefore exhort one another, and build each other up, even as you also do.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3470
+    },
+    {
+      "id": "sp_154",
+      "reference": "Psalm 72:12",
+      "body": "For he will deliver the needy when he cries; the poor, who has no helper.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3480
+    },
+    {
+      "id": "sp_155",
+      "reference": "Micah 6:8",
+      "body": "What does the LORD require of you, but to act justly, to love mercy, and to walk humbly with your God?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3490
+    },
+    {
+      "id": "sp_156",
+      "reference": "Isaiah 1:17",
+      "body": "Learn to do well. Seek justice. Relieve the oppressed. Defend the fatherless. Plead for the widow.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "intercession",
+      "sort_order": 3500
+    },
+    {
+      "id": "sp_157",
       "reference": "Carrying someone",
-      "body": "Hold the one I am carrying. I cannot fix it, and I am not asked to. I can only keep walking and keep asking.",
+      "body": "I am walking this stretch for one person. Lord, you know the name. Let this ground be prayed over on their behalf.",
       "translation": "",
       "kind": "prayer",
       "category": "intercession",
-      "sort_order": 280
+      "sort_order": 3510
     },
     {
-      "id": "sp_ps_34_18",
+      "id": "sp_158",
+      "reference": "For whoever is next",
+      "body": "For the next person I pass, whose day I know nothing about: mercy. Whatever they are carrying, help them carry it.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "intercession",
+      "sort_order": 3520
+    },
+    {
+      "id": "sp_159",
+      "reference": "The ones who are not here",
+      "body": "For those too tired, too ill or too far away to walk today — I will do this stretch in their name.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "intercession",
+      "sort_order": 3530
+    },
+    {
+      "id": "sp_160",
       "reference": "Psalm 34:18",
       "body": "The LORD is near to those who have a broken heart, and saves those who have a crushed spirit.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "lament",
-      "sort_order": 310
+      "sort_order": 4010
     },
     {
-      "id": "sp_ps_42_11",
+      "id": "sp_161",
       "reference": "Psalm 42:11",
-      "body": "Why are you in despair, my soul? Why are you disturbed within me? Hope in God! For I shall still praise him.",
+      "body": "Why are you in despair, my soul? Why are you disturbed within me? Hope in God!",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "lament",
-      "sort_order": 320
+      "sort_order": 4020
     },
     {
-      "id": "sp_matt_11_28",
+      "id": "sp_162",
       "reference": "Matthew 11:28",
       "body": "Come to me, all you who labour and are heavily burdened, and I will give you rest.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "lament",
-      "sort_order": 330
+      "sort_order": 4030
     },
     {
-      "id": "sp_ps_130_1",
+      "id": "sp_163",
       "reference": "Psalm 130:1-2",
       "body": "Out of the depths I have cried to you, LORD. Lord, hear my voice. Let your ears be attentive to the voice of my petitions.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "lament",
-      "sort_order": 340
+      "sort_order": 4040
     },
     {
-      "id": "sp_ps_23_4",
+      "id": "sp_164",
       "reference": "Psalm 23:4",
       "body": "Even though I walk through the valley of the shadow of death, I will fear no evil, for you are with me.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "lament",
-      "sort_order": 350
+      "sort_order": 4050
     },
     {
-      "id": "sp_2cor_12_9",
+      "id": "sp_165",
       "reference": "2 Corinthians 12:9",
-      "body": "He has said to me, \"My grace is sufficient for you, for my power is made perfect in weakness.\"",
+      "body": "My grace is sufficient for you, for my power is made perfect in weakness.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "lament",
-      "sort_order": 360
+      "sort_order": 4060
     },
     {
-      "id": "sp_ps_56_8",
+      "id": "sp_166",
       "reference": "Psalm 56:8",
-      "body": "You count my wanderings. You put my tears into your container. Aren't they in your book?",
+      "body": "You count my wanderings. You put my tears into your container. Aren’t they in your book?",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "lament",
-      "sort_order": 370
+      "sort_order": 4070
     },
     {
-      "id": "sp_prayer_jesus",
+      "id": "sp_167",
+      "reference": "Psalm 13:1-2",
+      "body": "How long, LORD? Will you forget me forever? How long will you hide your face from me?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4080
+    },
+    {
+      "id": "sp_168",
+      "reference": "Psalm 22:1",
+      "body": "My God, my God, why have you forsaken me? Why are you so far from helping me?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4090
+    },
+    {
+      "id": "sp_169",
+      "reference": "Habakkuk 1:2",
+      "body": "LORD, how long will I cry, and you will not hear? I cry out to you because of violence, and you will not save.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4100
+    },
+    {
+      "id": "sp_170",
+      "reference": "Psalm 6:6",
+      "body": "I am weary with my groaning. Every night I flood my bed. I drench my couch with my tears.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4110
+    },
+    {
+      "id": "sp_171",
+      "reference": "Jeremiah 20:18",
+      "body": "Why did I come out of the womb to see labour and sorrow, that my days should be consumed with shame?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4120
+    },
+    {
+      "id": "sp_172",
+      "reference": "Psalm 88:1-2",
+      "body": "LORD, the God of my salvation, I have cried day and night before you. Let my prayer enter into your presence.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4130
+    },
+    {
+      "id": "sp_173",
+      "reference": "Lamentations 3:19-20",
+      "body": "Remember my affliction and my misery, the wormwood and the bitterness. My soul still remembers them, and is bowed down within me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4140
+    },
+    {
+      "id": "sp_174",
+      "reference": "Job 3:26",
+      "body": "I am not at ease, neither am I quiet, neither do I have rest; but trouble comes.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4150
+    },
+    {
+      "id": "sp_175",
+      "reference": "Job 19:25",
+      "body": "But as for me, I know that my Redeemer lives. In the end, he will stand upon the earth.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4160
+    },
+    {
+      "id": "sp_176",
+      "reference": "Job 23:10",
+      "body": "But he knows the way that I take. When he has tried me, I will come out like gold.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4170
+    },
+    {
+      "id": "sp_177",
+      "reference": "Isaiah 53:3",
+      "body": "He was despised and rejected by men, a man of suffering and acquainted with disease.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4180
+    },
+    {
+      "id": "sp_178",
+      "reference": "Isaiah 43:2",
+      "body": "When you pass through the waters, I will be with you, and through the rivers, they will not overflow you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4190
+    },
+    {
+      "id": "sp_179",
+      "reference": "Psalm 147:3",
+      "body": "He heals the broken in heart, and binds up their wounds.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4200
+    },
+    {
+      "id": "sp_180",
+      "reference": "Psalm 46:1",
+      "body": "God is our refuge and strength, a very present help in trouble.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4210
+    },
+    {
+      "id": "sp_181",
+      "reference": "Psalm 61:2",
+      "body": "From the end of the earth, I will call to you when my heart is overwhelmed. Lead me to the rock that is higher than I.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4220
+    },
+    {
+      "id": "sp_182",
+      "reference": "1 Peter 4:12",
+      "body": "Beloved, don’t be astonished at the fiery trial which has come upon you to test you, as though a strange thing happened to you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4230
+    },
+    {
+      "id": "sp_183",
+      "reference": "John 11:35",
+      "body": "Jesus wept.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4240
+    },
+    {
+      "id": "sp_184",
+      "reference": "Matthew 26:38",
+      "body": "My soul is exceedingly sorrowful, even to death. Stay here and watch with me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4250
+    },
+    {
+      "id": "sp_185",
+      "reference": "Luke 22:44",
+      "body": "Being in agony he prayed more earnestly. His sweat became like great drops of blood falling down on the ground.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4260
+    },
+    {
+      "id": "sp_186",
+      "reference": "Romans 8:18",
+      "body": "For I consider that the sufferings of this present time are not worthy to be compared with the glory which will be revealed towards us.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4270
+    },
+    {
+      "id": "sp_187",
+      "reference": "Romans 8:28",
+      "body": "We know that all things work together for good for those who love God, for those who are called according to his purpose.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4280
+    },
+    {
+      "id": "sp_188",
+      "reference": "2 Corinthians 4:8-9",
+      "body": "We are pressed on every side, yet not crushed; perplexed, yet not to despair; pursued, yet not forsaken; struck down, yet not destroyed.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4290
+    },
+    {
+      "id": "sp_189",
+      "reference": "2 Corinthians 1:3-4",
+      "body": "The Father of mercies and God of all comfort, who comforts us in all our affliction.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4300
+    },
+    {
+      "id": "sp_190",
+      "reference": "1 Peter 5:10",
+      "body": "After you have suffered a little while, the God of all grace will himself perfect, establish, strengthen, and settle you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4310
+    },
+    {
+      "id": "sp_191",
+      "reference": "Revelation 21:4",
+      "body": "He will wipe away every tear from their eyes. Death will be no more; neither will there be mourning, nor crying, nor pain any more.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4320
+    },
+    {
+      "id": "sp_192",
+      "reference": "Psalm 40:1-2",
+      "body": "I waited patiently for the LORD. He turned to me, and heard my cry. He brought me up out of a horrible pit.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4330
+    },
+    {
+      "id": "sp_193",
+      "reference": "Psalm 73:26",
+      "body": "My flesh and my heart fails, but God is the strength of my heart and my portion forever.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4340
+    },
+    {
+      "id": "sp_194",
+      "reference": "Ecclesiastes 7:3",
+      "body": "Sorrow is better than laughter; for by the sadness of the face the heart is made good.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4350
+    },
+    {
+      "id": "sp_195",
+      "reference": "Psalm 143:4",
+      "body": "Therefore my spirit is overwhelmed within me. My heart within me is desolate.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4360
+    },
+    {
+      "id": "sp_196",
+      "reference": "Jeremiah 29:11",
+      "body": "For I know the thoughts that I think towards you, says the LORD, thoughts of peace, and not of evil, to give you hope and a future.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4370
+    },
+    {
+      "id": "sp_197",
+      "reference": "Jeremiah 8:22",
+      "body": "Is there no balm in Gilead? Is there no physician there?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4380
+    },
+    {
+      "id": "sp_198",
+      "reference": "Habakkuk 3:17-18",
+      "body": "Though the fig tree doesn’t flourish, nor fruit be in the vines, yet I will rejoice in the LORD. I will be joyful in the God of my salvation.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4390
+    },
+    {
+      "id": "sp_199",
+      "reference": "Micah 7:7",
+      "body": "But as for me, I will look to the LORD. I will wait for the God of my salvation. My God will hear me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4400
+    },
+    {
+      "id": "sp_200",
+      "reference": "Nahum 1:7",
+      "body": "The LORD is good, a stronghold in the day of trouble; and he knows those who take refuge in him.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4410
+    },
+    {
+      "id": "sp_201",
+      "reference": "Psalm 27:13-14",
+      "body": "I am still confident of this: I will see the goodness of the LORD in the land of the living. Wait for the LORD.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4420
+    },
+    {
+      "id": "sp_202",
+      "reference": "Ezekiel 36:26",
+      "body": "I will give you a new heart, and I will put a new spirit within you. I will take away the stony heart out of your flesh.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4430
+    },
+    {
+      "id": "sp_203",
+      "reference": "Isaiah 41:10",
+      "body": "Don’t be afraid, for I am with you. Don’t be dismayed, for I am your God. I will strengthen you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4440
+    },
+    {
+      "id": "sp_204",
+      "reference": "Isaiah 61:3",
+      "body": "To give to them a garland for ashes, the oil of joy for mourning, the garment of praise for the spirit of heaviness.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4450
+    },
+    {
+      "id": "sp_205",
+      "reference": "Matthew 5:4",
+      "body": "Blessed are those who mourn, for they shall be comforted.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4460
+    },
+    {
+      "id": "sp_206",
+      "reference": "Psalm 116:3-4",
+      "body": "The cords of death surrounded me, the pains of Sheol got a hold of me. Then I called on the LORD’s name.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4470
+    },
+    {
+      "id": "sp_207",
+      "reference": "Ecclesiastes 3:4",
+      "body": "A time to weep, and a time to laugh; a time to mourn, and a time to dance.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4480
+    },
+    {
+      "id": "sp_208",
+      "reference": "Psalm 25:16-17",
+      "body": "Turn to me, and have mercy on me, for I am desolate and afflicted. The troubles of my heart are enlarged.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4490
+    },
+    {
+      "id": "sp_209",
+      "reference": "1 Kings 19:4",
+      "body": "He requested for himself that he might die. He said, \"It is enough. Now, O LORD, take away my life.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4500
+    },
+    {
+      "id": "sp_210",
+      "reference": "Jude 1:24",
+      "body": "Now to him who is able to keep them from stumbling, and to present you faultless before the presence of his glory in great joy.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "lament",
+      "sort_order": 4510
+    },
+    {
+      "id": "sp_211",
       "reference": "The Jesus Prayer",
       "body": "Lord Jesus Christ, Son of God, have mercy on me, a sinner.",
       "translation": "",
       "kind": "prayer",
       "category": "lament",
-      "sort_order": 380
+      "sort_order": 4520
     },
     {
-      "id": "sp_ps_46_10",
+      "id": "sp_212",
+      "reference": "With no words left",
+      "body": "I have nothing to say and I am saying it here, on this road, to you. Count that as the prayer.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "lament",
+      "sort_order": 4530
+    },
+    {
+      "id": "sp_213",
+      "reference": "Kyrie",
+      "body": "Lord, have mercy. Christ, have mercy. Lord, have mercy.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "lament",
+      "sort_order": 4540
+    },
+    {
+      "id": "sp_214",
       "reference": "Psalm 46:10",
       "body": "Be still, and know that I am God.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "stillness",
-      "sort_order": 410
+      "sort_order": 5010
     },
     {
-      "id": "sp_1kings_19_12",
+      "id": "sp_215",
       "reference": "1 Kings 19:12",
       "body": "After the earthquake a fire passed; but the LORD was not in the fire. After the fire, there was a still small voice.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "stillness",
-      "sort_order": 420
+      "sort_order": 5020
     },
     {
-      "id": "sp_ps_62_1",
+      "id": "sp_216",
       "reference": "Psalm 62:1",
       "body": "My soul rests in God alone. My salvation is from him.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "stillness",
-      "sort_order": 430
+      "sort_order": 5030
     },
     {
-      "id": "sp_isa_30_15",
+      "id": "sp_217",
       "reference": "Isaiah 30:15",
-      "body": "In returning and rest you will be saved. In quietness and in confidence will be your strength.",
+      "body": "You will be saved in returning and rest. Your strength will be in quietness and in confidence.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "stillness",
-      "sort_order": 440
+      "sort_order": 5040
     },
     {
-      "id": "sp_ps_131_2",
+      "id": "sp_218",
       "reference": "Psalm 131:2",
-      "body": "Surely I have stilled and quieted my soul, like a weaned child with his mother, like a weaned child is my soul within me.",
+      "body": "Surely I have stilled and quieted my soul, like a weaned child with his mother.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "stillness",
-      "sort_order": 450
+      "sort_order": 5050
     },
     {
-      "id": "sp_hab_2_20",
+      "id": "sp_219",
       "reference": "Habakkuk 2:20",
       "body": "But the LORD is in his holy temple. Let all the earth be silent before him.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "stillness",
-      "sort_order": 460
+      "sort_order": 5060
     },
     {
-      "id": "sp_prayer_fewer_words",
+      "id": "sp_220",
+      "reference": "Zechariah 2:13",
+      "body": "Be silent, all flesh, before the LORD; for he has roused himself from his holy habitation!",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5070
+    },
+    {
+      "id": "sp_221",
+      "reference": "Zephaniah 3:17",
+      "body": "He will rest in his love. He will rejoice over you with singing.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5080
+    },
+    {
+      "id": "sp_222",
+      "reference": "Psalm 37:7",
+      "body": "Rest in the LORD, and wait patiently for him.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5090
+    },
+    {
+      "id": "sp_223",
+      "reference": "Psalm 62:5",
+      "body": "My soul, wait in silence for God alone, for my expectation is from him.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5100
+    },
+    {
+      "id": "sp_224",
+      "reference": "Lamentations 3:26",
+      "body": "It is good that a man should hope and quietly wait for the salvation of the LORD.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5110
+    },
+    {
+      "id": "sp_225",
+      "reference": "Ecclesiastes 5:2",
+      "body": "Don’t be rash with your mouth, and don’t let your heart be hasty to utter anything before God. Therefore let your words be few.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5120
+    },
+    {
+      "id": "sp_226",
+      "reference": "Proverbs 17:28",
+      "body": "Even a fool, when he keeps silent, is counted wise.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5130
+    },
+    {
+      "id": "sp_227",
+      "reference": "James 1:19",
+      "body": "Let every man be swift to hear, slow to speak, and slow to anger.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5140
+    },
+    {
+      "id": "sp_228",
+      "reference": "Matthew 6:6",
+      "body": "But you, when you pray, enter into your inner room, and having shut your door, pray to your Father who is in secret.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5150
+    },
+    {
+      "id": "sp_229",
+      "reference": "Matthew 6:7",
+      "body": "In praying, don’t use vain repetitions, as the Gentiles do; for they think that they will be heard for their much speaking.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5160
+    },
+    {
+      "id": "sp_230",
+      "reference": "Mark 6:31",
+      "body": "Come away into a deserted place, and rest a while.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5170
+    },
+    {
+      "id": "sp_231",
+      "reference": "Luke 5:16",
+      "body": "But he withdrew himself into the desert and prayed.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5180
+    },
+    {
+      "id": "sp_232",
+      "reference": "Luke 10:42",
+      "body": "But one thing is needed. Mary has chosen the good part, which will not be taken away from her.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5190
+    },
+    {
+      "id": "sp_233",
+      "reference": "Psalm 23:1-2",
+      "body": "The LORD is my shepherd; I shall lack nothing. He makes me lie down in green pastures. He leads me beside still waters.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5200
+    },
+    {
+      "id": "sp_234",
+      "reference": "Psalm 23:3",
+      "body": "He restores my soul. He guides me in the paths of righteousness for his name’s sake.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5210
+    },
+    {
+      "id": "sp_235",
+      "reference": "Exodus 14:14",
+      "body": "The LORD will fight for you, and you shall be still.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5220
+    },
+    {
+      "id": "sp_236",
+      "reference": "Exodus 33:14",
+      "body": "My presence will go with you, and I will give you rest.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5230
+    },
+    {
+      "id": "sp_237",
+      "reference": "Isaiah 26:3",
+      "body": "You will keep whoever’s mind is steadfast in perfect peace, because he trusts in you.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5240
+    },
+    {
+      "id": "sp_238",
+      "reference": "Isaiah 32:17",
+      "body": "The work of righteousness will be peace, and the effect of righteousness, quietness and confidence forever.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5250
+    },
+    {
+      "id": "sp_239",
+      "reference": "John 14:27",
+      "body": "Peace I leave with you. My peace I give to you. Don’t let your heart be troubled, neither let it be fearful.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5260
+    },
+    {
+      "id": "sp_240",
+      "reference": "Philippians 4:7",
+      "body": "And the peace of God, which surpasses all understanding, will guard your hearts and your thoughts in Christ Jesus.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5270
+    },
+    {
+      "id": "sp_241",
+      "reference": "Psalm 4:8",
+      "body": "In peace I will both lie down and sleep, for you alone, LORD, make me live in safety.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5280
+    },
+    {
+      "id": "sp_242",
+      "reference": "Psalm 4:4",
+      "body": "Search your own heart on your bed, and be still.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5290
+    },
+    {
+      "id": "sp_243",
+      "reference": "2 Kings 4:26",
+      "body": "Please run now to meet her, and ask her, \"Is it well with you?\" She answered, \"It is well.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5300
+    },
+    {
+      "id": "sp_244",
+      "reference": "1 Thessalonians 4:11",
+      "body": "Make it your ambition to lead a quiet life, and to do your own business, and to work with your own hands.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5310
+    },
+    {
+      "id": "sp_245",
+      "reference": "Psalm 131:1",
+      "body": "LORD, my heart isn’t arrogant, nor my eyes lofty; nor do I concern myself with great matters, or things too wonderful for me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5320
+    },
+    {
+      "id": "sp_246",
+      "reference": "Genesis 2:2",
+      "body": "On the seventh day God finished his work which he had done; and he rested on the seventh day from all his work.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5330
+    },
+    {
+      "id": "sp_247",
+      "reference": "Hebrews 4:9-10",
+      "body": "There remains therefore a Sabbath rest for the people of God. For he who has entered into his rest has also rested from his works.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5340
+    },
+    {
+      "id": "sp_248",
+      "reference": "Mark 4:39",
+      "body": "He awoke and rebuked the wind, and said to the sea, \"Peace! Be still!\" The wind ceased and there was a great calm.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5350
+    },
+    {
+      "id": "sp_249",
+      "reference": "Psalm 107:29-30",
+      "body": "He makes the storm a calm, so that its waves are still. Then they are glad because it is calm.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5360
+    },
+    {
+      "id": "sp_250",
+      "reference": "Job 37:14",
+      "body": "Listen to this, Job. Stand still, and consider the wondrous works of God.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5370
+    },
+    {
+      "id": "sp_251",
+      "reference": "1 Peter 3:4",
+      "body": "But in the hidden person of the heart, in the incorruptible adornment of a gentle and quiet spirit, which is very precious in God’s sight.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5380
+    },
+    {
+      "id": "sp_252",
+      "reference": "1 Corinthians 14:33",
+      "body": "For God is not a God of confusion, but of peace.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5390
+    },
+    {
+      "id": "sp_253",
+      "reference": "Colossians 3:2",
+      "body": "Set your mind on the things that are above, not on the things that are on the earth.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5400
+    },
+    {
+      "id": "sp_254",
+      "reference": "Isaiah 40:11",
+      "body": "He will feed his flock like a shepherd. He will gather the lambs in his arm, and carry them in his bosom.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5410
+    },
+    {
+      "id": "sp_255",
+      "reference": "Psalm 16:8",
+      "body": "I have set the LORD always before me. Because he is at my right hand, I shall not be moved.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5420
+    },
+    {
+      "id": "sp_256",
+      "reference": "Song of Songs 2:14",
+      "body": "Let me see your face. Let me hear your voice; for your voice is sweet and your face is lovely.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5430
+    },
+    {
+      "id": "sp_257",
+      "reference": "Obadiah 1:3",
+      "body": "The pride of your heart has deceived you, you who dwell in the clefts of the rock, whose habitation is high.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5440
+    },
+    {
+      "id": "sp_258",
+      "reference": "Numbers 9:19",
+      "body": "When the cloud stayed on the tabernacle many days, then the children of Israel kept the LORD’s command, and didn’t travel.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5450
+    },
+    {
+      "id": "sp_259",
+      "reference": "Psalm 27:4",
+      "body": "One thing I have asked of the LORD, that I will seek after: that I may dwell in the house of the LORD all the days of my life.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5460
+    },
+    {
+      "id": "sp_260",
+      "reference": "Ecclesiastes 4:6",
+      "body": "Better is a handful, with quietness, than two handfuls with labour and chasing after wind.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5470
+    },
+    {
+      "id": "sp_261",
+      "reference": "Isaiah 55:12",
+      "body": "For you shall go out with joy, and be led out with peace. The mountains and the hills will break out before you into singing.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5480
+    },
+    {
+      "id": "sp_262",
+      "reference": "2 Timothy 1:7",
+      "body": "For God didn’t give us a spirit of fear, but of power, love, and self-control.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5490
+    },
+    {
+      "id": "sp_263",
+      "reference": "Matthew 11:29",
+      "body": "Take my yoke upon you and learn from me, for I am gentle and lowly in heart; and you will find rest for your souls.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "stillness",
+      "sort_order": 5500
+    },
+    {
+      "id": "sp_264",
       "reference": "Fewer words",
-      "body": "I have nothing to say that you have not already heard. Let the walking be the prayer.",
+      "body": "Enough words. I will walk the next stretch without asking you for anything, and let that be the prayer.",
       "translation": "",
       "kind": "prayer",
       "category": "stillness",
-      "sort_order": 470
+      "sort_order": 5510
     },
     {
-      "id": "sp_ps_121_1",
-      "reference": "Psalm 121:1-2",
-      "body": "I will lift up my eyes to the hills. Where does my help come from? My help comes from the LORD, who made heaven and earth.",
-      "translation": "WEBBE",
-      "kind": "scripture",
-      "category": "scriptureWalk",
-      "sort_order": 510
+      "id": "sp_265",
+      "reference": "Breathing",
+      "body": "Breathing in: you are here. Breathing out: I am not in charge. Again, for as long as the road lasts.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "stillness",
+      "sort_order": 5520
     },
     {
-      "id": "sp_ps_119_105",
+      "id": "sp_266",
+      "reference": "One word",
+      "body": "One word for this mile, and no others: mercy. Or peace. Or here. Choose it, and keep returning to it.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "stillness",
+      "sort_order": 5530
+    },
+    {
+      "id": "sp_267",
       "reference": "Psalm 119:105",
       "body": "Your word is a lamp to my feet, and a light for my path.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "scriptureWalk",
-      "sort_order": 520
+      "sort_order": 6010
     },
     {
-      "id": "sp_micah_6_8",
-      "reference": "Micah 6:8",
-      "body": "He has shown you, O man, what is good. What does the LORD require of you, but to act justly, to love mercy, and to walk humbly with your God?",
-      "translation": "WEBBE",
-      "kind": "scripture",
-      "category": "scriptureWalk",
-      "sort_order": 530
-    },
-    {
-      "id": "sp_luke_24_32",
+      "id": "sp_268",
       "reference": "Luke 24:32",
-      "body": "Weren't our hearts burning within us while he spoke to us along the way, and while he opened the Scriptures to us?",
+      "body": "Weren’t our hearts burning within us while he spoke to us along the way, and while he opened the Scriptures to us?",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "scriptureWalk",
-      "sort_order": 540
+      "sort_order": 6020
     },
     {
-      "id": "sp_prov_3_6",
+      "id": "sp_269",
       "reference": "Proverbs 3:6",
       "body": "In all your ways acknowledge him, and he will make your paths straight.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "scriptureWalk",
-      "sort_order": 550
+      "sort_order": 6030
     },
     {
-      "id": "sp_isa_43_2",
-      "reference": "Isaiah 43:2",
-      "body": "When you pass through the waters, I will be with you, and through the rivers, they will not overflow you.",
-      "translation": "WEBBE",
-      "kind": "scripture",
-      "category": "scriptureWalk",
-      "sort_order": 560
-    },
-    {
-      "id": "sp_ps_16_11",
+      "id": "sp_270",
       "reference": "Psalm 16:11",
-      "body": "You will show me the path of life. In your presence is fullness of joy. In your right hand there are pleasures forever more.",
+      "body": "You will show me the path of life. In your presence is fullness of joy.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "scriptureWalk",
-      "sort_order": 570
+      "sort_order": 6040
     },
     {
-      "id": "sp_deut_31_8",
+      "id": "sp_271",
       "reference": "Deuteronomy 31:8",
-      "body": "The LORD himself is who goes before you. He will be with you. He will not fail you nor forsake you. Don't be afraid, neither be dismayed.",
+      "body": "The LORD himself is who goes before you. He will be with you. He will not fail you, nor forsake you.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "scriptureWalk",
-      "sort_order": 580
+      "sort_order": 6050
     },
     {
-      "id": "sp_gen_5_24",
+      "id": "sp_272",
       "reference": "Genesis 5:24",
       "body": "Enoch walked with God, and he was not found, for God took him.",
       "translation": "WEBBE",
       "kind": "scripture",
       "category": "scriptureWalk",
-      "sort_order": 590
+      "sort_order": 6060
     },
     {
-      "id": "sp_prayer_anima",
+      "id": "sp_273",
+      "reference": "Isaiah 30:21",
+      "body": "Your ears will hear a word behind you, saying, \"This is the way. Walk in it.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6070
+    },
+    {
+      "id": "sp_274",
+      "reference": "Micah 4:2",
+      "body": "He will teach us of his ways, and we will walk in his paths.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6080
+    },
+    {
+      "id": "sp_275",
+      "reference": "Jeremiah 6:16",
+      "body": "Ask for the old paths, where the good way is, and walk in it; and you will find rest for your souls.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6090
+    },
+    {
+      "id": "sp_276",
+      "reference": "Psalm 25:4",
+      "body": "Show me your ways, LORD. Teach me your paths.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6100
+    },
+    {
+      "id": "sp_277",
+      "reference": "Psalm 37:23",
+      "body": "A man’s goings are established by the LORD. He delights in his way.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6110
+    },
+    {
+      "id": "sp_278",
+      "reference": "Psalm 119:32",
+      "body": "I run in the path of your commandments, for you have set my heart free.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6120
+    },
+    {
+      "id": "sp_279",
+      "reference": "Psalm 119:35",
+      "body": "Direct me in the path of your commandments, for I delight in them.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6130
+    },
+    {
+      "id": "sp_280",
+      "reference": "Psalm 139:3",
+      "body": "You search out my path and my lying down, and are acquainted with all my ways.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6140
+    },
+    {
+      "id": "sp_281",
+      "reference": "Psalm 139:23-24",
+      "body": "Search me, God, and know my heart. Try me, and know my thoughts. Lead me in the everlasting way.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6150
+    },
+    {
+      "id": "sp_282",
+      "reference": "Proverbs 4:12",
+      "body": "When you go, your steps will not be hampered. When you run, you will not stumble.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6160
+    },
+    {
+      "id": "sp_283",
+      "reference": "Proverbs 4:26",
+      "body": "Make the path of your feet level. Let all of your ways be established.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6170
+    },
+    {
+      "id": "sp_284",
+      "reference": "Proverbs 16:9",
+      "body": "A man’s heart plans his course, but the LORD directs his steps.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6180
+    },
+    {
+      "id": "sp_285",
+      "reference": "Proverbs 20:24",
+      "body": "A man’s steps are from the LORD; how then can man understand his way?",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6190
+    },
+    {
+      "id": "sp_286",
+      "reference": "Isaiah 2:3",
+      "body": "Come, let’s go up to the mountain of the LORD, that he may teach us of his ways, and we may walk in his paths.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6200
+    },
+    {
+      "id": "sp_287",
+      "reference": "Isaiah 35:8",
+      "body": "A highway will be there, a road, and it will be called \"The Holy Way\".",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6210
+    },
+    {
+      "id": "sp_288",
+      "reference": "Isaiah 40:3",
+      "body": "The voice of one who calls out, \"Prepare the way of the LORD in the wilderness! Make a level highway in the desert for our God.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6220
+    },
+    {
+      "id": "sp_289",
+      "reference": "Isaiah 42:16",
+      "body": "I will bring the blind by a way that they don’t know. I will lead them in paths that they don’t know.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6230
+    },
+    {
+      "id": "sp_290",
+      "reference": "John 14:6",
+      "body": "Jesus said to him, \"I am the way, the truth, and the life.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6240
+    },
+    {
+      "id": "sp_291",
+      "reference": "John 8:12",
+      "body": "I am the light of the world. He who follows me will not walk in the darkness, but will have the light of life.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6250
+    },
+    {
+      "id": "sp_292",
+      "reference": "John 10:27",
+      "body": "My sheep hear my voice, and I know them, and they follow me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6260
+    },
+    {
+      "id": "sp_293",
+      "reference": "Matthew 4:19",
+      "body": "He said to them, \"Come after me, and I will make you fishers for men.\"",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6270
+    },
+    {
+      "id": "sp_294",
+      "reference": "Matthew 7:14",
+      "body": "How narrow is the gate and the way is restricted that leads to life! There are few who find it.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6280
+    },
+    {
+      "id": "sp_295",
+      "reference": "Mark 8:34",
+      "body": "If anyone wants to come after me, let him deny himself, and take up his cross, and follow me.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6290
+    },
+    {
+      "id": "sp_296",
+      "reference": "Luke 9:23",
+      "body": "If anyone desires to come after me, let him deny himself, take up his cross, and follow me daily.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6300
+    },
+    {
+      "id": "sp_297",
+      "reference": "Luke 24:15",
+      "body": "While they talked and questioned together, Jesus himself came near, and went with them.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6310
+    },
+    {
+      "id": "sp_298",
+      "reference": "Acts 9:2",
+      "body": "That if he found any who were of the Way, whether men or women, he might bring them bound to Jerusalem.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6320
+    },
+    {
+      "id": "sp_299",
+      "reference": "Acts 17:28",
+      "body": "For in him we live, move, and have our being.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6330
+    },
+    {
+      "id": "sp_300",
+      "reference": "Romans 12:2",
+      "body": "Don’t be conformed to this world, but be transformed by the renewing of your mind.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6340
+    },
+    {
+      "id": "sp_301",
+      "reference": "2 Corinthians 5:7",
+      "body": "For we walk by faith, not by sight.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6350
+    },
+    {
+      "id": "sp_302",
+      "reference": "Galatians 5:16",
+      "body": "But I say, walk by the Spirit, and you won’t fulfil the lust of the flesh.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6360
+    },
+    {
+      "id": "sp_303",
+      "reference": "Galatians 5:25",
+      "body": "If we live by the Spirit, let’s also walk by the Spirit.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6370
+    },
+    {
+      "id": "sp_304",
+      "reference": "Ephesians 5:2",
+      "body": "Walk in love, even as Christ also loved you and gave himself up for us.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6380
+    },
+    {
+      "id": "sp_305",
+      "reference": "Ephesians 5:15",
+      "body": "Therefore watch carefully how you walk, not as unwise, but as wise.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6390
+    },
+    {
+      "id": "sp_306",
+      "reference": "Colossians 2:6",
+      "body": "As therefore you received Christ Jesus the Lord, walk in him.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6400
+    },
+    {
+      "id": "sp_307",
+      "reference": "1 John 1:7",
+      "body": "But if we walk in the light as he is in the light, we have fellowship with one another.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6410
+    },
+    {
+      "id": "sp_308",
+      "reference": "1 John 2:6",
+      "body": "He who says he remains in him ought himself also to walk just like he walked.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6420
+    },
+    {
+      "id": "sp_309",
+      "reference": "Hebrews 12:1",
+      "body": "Let’s lay aside every weight and the sin which so easily entangles us, and let’s run with perseverance the race that is set before us.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6430
+    },
+    {
+      "id": "sp_310",
+      "reference": "Hebrews 11:8",
+      "body": "By faith Abraham obeyed and went out to the place which he was to receive. He went out, not knowing where he went.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6440
+    },
+    {
+      "id": "sp_311",
+      "reference": "Hebrews 13:14",
+      "body": "For we don’t have here an enduring city, but we seek that which is to come.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6450
+    },
+    {
+      "id": "sp_312",
+      "reference": "1 Peter 2:21",
+      "body": "Because Christ also suffered for us, leaving you an example, that you should follow his steps.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6460
+    },
+    {
+      "id": "sp_313",
+      "reference": "Psalm 84:7",
+      "body": "They go from strength to strength.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6470
+    },
+    {
+      "id": "sp_314",
+      "reference": "Psalm 121:8",
+      "body": "The LORD will keep your going out and your coming in, from this time forward, and forever more.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6480
+    },
+    {
+      "id": "sp_315",
+      "reference": "1 Corinthians 9:24",
+      "body": "Don’t you know that those who run in a race all run, but one receives the prize? Run like that, that you may win.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6490
+    },
+    {
+      "id": "sp_316",
+      "reference": "Revelation 21:24",
+      "body": "The nations will walk in its light.",
+      "translation": "WEBBE",
+      "kind": "scripture",
+      "category": "scriptureWalk",
+      "sort_order": 6500
+    },
+    {
+      "id": "sp_317",
       "reference": "Anima Christi",
-      "body": "Soul of Christ, sanctify me. Body of Christ, save me. Within your wounds hide me.",
+      "body": "Soul of Christ, sanctify me. Body of Christ, save me. Within your wounds, hide me. Never let me be parted from you.",
       "translation": "",
       "kind": "prayer",
       "category": "scriptureWalk",
-      "sort_order": 600
+      "sort_order": 6510
+    },
+    {
+      "id": "sp_318",
+      "reference": "The road ahead",
+      "body": "I do not know what is round the next bend. You do. That will have to be enough, and it is.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "scriptureWalk",
+      "sort_order": 6520
+    },
+    {
+      "id": "sp_319",
+      "reference": "Step by step",
+      "body": "Not the whole road — just the next step. Show me that one, and I will ask again after it.",
+      "translation": "",
+      "kind": "prayer",
+      "category": "scriptureWalk",
+      "sort_order": 6530
     }
   ]
 }

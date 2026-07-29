@@ -42,7 +42,17 @@ class FollowListScreen extends ConsumerWidget {
     final people = ref.watch(provider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(mode.title)),
+      appBar: AppBar(
+        title: Text(mode.title),
+        actions: [
+          IconButton(
+            tooltip: 'Find people',
+            icon: const Icon(Icons.person_search_outlined),
+            onPressed: () => context.pushNamed(Routes.discover),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(provider.future),
         child: AsyncView<List<UserProfile>>(
@@ -55,11 +65,16 @@ class FollowListScreen extends ConsumerWidget {
             padding: EdgeInsets.all(AppSpacing.lg),
             child: RowListLoading(count: 5),
           ),
+          // A follow list is one of the two places somebody is already thinking
+          // about who they know, so it is one of the two places the way to
+          // Discover belongs — the other being the empty feed.
           empty: () => ScrollableStateBody(
             child: EmptyState(
               icon: Icons.people_outline,
               title: mode.emptyTitle,
               message: mode.emptyMessage,
+              actionLabel: 'Find people',
+              onAction: () => context.pushNamed(Routes.discover),
             ),
           ),
           data: (items) => ListView.separated(

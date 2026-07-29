@@ -10,11 +10,13 @@ import 'package:prayer_walk/src/features/activity/data/step_cadence_trigger.dart
 import 'package:prayer_walk/src/features/activity/domain/activity.dart';
 import 'package:prayer_walk/src/features/activity/domain/cadence_trigger.dart';
 import 'package:prayer_walk/src/features/devotionals/domain/devotional.dart';
+import 'package:prayer_walk/src/features/scripture/data/scripture_history_controller.dart';
 import 'package:prayer_walk/src/features/scripture/data/scripture_prompt_store.dart';
 import 'package:prayer_walk/src/features/scripture/data/scripture_providers.dart';
 import 'package:prayer_walk/src/features/scripture/data/supabase_scripture_repository.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_repository.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_submission.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -66,6 +68,29 @@ class _StubScriptureRepository implements ScriptureRepository {
 
   @override
   Future<void> deletePrompt(String id) async {}
+
+  // Curation and the submissions queue are not what this test is about: it
+  // exercises delivery on a walk, which reads `publishedPrompts` and nothing
+  // else. Unimplemented is the honest stub — a silent empty list here would let
+  // a future test pass while calling something that never happened.
+  @override
+  Future<void> submitPrompt(ScriptureSubmissionDraft draft) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<ScriptureSubmission>> mySubmissions() =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<ScriptureSubmission>> submissions({SubmissionStatus? status}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> reviewSubmission(
+    String id, {
+    required SubmissionStatus outcome,
+    String reason = '',
+  }) => throw UnimplementedError();
 }
 
 /// A step trigger that reports the hardware missing, so the fallback path can
@@ -310,6 +335,112 @@ void main() {
         drawn[2],
         isNot(drawn[3]),
         reason: 'a reshuffle must not open on the verse that just went by',
+      );
+    });
+
+    test('ten consecutive walks repeat nothing while anything is unseen', () async {
+      // The complaint this whole change answers, asserted end to end rather
+      // than reasoned about. Ten walks of six verses is sixty draws; the
+      // library holds seventy, so nothing should come round twice.
+      //
+      // Before delivery history this failed on walk two — each walk reshuffled
+      // the whole library from nothing, so two draws of six from seventy
+      // collided about forty per cent of the time, and by walk ten a repeat was
+      // a certainty.
+      setUpWith(repository: _StubScriptureRepository(_library(70)));
+
+      final everything = <String>[];
+      for (var walk = 0; walk < 10; walk++) {
+        await startWalk();
+        await emit(leg(0));
+        for (var n = 1; n <= 6; n++) {
+          await emit(leg(n));
+        }
+        everything.addAll(state().deliveredPrompts.map((d) => d.prompt.id));
+        // Ends the walk exactly as discarding one does, which is what clears
+        // the queue and pushes the deliveries to the mirror.
+        controller().discard();
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      expect(everything, hasLength(60));
+      expect(
+        everything.toSet(),
+        hasLength(60),
+        reason: 'sixty draws from a library of seventy, with a record of what '
+            'has already been given, must be sixty different passages',
+      );
+    });
+
+    test('a passage delivered yesterday does not come back today', () async {
+      final prompts = _library(20);
+      setUpWith(repository: _StubScriptureRepository(prompts));
+
+      // Yesterday's walk, written straight into the record rather than walked,
+      // so the assertion is about selection and not about the clock.
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final history = container.read(scriptureHistoryProvider.notifier);
+      for (var i = 0; i < 6; i++) {
+        history.record('sp_$i', at: yesterday);
+      }
+
+      await startWalk();
+      await emit(leg(0));
+      for (var n = 1; n <= 6; n++) {
+        await emit(leg(n));
+      }
+
+      final drawn = state().deliveredPrompts.map((d) => d.prompt.id).toSet();
+      expect(drawn, hasLength(6));
+      expect(
+        drawn.intersection({for (var i = 0; i < 6; i++) 'sp_$i'}),
+        isEmpty,
+        reason: 'fourteen passages remain unseen — none of yesterday\'s six '
+            'should be reached',
+      );
+    });
+
+    test('what a walk delivered is remembered', () async {
+      await startWalk();
+      await emit(leg(0));
+      await emit(leg(1));
+
+      final delivered = state().deliveredPrompts.single.prompt.id;
+      expect(
+        container.read(scriptureHistoryProvider).hasSeen(delivered),
+        isTrue,
+      );
+    });
+
+    test('history that cannot reach the server still governs the walk', () async {
+      // Supabase is not initialised in a test, so every mirror call fails
+      // exactly as it does on a walk with no signal. The walk must be
+      // unaffected — and the *next* walk must still know what this one gave.
+      setUpWith(repository: _StubScriptureRepository(_library(20)));
+
+      await startWalk();
+      await emit(leg(0));
+      for (var n = 1; n <= 4; n++) {
+        await emit(leg(n));
+      }
+      final firstWalk = state().deliveredPrompts.map((d) => d.prompt.id).toSet();
+      expect(firstWalk, hasLength(4));
+
+      controller().discard();
+      await Future<void>.delayed(Duration.zero);
+
+      await startWalk();
+      await emit(leg(0));
+      for (var n = 1; n <= 4; n++) {
+        await emit(leg(n));
+      }
+      final secondWalk = state().deliveredPrompts.map((d) => d.prompt.id).toSet();
+
+      expect(secondWalk, hasLength(4));
+      expect(
+        firstWalk.intersection(secondWalk),
+        isEmpty,
+        reason: 'a failed mirror write must not cost the local record',
       );
     });
 
