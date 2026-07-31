@@ -12,7 +12,9 @@ import '../../scripture/presentation/scripture_settings_panel.dart';
 import '../data/location_service.dart';
 import '../data/activity_providers.dart';
 import '../data/recording_controller.dart';
+import '../data/recording_journal.dart';
 import '../domain/activity.dart';
+import '../domain/interrupted_recording.dart';
 import 'widgets/intentions_sheet.dart';
 
 /// Log tag for this screen's failures.
@@ -46,6 +48,11 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
   }
 
   Future<void> _start() async {
+    // Starting a fresh walk overwrites the journal, so an unresolved one has to
+    // be resolved first — the card above the button is the offer, and this is
+    // what stops the offer from being answered by accident.
+    if (!await _clearedToStart()) return;
+    if (!mounted) return;
     setState(() => _starting = true);
     // Fired on the press, not on the result: the walk begins when the thumb
     // lifts, and a permission prompt can sit in between.
@@ -76,6 +83,116 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
     } finally {
       if (mounted) setState(() => _starting = false);
     }
+  }
+
+  // ------------------------------------------------ the walk that was lost ---
+
+  /// Whether a new walk may begin, given whatever unfinished one is waiting.
+  ///
+  /// Answers true immediately in the ordinary case, where nothing is waiting.
+  /// When something is, the walker is told what pressing Start costs and given
+  /// the door they probably wanted — "Save it first" leaves the old walk on the
+  /// summary screen and the new one unstarted, which is recoverable in a way
+  /// that overwriting it is not.
+  Future<bool> _clearedToStart() async {
+    final current = ref.read(recordingControllerProvider);
+    // Same suppression the card uses: the journal describes a live walk and an
+    // unsaved draft as well as a lost one, and neither of those is something to
+    // warn about here.
+    if (current.isLive || current.hasDraft) return true;
+    final waiting = ref.read(interruptedRecordingProvider).value;
+    if (waiting == null) return true;
+
+    final saveFirst = await showConfirmDialog(
+      context,
+      title: 'Save your unfinished walk first?',
+      message:
+          '${Fmt.distance(waiting.distanceMeters)} of an earlier walk has not '
+          'been saved yet. Starting a new one now replaces it.',
+      confirmLabel: 'Save it first',
+      cancelLabel: 'Start a new walk',
+    );
+    if (!saveFirst) return true;
+    if (!mounted) return false;
+    _keepInterrupted(waiting);
+    return false;
+  }
+
+  /// Picks the interrupted walk back up and goes straight to the live screen.
+  Future<void> _resumeInterrupted(InterruptedRecording walk) async {
+    setState(() => _starting = true);
+    AppHaptics.heavy();
+    try {
+      final access = await ref
+          .read(recordingControllerProvider.notifier)
+          .resumeInterrupted(walk);
+      if (!mounted) return;
+      if (access.canRecord) context.goNamed(Routes.liveTracking);
+    } catch (error, stack) {
+      if (mounted) {
+        reportFailure(
+          context,
+          error,
+          stack,
+          tag: _tag,
+          fallback: "That walk couldn't be picked up again.",
+          onRetry: () => _resumeInterrupted(walk),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
+  }
+
+  /// Takes the interrupted walk as finished and goes to the summary, where it
+  /// is titled and saved like any other.
+  void _keepInterrupted(InterruptedRecording walk) {
+    AppHaptics.heavy();
+    ref.read(recordingControllerProvider.notifier).keepInterrupted(walk);
+    context.goNamed(Routes.activitySummary);
+  }
+
+  /// The only path that throws a recovered walk away, and it asks first.
+  Future<void> _discardInterrupted(InterruptedRecording walk) async {
+    final discard = await showConfirmDialog(
+      context,
+      title: 'Throw this walk away?',
+      message:
+          '${Fmt.distance(walk.distanceMeters)} and '
+          '${Fmt.duration(walk.elapsed)} were recorded before the app stopped. '
+          'Nothing about them is kept.',
+      confirmLabel: 'Throw away',
+      cancelLabel: 'Keep it',
+      destructive: true,
+    );
+    if (!discard) return;
+    await ref.read(recordingControllerProvider.notifier).discardInterrupted();
+  }
+
+  /// Why a walk gets interrupted, and the one setting that usually fixes it.
+  ///
+  /// Only ever reached by somebody tapping "Why did this happen?" on a walk
+  /// that actually was interrupted — so it is never a prompt, never a banner,
+  /// and never shown to the great majority of walkers whose phones behave. That
+  /// is deliberate: this is a manufacturer's battery manager, not something the
+  /// app can detect reliably or fix on the walker's behalf, and a permanent
+  /// nag about it would cost more than it saves.
+  Future<void> _explainInterruption() async {
+    final open = await showConfirmDialog(
+      context,
+      title: 'Why a walk stops',
+      message:
+          'Prayer Walk keeps recording in the background, but some phones — '
+          'Xiaomi, Huawei, Samsung, Oppo and OnePlus especially — close apps '
+          'that run for a long time with the screen off, whatever the app asks '
+          'for.\n\nIf this keeps happening, find Prayer Walk in your phone\'s '
+          'Settings, open Battery, and set it to Unrestricted (some phones call '
+          'it "Don\'t optimise" or "Allow background activity").',
+      confirmLabel: 'Open settings',
+      cancelLabel: 'Not now',
+    );
+    if (!open) return;
+    await ref.read(locationServiceProvider).openAppSettings();
   }
 
   /// The action that actually fixes each blocked case.
@@ -166,6 +283,22 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
           _RecordPanel(
             state: state,
             access: access,
+            // Null on every ordinary launch. Present only when the app was
+            // killed mid-walk, and then it is the first thing on the panel —
+            // above the type chips, above Start — because starting a second
+            // walk on top of an unresolved one is how the first gets lost.
+            //
+            // Suppressed outright while a walk is live or a draft is waiting on
+            // the summary screen. The journal describes both of those too, and
+            // offering the walk somebody is *currently on* back to them as
+            // "unfinished" would be nonsense.
+            interrupted: state.isLive || state.hasDraft
+                ? null
+                : ref.watch(interruptedRecordingProvider).value,
+            onResumeInterrupted: _resumeInterrupted,
+            onKeepInterrupted: _keepInterrupted,
+            onDiscardInterrupted: _discardInterrupted,
+            onExplainInterruption: _explainInterruption,
             starting: _starting,
             onSelectType: (type) {
               AppHaptics.selection();
@@ -188,6 +321,11 @@ class _RecordPanel extends StatelessWidget {
   const _RecordPanel({
     required this.state,
     required this.access,
+    required this.interrupted,
+    required this.onResumeInterrupted,
+    required this.onKeepInterrupted,
+    required this.onDiscardInterrupted,
+    required this.onExplainInterruption,
     required this.starting,
     required this.onSelectType,
     required this.onEditIntentions,
@@ -202,6 +340,15 @@ class _RecordPanel extends StatelessWidget {
   /// everything else, including an approximate grant, has something the walker
   /// needs to know before they set off.
   final LocationAccess access;
+
+  /// A walk the app was recording when it stopped running, or null — which is
+  /// what this is on essentially every launch.
+  final InterruptedRecording? interrupted;
+
+  final ValueChanged<InterruptedRecording> onResumeInterrupted;
+  final ValueChanged<InterruptedRecording> onKeepInterrupted;
+  final ValueChanged<InterruptedRecording> onDiscardInterrupted;
+  final VoidCallback onExplainInterruption;
 
   final bool starting;
   final ValueChanged<ActivityType> onSelectType;
@@ -240,6 +387,16 @@ class _RecordPanel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (interrupted != null) ...[
+                _InterruptedWalkCard(
+                  walk: interrupted!,
+                  onResume: () => onResumeInterrupted(interrupted!),
+                  onKeep: () => onKeepInterrupted(interrupted!),
+                  onDiscard: () => onDiscardInterrupted(interrupted!),
+                  onExplain: onExplainInterruption,
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -332,15 +489,146 @@ class _RecordPanel extends StatelessWidget {
                 onPressed: onStart,
               ),
               const SizedBox(height: AppSpacing.sm),
+              // Said before the walk, not during it, because it is the thing
+              // that decides whether somebody puts the phone away and prays or
+              // holds it up and watches it. The notification is named because
+              // one appearing unannounced reads as something having gone wrong.
               Text(
-                'Your route is recorded while the app is open. Locked-screen '
-                'tracking comes later.',
+                'Your route keeps recording with the screen locked or the phone '
+                'in a pocket. A notification shows while a walk is running, and '
+                'your location is read only between Start and Finish.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A walk the app was recording when it stopped running, offered back.
+///
+/// The whole point is that it is *offered*, never assumed. An interrupted walk
+/// is not resumed by itself — silently restarting the GPS and the notification
+/// for somebody who finished walking an hour ago and opened the app to read the
+/// feed would be its own kind of failure — and it is never thrown away by
+/// itself either. Three doors, all of them explicit:
+///
+///  * **Pick it up** carries on recording from where it stopped. Hidden once
+///    the gap is long enough that resuming would mean stitching two different
+///    walks together; the walk is still offered, just not as a live one.
+///  * **Save it** treats it as finished and goes to the ordinary summary
+///    screen, so a recovered walk is titled, made public or private, and stored
+///    exactly like every other walk.
+///  * **Throw it away** asks first, and is deliberately the quietest of the
+///    three.
+class _InterruptedWalkCard extends StatelessWidget {
+  const _InterruptedWalkCard({
+    required this.walk,
+    required this.onResume,
+    required this.onKeep,
+    required this.onDiscard,
+    required this.onExplain,
+  });
+
+  final InterruptedRecording walk;
+  final VoidCallback onResume;
+  final VoidCallback onKeep;
+  final VoidCallback onDiscard;
+  final VoidCallback onExplain;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final canResume = !walk.isTooOldToResume;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: AppRadius.control,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.restore_rounded,
+                size: 18,
+                color: scheme.onTertiaryContainer,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'You have an unfinished walk',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: scheme.onTertiaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            // Everything the walker needs to recognise it: how much of it there
+            // is, and how long ago it stopped. The gap is what tells them
+            // whether picking it up makes sense.
+            '${Fmt.distance(walk.distanceMeters)} · '
+            '${Fmt.duration(walk.elapsed)} · '
+            'stopped ${Fmt.relativeTime(walk.lastSeenAt).toLowerCase()}. '
+            '${canResume ? 'Carry on with it, or save it as it is.' : 'Too long ago to carry on with — save it as it is.'}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onTertiaryContainer,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              if (canResume) ...[
+                Expanded(
+                  child: FilledButton(
+                    onPressed: onResume,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, AppSizes.minTapTarget),
+                    ),
+                    child: const Text('Pick it up'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
+              Expanded(
+                child: canResume
+                    ? OutlinedButton(
+                        onPressed: onKeep,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, AppSizes.minTapTarget),
+                          foregroundColor: scheme.onTertiaryContainer,
+                        ),
+                        child: const Text('Save it'),
+                      )
+                    : FilledButton(
+                        onPressed: onKeep,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, AppSizes.minTapTarget),
+                        ),
+                        child: const Text('Save it'),
+                      ),
+              ),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              AppTextButton(label: 'Why did this happen?', onPressed: onExplain),
+              AppTextButton(label: 'Throw it away', onPressed: onDiscard),
+            ],
+          ),
+        ],
       ),
     );
   }

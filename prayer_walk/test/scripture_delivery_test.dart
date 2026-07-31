@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show FlutterView;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,8 @@ import 'package:prayer_walk/src/features/scripture/data/scripture_history_contro
 import 'package:prayer_walk/src/features/scripture/data/scripture_prompt_store.dart';
 import 'package:prayer_walk/src/features/scripture/data/scripture_providers.dart';
 import 'package:prayer_walk/src/features/scripture/data/supabase_scripture_repository.dart';
+import 'package:prayer_walk/src/features/scripture/domain/bible_translation.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_library.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_repository.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_submission.dart';
@@ -26,20 +29,63 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// screen, because the controller is where the promises live: a verse arrives
 /// at the first interval and not at the start line, never while paused, never
 /// twice on one walk, and always leaves a waypoint behind that survives the
-/// save. The chime and the voice are the live screen's business and are not
-/// exercised here — a test has no speaker, which is exactly why they were kept
-/// out of the controller.
+/// save.
+///
+/// The chime and the voice are asserted here too, through a silent stand-in for
+/// [ScriptureAnnouncer]. They used to be the live screen's business, which is
+/// why they used to be out of scope — and also why a verse arriving with the
+/// app on another tab or the screen locked went out in silence. Announcing is
+/// the recorder's job now, so a test with no speaker is exactly the thing that
+/// can check it happens.
 
 /// A location service driven by the test.
 class _FakeLocationService extends LocationService {
   final StreamController<LocationFix> controller =
       StreamController<LocationFix>.broadcast();
 
+  /// Whether each opened stream asked for background delivery.
+  final List<bool> backgroundRequests = [];
+
   @override
   Future<LocationAccess> ensureAccess() async => LocationAccess.granted;
 
   @override
-  Stream<LocationFix> positionStream() => controller.stream;
+  Future<bool> ensureNotificationAccess() async => true;
+
+  @override
+  Future<BackgroundLocationAccess> backgroundAccess() async =>
+      BackgroundLocationAccess.granted;
+
+  @override
+  Stream<LocationFix> positionStream({bool background = false}) {
+    backgroundRequests.add(background);
+    return controller.stream;
+  }
+}
+
+/// An announcer with no speaker, no engine and no plugins — it only remembers
+/// what it was asked to say.
+class _SilentAnnouncer extends ScriptureAnnouncer {
+  final List<ScripturePrompt> spoken = [];
+  final List<({bool sound, bool voice})> channels = [];
+  int silenced = 0;
+
+  @override
+  Future<void> announce(
+    ScripturePrompt prompt, {
+    required bool sound,
+    required bool voice,
+    FlutterView? view,
+  }) async {
+    spoken.add(prompt);
+    channels.add((sound: sound, voice: voice));
+  }
+
+  @override
+  Future<void> silence() async => silenced++;
+
+  @override
+  void dispose() {}
 }
 
 /// A fixed library, with no network under it.
@@ -51,9 +97,22 @@ class _StubScriptureRepository implements ScriptureRepository {
   @override
   Future<List<ScripturePrompt>> publishedPrompts({
     DevotionalCategory? category,
-  }) async => category == null
-      ? prompts
-      : prompts.where((p) => p.category == category).toList();
+  }) async => (await publishedLibrary(category: category)).prompts;
+
+  @override
+  Future<ScriptureLibrary> publishedLibrary({
+    DevotionalCategory? category,
+  }) async {
+    final available = category == null
+        ? prompts
+        : prompts.where((p) => p.category == category).toList();
+    return ScriptureLibrary(
+      prompts: available,
+      source: ScriptureLibrarySource.cache,
+      requested: BibleTranslation.fallback,
+      available: available,
+    );
+  }
 
   @override
   Future<List<ScripturePrompt>> allPrompts() async => prompts;
@@ -100,6 +159,9 @@ class _AbsentStepTrigger implements CadenceTrigger {
   Future<CadenceReadiness> prepare() async => CadenceReadiness.unavailable;
 
   @override
+  Stream<void> get due => const Stream<void>.empty();
+
+  @override
   bool isDue(double distanceMeters) => false;
 
   @override
@@ -139,6 +201,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _FakeLocationService service;
+  late _SilentAnnouncer announcer;
   late ProviderContainer container;
 
   RecordingController controller() =>
@@ -151,9 +214,11 @@ void main() {
   }) {
     SharedPreferences.setMockInitialValues({});
     service = _FakeLocationService();
+    announcer = _SilentAnnouncer();
     container = ProviderContainer(
       overrides: [
         locationServiceProvider.overrideWithValue(service),
+        scriptureAnnouncerProvider.overrideWithValue(announcer),
         scriptureRepositoryProvider.overrideWithValue(
           repository ?? _StubScriptureRepository(_library()),
         ),
@@ -200,6 +265,61 @@ void main() {
       expect(state().deliveredPrompts, hasLength(1));
       expect(state().currentPrompt, isNotNull);
       expect(state().distanceMeters, greaterThan(400));
+    });
+
+    test('the verse is spoken with no screen involved at all', () async {
+      // The point of this test is what is *not* in it: no widget, no
+      // `pumpWidget`, no live screen. A phone in a pocket has no built screen
+      // either, and it used to be the screen doing the announcing — so a verse
+      // arriving with the app on another tab, or with the route torn down
+      // behind a lock screen, went out in silence.
+      await startWalk();
+      await emit(leg(0));
+      await emit(leg(1));
+
+      expect(announcer.spoken, hasLength(1));
+      expect(announcer.spoken.single.id, state().deliveredPrompts.single.prompt.id);
+      expect(announcer.channels.single.sound, isTrue);
+      expect(announcer.channels.single.voice, isTrue);
+    });
+
+    test('a muted walk delivers the verse and says nothing', () async {
+      await startWalk();
+      controller().setScriptureMuted(true);
+      await emit(leg(0));
+      await emit(leg(1));
+
+      expect(state().deliveredPrompts, hasLength(1), reason: 'still arrives');
+      expect(announcer.channels.single.sound, isFalse);
+      expect(announcer.channels.single.voice, isFalse);
+    });
+
+    test('muting mid-sentence stops the voice', () async {
+      await startWalk();
+      await emit(leg(0));
+      await emit(leg(1));
+      final before = announcer.silenced;
+
+      controller().setScriptureMuted(true);
+      expect(announcer.silenced, greaterThan(before));
+    });
+
+    test('pausing stops the voice wherever the walker is', () async {
+      await startWalk();
+      await emit(leg(0));
+      final before = announcer.silenced;
+
+      controller().pause();
+      expect(announcer.silenced, greaterThan(before));
+    });
+
+    test('finishing stops the voice', () async {
+      await startWalk();
+      await emit(leg(0));
+      final before = announcer.silenced;
+
+      controller().finish();
+      expect(announcer.silenced, greaterThan(before));
     });
 
     test('each verse drops a scripture waypoint where it landed', () async {
@@ -499,7 +619,179 @@ void main() {
     });
   });
 
+  /// Step cadence, driven by a scripted pedometer and starved of GPS.
+  ///
+  /// This is the group that answers the device report. The recorder used to ask
+  /// its trigger one question in one place — after an accepted fix had moved
+  /// the distance — so a step trigger was paced, in practice, by the sensor it
+  /// deliberately does not use. On a prayer walk that is precisely the wrong
+  /// coupling: slow enough to fall under the 3 m accumulation floor, under tree
+  /// cover wide enough to fail the 25 m accuracy gate, and the verses stopped.
+  ///
+  /// So every test here withholds the thing the old path depended on.
   group('step cadence', () {
+    late StreamController<int> sensor;
+
+    /// The reading the device happens to be at when the walk begins. Android
+    /// counts from the last boot, so this is a number to subtract, not a walk.
+    const boot = 51200;
+
+    /// Starts a walk on step cadence with [sensor] standing in for the
+    /// pedometer, and waits for the trigger to be swapped in for the interim
+    /// distance one.
+    Future<void> startStepWalk({int intervalSteps = 500}) async {
+      sensor = StreamController<int>();
+      addTearDown(sensor.close);
+      setUpWith(
+        stepTrigger: (interval) =>
+            StepCadenceTrigger(intervalSteps: interval, source: sensor.stream),
+      );
+      container
+          .read(scriptureSettingsProvider.notifier)
+          .setCadence(
+            ScriptureCadence(
+              source: CadenceSource.steps,
+              intervalSteps: intervalSteps,
+              // Far enough out that the interim distance trigger cannot be the
+              // thing delivering anything these tests assert on.
+              intervalMeters: 100000,
+            ),
+          );
+
+      await controller().start();
+      // The baseline the sensor probe is waiting on.
+      sensor.add(boot);
+      for (var i = 0; i < 6; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    /// Walks [steps] more, and lets the push signal reach the recorder.
+    Future<void> step(int steps) async {
+      sensor.add(boot + steps);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    test('verses arrive on steps alone, with no fix ever moving the walk', () async {
+      await startStepWalk();
+      // One fix, to close the warm-up gate and give the markers a place. After
+      // this the position stream says nothing at all for the rest of the walk —
+      // the GPS gap that used to make the feature silent.
+      await emit(leg(0));
+      expect(state().deliveredPrompts, isEmpty, reason: 'not at the start line');
+
+      await step(499);
+      expect(state().deliveredPrompts, isEmpty, reason: 'inside the interval');
+
+      await step(500);
+      expect(state().deliveredPrompts, hasLength(1));
+
+      await step(1000);
+      await step(1500);
+      await step(2000);
+
+      expect(
+        state().deliveredPrompts,
+        hasLength(4),
+        reason: 'one verse at each step threshold, on zero metres of GPS',
+      );
+      expect(
+        state().distanceMeters,
+        0,
+        reason: 'the walk never moved as far as the recorder is concerned — '
+            'which is the entire point of the test',
+      );
+      expect(state().waypoints, hasLength(4));
+    });
+
+    test('rejected and sub-floor fixes do not hold the verses up', () async {
+      await startStepWalk();
+      await emit(leg(0));
+
+      // Everything the accepted-position handler throws away: fixes wider than
+      // the accuracy gate, and fixes too close to the last one to count.
+      await emit(fixAt(_startLat + 0.004, _lng, accuracy: 40));
+      await emit(fixAt(_startLat + 0.000001, _lng));
+
+      await step(500);
+      await step(1000);
+
+      expect(state().deliveredPrompts, hasLength(2));
+    });
+
+    test('a batched delivery of several intervals is exactly one verse', () async {
+      await startStepWalk();
+      await emit(leg(0));
+
+      // The sensor went quiet — a doze window, a batching handset — and then
+      // handed over four intervals in one sample.
+      await step(2100);
+
+      expect(
+        state().deliveredPrompts,
+        hasLength(1),
+        reason: 'a late batch is one verse, not a backlog emptied into the walker',
+      );
+
+      // ...and the next one is owed at the next threshold above where the walk
+      // actually is, not back at 1000.
+      await step(2400);
+      expect(state().deliveredPrompts, hasLength(1));
+      await step(2500);
+      expect(state().deliveredPrompts, hasLength(2));
+    });
+
+    test('a threshold crossed before the walk has a place is held, not lost', () async {
+      await startStepWalk();
+      // No fix at all yet: nothing is plotted, so there is nowhere truthful to
+      // put a marker. The verse must not be spent on nowhere.
+      await step(500);
+      await step(1200);
+
+      expect(state().deliveredPrompts, isEmpty);
+      expect(state().waypoints, isEmpty);
+
+      // The signal arrives. What was held is owed, and arrives once.
+      await emit(leg(0));
+
+      expect(
+        state().deliveredPrompts,
+        hasLength(1),
+        reason: 'the walker earned it before the GPS caught up',
+      );
+      expect(state().waypoints.single.point, state().lastPoint);
+    });
+
+    test('nothing arrives on steps while the walk is paused', () async {
+      await startStepWalk();
+      await emit(leg(0));
+      controller().pause();
+
+      await step(500);
+      await step(1000);
+
+      expect(state().deliveredPrompts, isEmpty);
+
+      // ...and what was owed on the far side of the pause was held rather than
+      // eaten, because a suppressed evaluation never consults the trigger.
+      controller().resume();
+      expect(state().deliveredPrompts, hasLength(1));
+    });
+
+    test('a custom interval is the one the walk is actually paced by', () async {
+      // The setting used to be stored and ignored: the panel wrote metres only,
+      // so a walker on step cadence kept whichever step interval the last
+      // preset had left behind.
+      await startStepWalk(intervalSteps: 200);
+      await emit(leg(0));
+
+      await step(200);
+      await step(400);
+
+      expect(state().deliveredPrompts, hasLength(2));
+    });
+
     test('an absent sensor falls back to distance and says so', () async {
       setUpWith(stepTrigger: (_) => _AbsentStepTrigger());
       container
@@ -514,6 +806,24 @@ void main() {
       await emit(leg(0));
       await emit(leg(1));
       expect(state().deliveredPrompts, hasLength(1));
+    });
+
+    test('a refused permission is a fallback, not a silent walk', () async {
+      // What `ACTIVITY_RECOGNITION` denial looks like from the recorder's side:
+      // the trigger reports itself unavailable before any sensor is reached.
+      setUpWith(stepTrigger: (_) => _AbsentStepTrigger());
+      container
+          .read(scriptureSettingsProvider.notifier)
+          .setSource(CadenceSource.steps);
+
+      await startWalk();
+
+      expect(
+        state().scriptureFellBackToDistance,
+        isTrue,
+        reason: 'the flag is what the live screen says its one sentence from',
+      );
+      expect(state().scripture.enabled, isTrue);
     });
   });
 
@@ -604,9 +914,11 @@ void main() {
     test('a walk with the network down still delivers verses', () async {
       SharedPreferences.setMockInitialValues({});
       service = _FakeLocationService();
+      announcer = _SilentAnnouncer();
       container = ProviderContainer(
         overrides: [
           locationServiceProvider.overrideWithValue(service),
+          scriptureAnnouncerProvider.overrideWithValue(announcer),
           // The real repository, with no Supabase behind it.
           scriptureRepositoryProvider.overrideWithValue(
             const SupabaseScriptureRepository(),

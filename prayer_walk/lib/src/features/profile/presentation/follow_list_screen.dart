@@ -94,6 +94,7 @@ class FollowListScreen extends ConsumerWidget {
                 leading: UserAvatar(
                   initials: person.initials,
                   accentIndex: person.accentIndex,
+                  imageUrl: person.avatarUrl,
                 ),
                 title: Text(person.displayName),
                 subtitle: Text(

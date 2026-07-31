@@ -31,15 +31,15 @@ Activity activityFromRow(Map<String, dynamic> row) {
   return Activity(
     id: id,
     userId: row['user_id'] as String,
-    type: _typeFrom(row['type'] as String?),
+    type: activityTypeFrom(row['type'] as String?),
     title: (row['title'] as String?) ?? '',
     startedAt: startedAt,
     duration: Duration(seconds: (row['duration_seconds'] as num?)?.toInt() ?? 0),
     distanceMeters: (row['distance_meters'] as num?)?.toDouble() ?? 0,
     elevationGainMeters: (row['elevation_gain_meters'] as num?)?.toDouble() ?? 0,
-    route: _decodeRoute(row['route']),
-    waypoints: _decodeWaypoints(row['waypoints'], id),
-    intentions: _decodeIntentions(row['intentions'], id, startedAt),
+    route: decodeRoute(row['route']),
+    waypoints: decodeWaypoints(row['waypoints'], id),
+    intentions: decodeIntentions(row['intentions'], id, startedAt),
     note: (row['note'] as String?) ?? '',
     placeName: (row['place_name'] as String?)?.trim().isNotEmpty ?? false
         ? (row['place_name'] as String).trim()
@@ -81,13 +81,19 @@ List<Map<String, dynamic>> encodeIntentions(List<PrayerIntention> intentions) =>
 ];
 
 // --------------------------------------------------------------- decoding ---
+//
+// Public, because `recording_journal.dart` writes the in-progress state of a
+// walk in this same shape. That is deliberate reuse rather than convenience:
+// the journal holds a route, waypoints and intentions that are on their way to
+// becoming exactly these columns, and two encodings of the same three things is
+// how they would eventually come to disagree.
 
-ActivityType _typeFrom(String? value) => ActivityType.values.firstWhere(
+ActivityType activityTypeFrom(String? value) => ActivityType.values.firstWhere(
   (t) => t.name == value,
   orElse: () => ActivityType.walk,
 );
 
-List<LatLng> _decodeRoute(Object? raw) {
+List<LatLng> decodeRoute(Object? raw) {
   if (raw is! List) return const [];
   return [
     for (final pair in raw)
@@ -96,7 +102,7 @@ List<LatLng> _decodeRoute(Object? raw) {
   ];
 }
 
-List<Waypoint> _decodeWaypoints(Object? raw, String activityId) {
+List<Waypoint> decodeWaypoints(Object? raw, String activityId) {
   if (raw is! List) return const [];
   var index = 0;
   return [
@@ -124,7 +130,7 @@ List<Waypoint> _decodeWaypoints(Object? raw, String activityId) {
   ];
 }
 
-List<PrayerIntention> _decodeIntentions(
+List<PrayerIntention> decodeIntentions(
   Object? raw,
   String activityId,
   DateTime startedAt,

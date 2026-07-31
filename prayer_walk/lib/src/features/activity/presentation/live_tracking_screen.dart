@@ -10,7 +10,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_haptics.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../scripture/data/scripture_providers.dart';
 import '../../scripture/domain/scripture_settings.dart';
 import '../../scripture/presentation/scripture_arrival_card.dart';
 import '../../scripture/presentation/scripture_quotation.dart';
@@ -30,20 +29,13 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   /// Whether the one-time "your phone has no step sensor" note has been shown.
   bool _toldAboutFallback = false;
 
-  late final ScriptureAnnouncer _announcer;
-
-  @override
-  void initState() {
-    super.initState();
-    _announcer = ref.read(scriptureAnnouncerProvider);
-  }
-
-  @override
-  void dispose() {
-    // Leaving the screen mid-sentence should not leave a voice talking.
-    unawaited(_announcer.silence());
-    super.dispose();
-  }
+  // Deliberately no announcer here any more, and no `dispose` that silences
+  // one. Both used to live on this screen, which meant a verse only spoke while
+  // this screen happened to be built — so walking with the feed open, or with
+  // the phone locked long enough for the route to be torn down, dropped the
+  // marker in silence. The chime, the voice and the stopping of both now belong
+  // to `RecordingController`, which outlives every screen. Leaving this one is
+  // no longer a reason for a walk to go quiet.
 
   Future<void> _confirmDiscard(BuildContext context, WidgetRef ref) async {
     final discard = await showConfirmDialog(
@@ -59,62 +51,54 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
     context.goNamed(Routes.record);
   }
 
-  void _announce(DeliveredPrompt delivered) {
-    final settings = ref.read(recordingControllerProvider).scripture;
-    unawaited(
-      _announcer
-          .announce(
-            delivered.prompt,
-            sound: settings.sound,
-            voice: settings.voice,
-            view: View.of(context),
-          ),
-    );
+  /// Says once that this walk is being paced by distance after all.
+  ///
+  /// Covers both reasons the recorder falls back — no step sensor in the phone,
+  /// or motion access refused — because from the walker's side they are the
+  /// same event: they asked for steps and are getting metres, and being left to
+  /// work that out from a cadence that feels wrong is the worst of the options.
+  ///
+  /// Called from the listener *and* with the current value on build. A listener
+  /// alone was not enough: it fires on change, and the fallback can be settled
+  /// before this screen exists — a permission refused for good comes back
+  /// immediately, well inside the time it takes to navigate here — leaving the
+  /// walker with the one thing this notice exists to prevent.
+  void _tellAboutFallbackOnce(bool fellBack) {
+    if (!fellBack || _toldAboutFallback) return;
+    _toldAboutFallback = true;
+    // May be reached from build, where a snack bar cannot be shown yet.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        'Steps are not available on this phone, so verses are paced by '
+        'distance instead.',
+      );
+    });
   }
 
   void _toggleMute() {
     AppHaptics.selection();
     final controller = ref.read(recordingControllerProvider.notifier);
     final wasMuted = ref.read(recordingControllerProvider).scriptureMuted;
+    // Silencing whatever is mid-sentence is part of muting, and the controller
+    // does it — this screen is not the only place a walk can be muted from.
     controller.setScriptureMuted(!wasMuted);
-    // Muting has to stop what is being said right now, or the control reads as
-    // broken for the eight seconds it takes the verse to finish.
-    if (!wasMuted) unawaited(_announcer.silence());
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(recordingControllerProvider);
 
-    ref.listen<DeliveredPrompt?>(
-      recordingControllerProvider.select((s) => s.currentPrompt),
-      (previous, next) {
-        if (next == null || identical(previous, next)) return;
-        _announce(next);
-      },
-    );
-
-    // Pausing is a request for quiet, not only for the clock to stop.
-    ref.listen<bool>(
-      recordingControllerProvider.select((s) => s.isPaused),
-      (_, paused) {
-        if (paused) unawaited(_announcer.silence());
-      },
-    );
-
     // Steps were asked for and the device could not supply them. Said once,
     // quietly, and never again for this walk.
     ref.listen<bool>(
       recordingControllerProvider.select((s) => s.scriptureFellBackToDistance),
-      (_, fellBack) {
-        if (!fellBack || _toldAboutFallback || !mounted) return;
-        _toldAboutFallback = true;
-        showAppSnackBar(
-          context,
-          'This phone has no step sensor, so verses are paced by distance.',
-        );
-      },
+      (_, fellBack) => _tellAboutFallbackOnce(fellBack),
     );
+    // ...and again for the case the listener cannot see: already fallen back by
+    // the time this screen was built.
+    _tellAboutFallbackOnce(state.scriptureFellBackToDistance);
 
     if (!state.isLive) {
       // Reached by deep link, or after the recording was finished elsewhere.
@@ -219,7 +203,6 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                 onToggleMute: _toggleMute,
                 onFinish: () {
                   AppHaptics.heavy();
-                  unawaited(_announcer.silence());
                   ref.read(recordingControllerProvider.notifier).finish();
                   context.goNamed(Routes.activitySummary);
                 },
@@ -492,8 +475,13 @@ class _LivePanel extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
+              // The promise the whole background phase exists to make, said
+              // plainly — the old line here told walkers the opposite, and a
+              // walker who believes it will keep the phone in their hand for an
+              // hour rather than pray with it in a pocket.
               Text(
-                'Keep the app open — recording stops if you lock the screen.',
+                'Recording continues with your phone in a pocket or the screen '
+                'locked. It stops when you tap Finish.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(color: muted),
               ),

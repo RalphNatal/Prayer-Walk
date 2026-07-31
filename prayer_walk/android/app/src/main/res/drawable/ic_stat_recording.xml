@@ -1,0 +1,29 @@
+<!--
+  The small icon on the recording notification.
+
+  Android renders a notification's small icon as a silhouette: every non-
+  transparent pixel is repainted white (or with the notification's accent
+  colour) whatever this file says, so it is drawn as a plain white stroke on
+  transparency rather than as artwork with colours of its own. Anything with
+  fills and gradients — the launcher icon, for instance — comes out as a grey
+  blob at this size, which is why the mipmap is not reused here.
+
+  The shape is the brand trail from `brand_trail_mark.dart`, the same climbing
+  curve, mapped from that painter's fractional coordinates onto a 24dp
+  viewport with 2dp of breathing room on every side. The three candles are
+  deliberately dropped: they are a second colour in the app, and a second
+  colour is exactly what a silhouette cannot have.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M3.2,20.4 C8.0,19.2 5.6,11.2 11.2,10.8 C16.8,10.4 14.4,5.2 20.8,3.6"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

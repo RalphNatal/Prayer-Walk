@@ -1,4 +1,5 @@
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
+import 'scripture_library.dart';
 import 'scripture_prompt.dart';
 import 'scripture_submission.dart';
 
@@ -15,6 +16,18 @@ import 'scripture_submission.dart';
 abstract interface class ScriptureRepository {
   /// What a walk reads from. Never throws; returns the best set it can reach.
   Future<List<ScripturePrompt>> publishedPrompts({DevotionalCategory? category});
+
+  /// The same set, plus where it came from and which edition was asked for.
+  ///
+  /// A walk does not need this — [publishedPrompts] is the verses, and verses
+  /// are all a walk wants. The diagnostic readout does: "these are not the
+  /// verses I configured" has several possible causes, and the only one visible
+  /// from the text itself is the wrong edition being seeded. Knowing whether
+  /// the set arrived from the network, from the last sync, or from the asset
+  /// inside the binary separates the rest of them without a code trace.
+  ///
+  /// Same contract as [publishedPrompts]: never throws, always answers.
+  Future<ScriptureLibrary> publishedLibrary({DevotionalCategory? category});
 
   // ------------------------------------------------------- admin curation ---
 

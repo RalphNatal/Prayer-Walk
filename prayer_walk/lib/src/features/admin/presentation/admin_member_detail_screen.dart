@@ -171,6 +171,7 @@ class AdminMemberDetailScreen extends ConsumerWidget {
                 UserAvatar(
                   initials: item.initials,
                   accentIndex: item.accentIndex,
+                  imageUrl: item.avatarUrl,
                   size: AppSizes.avatarLg,
                 ),
                 const SizedBox(width: AppSpacing.lg),

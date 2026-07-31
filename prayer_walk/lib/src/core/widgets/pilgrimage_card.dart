@@ -30,6 +30,7 @@ class PilgrimageCard extends StatelessWidget {
     this.authorName,
     this.authorInitials,
     this.authorAccentIndex = 0,
+    this.authorAvatarUrl,
     this.encouragementCount = 0,
     this.commentCount = 0,
     this.encouraged = false,
@@ -56,6 +57,9 @@ class PilgrimageCard extends StatelessWidget {
   final String? authorName;
   final String? authorInitials;
   final int authorAccentIndex;
+
+  /// The author's photo, or null for their initials.
+  final String? authorAvatarUrl;
 
   final int encouragementCount;
   final int commentCount;
@@ -107,6 +111,7 @@ class PilgrimageCard extends StatelessWidget {
                       name: authorName!,
                       initials: authorInitials ?? '?',
                       accentIndex: authorAccentIndex,
+                      avatarUrl: authorAvatarUrl,
                       type: type,
                       startedAt: startedAt,
                       isSelf: isSelf,
@@ -165,6 +170,7 @@ class _Byline extends StatelessWidget {
     required this.name,
     required this.initials,
     required this.accentIndex,
+    required this.avatarUrl,
     required this.type,
     required this.startedAt,
     required this.isSelf,
@@ -174,6 +180,7 @@ class _Byline extends StatelessWidget {
   final String name;
   final String initials;
   final int accentIndex;
+  final String? avatarUrl;
   final ActivityType type;
   final DateTime startedAt;
   final bool isSelf;
@@ -192,6 +199,7 @@ class _Byline extends StatelessWidget {
             child: UserAvatar(
               initials: initials,
               accentIndex: accentIndex,
+              imageUrl: avatarUrl,
               size: AppSizes.avatarSm,
               ring: isSelf,
               semanticLabel: isSelf ? 'You' : name,

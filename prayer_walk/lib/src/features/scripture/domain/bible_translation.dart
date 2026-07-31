@@ -76,6 +76,19 @@ class BibleTranslation {
   /// `(NLT)`. Empty when no mark is required.
   String get quotationMark => requiresQuotationMark ? '($shortCode)' : '';
 
+  /// **The name a verse is shown under, always.**
+  ///
+  /// Distinct from [quotationMark], which only a licensed edition carries. This
+  /// is what the credit under a passage says, and it is never empty: a walker
+  /// should never have to guess which translation is being read, and "nothing
+  /// shown" is exactly the state that let a WEBBE fallback pass for something
+  /// else for as long as it did.
+  ///
+  /// A prayer quotes nobody, so it is named for what it is rather than left
+  /// blank — the label is still true, and still tells the walker that no
+  /// translation is involved.
+  String get creditLabel => isQuotation ? shortCode : 'Public domain';
+
   /// **The only way a quotation becomes displayable text.**
   ///
   /// Every path that puts a verse on screen goes through here — the arrival
@@ -159,6 +172,31 @@ class BibleTranslation {
       if (translation.id.toUpperCase() == upper) return translation;
     }
     return BibleTranslation.unknown(key);
+  }
+
+  /// The edition a piece of **already-marked** text declares about itself.
+  ///
+  /// The companion to [attributed], for the one place a quotation travels
+  /// without its column: a scripture waypoint's note is JSONB on `activities`
+  /// with no `translation` beside it, so what reaches the summary and detail
+  /// lists is a bare string. That string is not silent, though — [attributed]
+  /// wrote the mark into it at the moment the edition was still known, so a
+  /// licensed quotation says `(NLT)` at its own end and can be read back here.
+  ///
+  /// Text carrying no mark resolves to [none], which is the truth rather than a
+  /// guess: everything this app writes unmarked is either public-domain WEBBE
+  /// or a prayer quoting nobody, and [creditLabel] names that honestly instead
+  /// of inventing an edition for it.
+  static BibleTranslation declaredIn(String markedText) {
+    final trimmed = markedText.trim();
+    final mark = RegExp(r'\(([A-Za-z0-9]{2,12})\)$').firstMatch(trimmed);
+    if (mark == null) return none;
+    final declared = of(mark.group(1));
+    // Only a mark an edition would actually have written counts. `(NIV)` at the
+    // end of a walker's own note is somebody typing, not this app attributing —
+    // and `BibleTranslation.unknown` would otherwise turn any parenthesis into
+    // a translation.
+    return declared.requiresQuotationMark && declared.isKnown ? declared : none;
   }
 
   @override

@@ -38,7 +38,6 @@ import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart'
 import 'package:prayer_walk/src/features/scripture/domain/scripture_settings.dart';
 import 'package:prayer_walk/src/features/scripture/presentation/submit_scripture_screen.dart';
 import 'package:prayer_walk/src/features/profile/data/profile_providers.dart';
-import 'package:prayer_walk/src/features/profile/domain/profile_repository.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
 import 'package:prayer_walk/src/features/profile/presentation/widgets/profile_pieces.dart';
 import 'package:prayer_walk/src/features/social/data/social_providers.dart';
@@ -200,17 +199,6 @@ class _StubActivityRepository implements ActivityRepository {
   Future<void> deleteActivity(String id) async {}
 }
 
-class _StubProfileRepository implements ProfileRepository {
-  const _StubProfileRepository();
-
-  @override
-  Future<UserProfile> profileById(String id) async => _profile();
-
-  @override
-  Future<UserProfile> updateProfile(String id, ProfileEdit edit) async =>
-      _profile();
-}
-
 /// The app shell every case is pumped inside: the real theme, and one text
 /// scale pinned for the whole tree.
 MaterialApp _app(Widget home, double scale) => MaterialApp(
@@ -301,7 +289,7 @@ void main() {
               const _StubActivityRepository(),
             ),
             profileRepositoryProvider.overrideWithValue(
-              const _StubProfileRepository(),
+              StubProfileRepository(_profile()),
             ),
             socialRepositoryProvider.overrideWith(
               (ref) => FakeSocialRepository(),
@@ -560,7 +548,7 @@ void main() {
         (ref) => StubScriptureRepository(),
       ),
       profileRepositoryProvider.overrideWithValue(
-        const _StubProfileRepository(),
+        StubProfileRepository(_profile()),
       ),
       currentAuthUserIdProvider.overrideWith((ref) => _viewerId),
     ],

@@ -52,8 +52,12 @@ class UserProfile {
     required this.status,
     required this.joinedAt,
     required this.accentIndex,
+    this.avatarUrl,
     this.bio = '',
     this.parish = '',
+    this.pronouns = '',
+    this.location = '',
+    this.links = '',
     this.stats = LifetimeStats.empty,
     this.followerCount = 0,
     this.followingCount = 0,
@@ -66,12 +70,35 @@ class UserProfile {
   final String handle;
   final String bio;
   final String parish;
+
+  /// Short, member-supplied: "she/her", "they/them". Public, like everything
+  /// else on this row.
+  final String pronouns;
+
+  /// City-level and free text — a label, never coordinates. See the column
+  /// comment in `20260731010000_profile_public_fields.sql` for why.
+  final String location;
+
+  /// One member-supplied URL, already scheme-checked on the way in. Still
+  /// re-checked before it is offered as a link: this value can come from a row
+  /// written by an older build.
+  final String links;
+
   final UserRole role;
   final MemberStatus status;
   final DateTime joinedAt;
 
-  /// Picks the avatar tint. No photo uploads this phase, so avatars are
-  /// initials on a deterministic colour from the palette.
+  /// The uploaded photo, or null for the initials avatar.
+  ///
+  /// Always an object in this project's own `avatars` bucket — never a
+  /// third-party URL. The signup trigger used to copy Google's; it does not any
+  /// more, and the ones it wrote were cleared. `UserAvatar` reads this and
+  /// falls back to [initials] on null *and* on a load failure, so a swept
+  /// object never leaves a hole on screen.
+  final String? avatarUrl;
+
+  /// Picks the avatar tint — the background behind [initials] when there is no
+  /// photo, and the placeholder colour while one loads.
   final int accentIndex;
 
   final LifetimeStats stats;
@@ -90,11 +117,19 @@ class UserProfile {
     return '${first(parts.first)}${first(parts.last)}';
   }
 
+  /// [avatarUrl] takes a sentinel rather than a plain `String?` because null is
+  /// a value here, not an absence: "keep the photo you have" and "you have no
+  /// photo" are different instructions, and `avatarUrl ?? this.avatarUrl` can
+  /// only express the first. Pass [noAvatar] to clear it.
   UserProfile copyWith({
     String? displayName,
     String? handle,
     String? bio,
     String? parish,
+    String? pronouns,
+    String? location,
+    String? links,
+    Object? avatarUrl = _keepAvatar,
     UserRole? role,
     MemberStatus? status,
     LifetimeStats? stats,
@@ -109,11 +144,24 @@ class UserProfile {
       status: status ?? this.status,
       joinedAt: joinedAt,
       accentIndex: accentIndex,
+      avatarUrl: identical(avatarUrl, _keepAvatar)
+          ? this.avatarUrl
+          : avatarUrl as String?,
       bio: bio ?? this.bio,
       parish: parish ?? this.parish,
+      pronouns: pronouns ?? this.pronouns,
+      location: location ?? this.location,
+      links: links ?? this.links,
       stats: stats ?? this.stats,
       followerCount: followerCount ?? this.followerCount,
       followingCount: followingCount ?? this.followingCount,
     );
   }
+
+  /// Pass as `copyWith(avatarUrl: UserProfile.noAvatar)` to remove the photo.
+  static const Object? noAvatar = null;
+
+  /// The "you did not mention it" marker for [copyWith]'s `avatarUrl`. Private
+  /// and identity-compared, so no caller can pass it by accident.
+  static const Object _keepAvatar = Object();
 }

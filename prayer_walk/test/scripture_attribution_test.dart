@@ -9,7 +9,9 @@ import 'package:prayer_walk/src/features/devotionals/presentation/devotional_rea
 import 'package:prayer_walk/src/features/scripture/data/scripture_prompt_store.dart';
 import 'package:prayer_walk/src/features/scripture/data/supabase_scripture_repository.dart';
 import 'package:prayer_walk/src/features/scripture/domain/bible_translation.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_library.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
+import 'package:prayer_walk/src/features/scripture/presentation/scripture_quotation.dart';
 import 'package:prayer_walk/src/features/scripture/presentation/scripture_reading.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -90,6 +92,20 @@ void main() {
       expect(BibleTranslation.nlt.attributed('   '), '   ');
     });
 
+    test('every edition has something true to say about itself', () {
+      // The credit under a passage is never blank. A blank line is what let a
+      // public-domain fallback pass for a licensed edition unnoticed — it looks
+      // identical to a verse that simply forgot to say what it was.
+      expect(BibleTranslation.webbe.creditLabel, 'WEBBE');
+      expect(BibleTranslation.nlt.creditLabel, 'NLT');
+      expect(BibleTranslation.of('ESV').creditLabel, 'ESV');
+      // A prayer quotes nobody. Naming that is still naming something.
+      expect(BibleTranslation.none.creditLabel, 'Public domain');
+      for (final translation in BibleTranslation.values) {
+        expect(translation.creditLabel, isNotEmpty);
+      }
+    });
+
     test('an unknown edition fails closed — marked, and named as unknown', () {
       final unknown = BibleTranslation.of('ESV');
       expect(unknown.isKnown, isFalse);
@@ -116,6 +132,89 @@ void main() {
         'Foundation. Used by permission of Tyndale House Publishers, Carol '
         'Stream, Illinois 60188. All rights reserved.',
       );
+    });
+  });
+
+  group('text that outlived its column still says what it is', () {
+    // A scripture waypoint's note is JSONB with no translation beside it. What
+    // reaches the summary and detail lists is a bare string, so the string has
+    // to carry the answer — and this is the pair of functions that put it there
+    // and read it back.
+
+    test('a mark written by attributed() is read back by declaredIn()', () {
+      final marked = BibleTranslation.nlt.attributed(_placeholder);
+      expect(BibleTranslation.declaredIn(marked), BibleTranslation.nlt);
+    });
+
+    test('unmarked text claims no edition rather than guessing one', () {
+      // WEBBE writes no mark, and neither does a prayer. Both are honest as
+      // "public domain"; inventing an edition for them would not be.
+      expect(BibleTranslation.declaredIn(_placeholder), BibleTranslation.none);
+      expect(
+        BibleTranslation.declaredIn(
+          BibleTranslation.webbe.attributed(_placeholder),
+        ),
+        BibleTranslation.none,
+      );
+      expect(BibleTranslation.declaredIn(''), BibleTranslation.none);
+    });
+
+    test('a parenthesis that is not a mark is not read as one', () {
+      // A walker's own note, or a verse that simply ends in a bracket. Neither
+      // is this app attributing anything.
+      expect(
+        BibleTranslation.declaredIn('Prayed for the school (the new wing).'),
+        BibleTranslation.none,
+      );
+      // An edition the build has no terms for is not conjured out of a note
+      // either: `unknown` exists for a *column* value an admin typed, not for
+      // whatever happens to sit in brackets at the end of a sentence.
+      expect(
+        BibleTranslation.declaredIn('Something. (NIV)'),
+        BibleTranslation.none,
+      );
+    });
+
+    testWidgets('a saved verse names its edition in the waypoint lists', (
+      tester,
+    ) async {
+      // The exact string RecordingController persists for a licensed verse.
+      final note = BibleTranslation.nlt.attributed(_placeholder);
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: MarkedQuotation(markedText: note))),
+      );
+      expect(find.textContaining('(NLT)'), findsOneWidget);
+      expect(find.text('NLT'), findsOneWidget);
+    });
+
+    testWidgets('a saved public-domain verse is identifiable too', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: MarkedQuotation(markedText: _placeholder)),
+        ),
+      );
+      expect(find.text('Public domain'), findsOneWidget);
+      expect(find.textContaining('(NLT)'), findsNothing);
+    });
+
+    testWidgets('the courtesy label goes with the setting; the mark does not', (
+      tester,
+    ) async {
+      final note = BibleTranslation.nlt.attributed(_placeholder);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MarkedQuotation(markedText: note, showTranslation: false),
+          ),
+        ),
+      );
+      // The label is gone, because it is a preference.
+      expect(find.text('NLT'), findsNothing);
+      // The mark is not, because it is a licence condition and it lives inside
+      // the stored text where no setting can reach it.
+      expect(find.textContaining('(NLT)'), findsOneWidget);
     });
   });
 
@@ -305,13 +404,80 @@ void main() {
       // Configured for an edition nothing has been seeded in. Delivering
       // nothing would be the worse failure, so the whole library comes
       // through — still carrying its own, correct, attribution.
-      final delivered = await SupabaseScriptureRepository(
+      final library = await SupabaseScriptureRepository(
         store,
         'NLT',
-      ).publishedPrompts();
-      expect(delivered, hasLength(1));
-      expect(delivered.single.translation, 'WEBBE');
-      expect(delivered.single.attributedBody, isNot(contains('(NLT)')));
+      ).publishedLibrary();
+      expect(library.prompts, hasLength(1));
+      expect(library.prompts.single.translation, 'WEBBE');
+      expect(library.prompts.single.attributedBody, isNot(contains('(NLT)')));
+      // And it says so, rather than looking like an ordinary selection. This
+      // is the flag the debug readout turns into a sentence, and the same
+      // condition the repository logs.
+      expect(library.fellBack, isTrue);
+      expect(library.requested, BibleTranslation.nlt);
+      expect(library.deliveredTranslations, {BibleTranslation.webbe});
+    });
+  });
+
+  group('the library says where it came from', () {
+    // The single line that separates "the licensed rows were never seeded"
+    // from "they were, and this device could not reach them". Without it the
+    // question costs a trace through five files, which is what it cost.
+
+    test('the bundled asset reports itself as bundled', () async {
+      SharedPreferences.setMockInitialValues({});
+      // No network in a test and no cache written: the binary answers.
+      final library = await const SupabaseScriptureRepository(
+        ScripturePromptStore(),
+        'NLT',
+      ).publishedLibrary();
+
+      expect(library.source, ScriptureLibrarySource.bundled);
+      // Cause 4, stated in one field: an NLT build reading WEBBE because the
+      // offline floor is the only thing it could reach.
+      expect(library.requested, BibleTranslation.nlt);
+      expect(library.deliveredTranslations, {BibleTranslation.webbe});
+      expect(library.fellBack, isTrue);
+    });
+
+    test('a replayed sync reports itself as cached', () async {
+      SharedPreferences.setMockInitialValues({});
+      const store = ScripturePromptStore();
+      await store.writeCache([_prompt(translation: 'WEBBE')]);
+
+      final library = await const SupabaseScriptureRepository(
+        store,
+        'WEBBE',
+      ).publishedLibrary();
+      expect(library.source, ScriptureLibrarySource.cache);
+      expect(library.fellBack, isFalse);
+    });
+
+    test('counts are taken before the edition filter, not after', () async {
+      // The informative number is the one that was *not* selected: "NLT 0" is
+      // the answer to the complaint, and it cannot be read off what a walk got.
+      SharedPreferences.setMockInitialValues({});
+      const store = ScripturePromptStore();
+      await store.writeCache([
+        _prompt(translation: 'WEBBE', reference: 'Psalm 46:10'),
+        _prompt(translation: 'WEBBE', reference: 'Psalm 23:1'),
+        const ScripturePrompt(
+          id: 'p_prayer',
+          reference: 'The Jesus Prayer',
+          body: 'Lord Jesus Christ, Son of God, have mercy on me, a sinner.',
+          kind: ScripturePromptKind.prayer,
+          category: DevotionalCategory.lament,
+        ),
+      ]);
+
+      final library = await const SupabaseScriptureRepository(
+        store,
+        'NLT',
+      ).publishedLibrary();
+      expect(library.countsByTranslation['WEBBE'], 2);
+      expect(library.countsByTranslation['NLT'], isNull);
+      expect(library.countsByTranslation[''], 1, reason: 'the prayer');
     });
   });
 
@@ -357,21 +523,34 @@ void main() {
         // scripture waypoint's note is persisted, so it is attributed at the
         // moment the edition is still known. See RecordingController.
         'lib/src/features/activity/data/recording_controller.dart',
+        // And the mapper that carries that already-marked note to and from the
+        // row. It moves the string; it never draws it, and it must never strip
+        // what RecordingController wrote into it.
+        'lib/src/features/activity/data/activity_row_mapper.dart',
       };
 
       // Reaching for the raw text of a quotation. `.body` alone would catch
       // every devotional's prose, which is not a quotation and not the concern.
-      final raw = RegExp(r'(prompt\.body|\.scriptureText)\b');
+      //
+      // `waypoint.note` is here because a saved verse is a verse: it is the one
+      // quotation that travels without its translation column, and a bare Text
+      // around it is a passage on screen with nothing saying what it is.
+      // `activity.note` — the walker's own words — is deliberately not matched.
+      final raw = RegExp(r'(prompt\.body|\.scriptureText|waypoint\.note)\b');
 
-      // The one sanctioned way a screen may hold raw text: handing it to
-      // ScriptureQuotation, which is what puts the mark on. Anything else —
-      // a bare Text, a string interpolation, a Semantics label — is the bug.
+      // Asking whether there is anything there at all. Not a display.
+      final emptinessCheck = RegExp(r'\.(note|body)\.(isNotEmpty|isEmpty)\b');
+
+      // The sanctioned ways a screen may hold raw text: handing it to
+      // ScriptureQuotation, which puts the mark on, or to MarkedQuotation,
+      // which reads back the mark already in it. Anything else — a bare Text, a
+      // string interpolation, a Semantics label — is the bug.
       final handedToTheWidget = RegExp(
-        r'^\s*text:\s*\w+\.(body|scriptureText),\s*$',
+        r'^\s*(text|markedText):\s*\w+\.(body|scriptureText|note),\s*$',
       );
-      // Matched on the widget rather than on an import path: the file next to
-      // it reaches it with a bare relative import.
-      const widget = 'ScriptureQuotation(';
+      // Matched on the widgets rather than on an import path: the file next to
+      // them reaches them with a bare relative import.
+      const widgets = ['ScriptureQuotation(', 'MarkedQuotation('];
 
       final offenders = <String>[];
       for (final entity in Directory('lib').listSync(recursive: true)) {
@@ -379,9 +558,10 @@ void main() {
         final path = entity.path.replaceAll(r'\', '/');
         if (seam.contains(path)) continue;
         final source = entity.readAsStringSync();
-        final drawsThroughTheWidget = source.contains(widget);
+        final drawsThroughTheWidget = widgets.any(source.contains);
         for (final line in source.split('\n')) {
           if (!raw.hasMatch(line)) continue;
+          if (emptinessCheck.hasMatch(line)) continue;
           if (drawsThroughTheWidget && handedToTheWidget.hasMatch(line)) {
             continue;
           }

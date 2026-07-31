@@ -26,6 +26,26 @@ abstract class CadenceTrigger {
   /// answers [CadenceReadiness.unavailable].
   Future<CadenceReadiness> prepare();
 
+  /// Fires when the trigger has advanced *on its own* and may now be due.
+  ///
+  /// This exists because a trigger paced by something other than distance has
+  /// no other way to be heard. The recorder used to ask [isDue] from exactly
+  /// one place — after an accepted fix had moved the total — which is the right
+  /// question for a distance trigger and the wrong one for a step trigger: the
+  /// pedometer could be counting perfectly while no verse arrived, because
+  /// nobody ever put the question to it. A walk with sparse fixes, or slow
+  /// enough that fixes fell under the accumulation floor, simply went quiet.
+  ///
+  /// So a push-paced trigger says when to ask. It is a signal, not an answer:
+  /// the recorder still checks every suppression and still consults [isDue],
+  /// which is what keeps the two invariants below intact. A trigger that is
+  /// genuinely paced by distance has nothing to push and returns an empty
+  /// stream — it continues to be evaluated on position updates.
+  ///
+  /// Broadcast, so a listener arriving late (the step trigger is swapped in
+  /// after its sensor probe) is not a second-subscription error.
+  Stream<void> get due;
+
   /// Whether something is due now, given how far the walk has come.
   ///
   /// Two properties every implementation owes its caller:
@@ -36,6 +56,9 @@ abstract class CadenceTrigger {
   ///  * **no backlog.** Whatever was skipped by that jump is skipped for good;
   ///    the next one is due at the next threshold *above* where the walk
   ///    actually is.
+  ///
+  /// The same two hold for a [due] signal that arrives in a batch: a pedometer
+  /// that went quiet and handed over four intervals at once is one prompt.
   bool isDue(double distanceMeters);
 
   /// Back to the start of the walk. Called when a recording begins.
@@ -62,6 +85,12 @@ class DistanceCadenceTrigger implements CadenceTrigger {
 
   @override
   Future<CadenceReadiness> prepare() async => CadenceReadiness.ready;
+
+  /// Nothing to push. Distance moves only when the recorder accepts a fix, and
+  /// the recorder already evaluates there — a signal from here would say
+  /// nothing the caller does not already know.
+  @override
+  Stream<void> get due => const Stream<void>.empty();
 
   @override
   bool isDue(double distanceMeters) {

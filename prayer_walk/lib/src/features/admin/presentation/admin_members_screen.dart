@@ -178,6 +178,7 @@ class _MemberRow extends StatelessWidget {
       leading: UserAvatar(
         initials: member.initials,
         accentIndex: member.accentIndex,
+        imageUrl: member.avatarUrl,
       ),
       // A long name plus two pills is wider than a phone. The pills wrap under
       // the name rather than being squeezed or clipped: "Suspended" is the

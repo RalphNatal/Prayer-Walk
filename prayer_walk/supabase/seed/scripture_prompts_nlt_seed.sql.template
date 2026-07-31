@@ -111,6 +111,11 @@
 --
 -- THE CEILING COUNTER
 -- --------------------
+-- Run `nlt_ceiling_count.sql`, in this directory. It is the same query as
+-- below, kept as a file so it can be run rather than un-commented, and it adds
+-- the headroom and percentage columns and the "no complete book" check. The app
+-- shows the same figure on the admin Scripture screen.
+--
 -- Licensed verses in use, both tables, ranges expanded:
 --
 --   with quoted as (

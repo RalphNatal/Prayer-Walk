@@ -6,6 +6,7 @@ import '../../../core/utils/app_exception.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
 import '../domain/bible_translation.dart';
+import '../domain/scripture_library.dart';
 import '../domain/scripture_prompt.dart';
 import '../domain/scripture_repository.dart';
 import '../domain/scripture_submission.dart';
@@ -48,6 +49,11 @@ class SupabaseScriptureRepository implements ScriptureRepository {
   @override
   Future<List<ScripturePrompt>> publishedPrompts({
     DevotionalCategory? category,
+  }) async => (await publishedLibrary(category: category)).prompts;
+
+  @override
+  Future<ScriptureLibrary> publishedLibrary({
+    DevotionalCategory? category,
   }) async {
     final fresh = await _fetch();
     if (fresh.isNotEmpty) {
@@ -56,13 +62,13 @@ class SupabaseScriptureRepository implements ScriptureRepository {
       // cached, both editions included, so switching the default translation
       // does not have to wait for a re-sync.
       unawaited(_store.writeCache(fresh));
-      return _select(fresh, category);
+      return _select(fresh, category, ScriptureLibrarySource.network);
     }
 
     final cached = await _store.readCache();
     if (cached.isNotEmpty) {
       AppLogger.info(_tag, 'using the cached prompt library');
-      return _select(cached, category);
+      return _select(cached, category, ScriptureLibrarySource.cache);
     }
 
     // The offline floor, and the one place the configured translation does not
@@ -75,17 +81,28 @@ class SupabaseScriptureRepository implements ScriptureRepository {
     final bundled = await _store.readBundled();
     AppLogger.info(
       _tag,
-      'using the bundled prompt library (WEBBE) — '
+      'using the bundled prompt library (${BibleTranslation.fallback.id}) — '
       '${_translation.id} is not shipped offline',
     );
-    return _select(bundled, category);
+    if (bundled.isEmpty) {
+      AppLogger.error(_tag, 'no prompts from any source — the walk is silent');
+      return const ScriptureLibrary.empty();
+    }
+    return _select(bundled, category, ScriptureLibrarySource.bundled);
   }
 
   /// Theme first, then edition — the two filters a walk applies to the library.
-  List<ScripturePrompt> _select(
+  ///
+  /// [source] rides along untouched. Filtering does not change where a set came
+  /// from, and where it came from is the fact that explains the other four.
+  ScriptureLibrary _select(
     List<ScripturePrompt> prompts,
     DevotionalCategory? category,
-  ) => _inTranslation(_inCategory(prompts, category));
+    ScriptureLibrarySource source,
+  ) {
+    final available = _inCategory(prompts, category);
+    return _inTranslation(available, source);
+  }
 
   /// Only the configured edition is delivered, so both sets can live in the
   /// table at once and the build decides which is heard. Prayers come through
@@ -93,10 +110,16 @@ class SupabaseScriptureRepository implements ScriptureRepository {
   /// edition rather than to none.
   ///
   /// If that leaves no scripture at all — an NLT build whose licensed rows have
-  /// not been seeded yet — the whole library is delivered instead. A walk with
-  /// the wrong edition is a disappointment; a walk with nothing to read is the
-  /// failure this feature exists to avoid.
-  List<ScripturePrompt> _inTranslation(List<ScripturePrompt> prompts) {
+  /// not been seeded yet — the whole library is delivered instead, which in
+  /// practice means WEBBE, because WEBBE is what is seeded and bundled. A walk
+  /// with the wrong edition is a disappointment; a walk with nothing to read is
+  /// the failure this feature exists to avoid. It is logged with both editions
+  /// named, because a walker asking "why isn't this the NLT" deserves an answer
+  /// that does not require reading the source.
+  ScriptureLibrary _inTranslation(
+    List<ScripturePrompt> prompts,
+    ScriptureLibrarySource source,
+  ) {
     final wanted = _translation;
     final selected = [
       for (final prompt in prompts)
@@ -104,15 +127,35 @@ class SupabaseScriptureRepository implements ScriptureRepository {
             prompt.translationInfo == wanted)
           prompt,
     ];
-    if (selected.any((p) => p.translationInfo.isQuotation)) return selected;
-
-    if (prompts.any((p) => p.translationInfo.isQuotation)) {
-      AppLogger.info(
-        _tag,
-        'no ${wanted.id} prompts in the library — delivering every edition',
+    if (selected.any((p) => p.translationInfo.isQuotation)) {
+      return ScriptureLibrary(
+        prompts: selected,
+        source: source,
+        requested: wanted,
+        available: prompts,
       );
     }
-    return prompts;
+
+    if (prompts.any((p) => p.translationInfo.isQuotation)) {
+      final falling = {
+        for (final p in prompts)
+          if (p.translationInfo.isQuotation) p.translationInfo.id,
+      }.join(', ');
+      AppLogger.warn(
+        _tag,
+        'no ${wanted.id} prompts in the ${source.label} library — '
+        'falling back to what is there ($falling). '
+        'Seed the ${wanted.id} rows, or set SCRIPTURE_TRANSLATION back to '
+        '${BibleTranslation.fallback.id}.',
+      );
+    }
+    return ScriptureLibrary(
+      prompts: prompts,
+      source: source,
+      requested: wanted,
+      available: prompts,
+      fellBack: true,
+    );
   }
 
   /// Supabase, or an empty list. Deliberately swallows: every failure here has

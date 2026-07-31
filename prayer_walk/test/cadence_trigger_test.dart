@@ -130,6 +130,72 @@ void main() {
       expect(trigger.isDue(0), isFalse);
     });
 
+    test('it asks to be evaluated when it crosses a threshold', () async {
+      // The property the whole fix rests on. Nothing about a step trigger is
+      // visible to a recorder that only asks after a GPS fix moved the total,
+      // so the trigger has to raise its own hand.
+      final sensor = StreamController<int>();
+      final trigger = StepCadenceTrigger(
+        intervalSteps: 500,
+        source: sensor.stream,
+      );
+      addTearDown(trigger.dispose);
+
+      final signals = <void>[];
+      trigger.due.listen(signals.add);
+
+      final ready = trigger.prepare();
+      sensor.add(51200);
+      await ready;
+
+      sensor.add(51400);
+      await Future<void>.delayed(Duration.zero);
+      expect(signals, isEmpty, reason: 'nothing is due 200 steps in');
+
+      sensor.add(51700);
+      await Future<void>.delayed(Duration.zero);
+      expect(signals, hasLength(1));
+
+      // A signal is a nudge, not a delivery: until somebody consults `isDue`
+      // the threshold stays uncrossed, so a walk that was paused or had nowhere
+      // to put a marker is asked again rather than losing the verse.
+      sensor.add(51800);
+      await Future<void>.delayed(Duration.zero);
+      expect(signals, hasLength(2));
+
+      expect(trigger.isDue(0), isTrue);
+
+      // Consulted now, so the next threshold is 1000 and 900 steps is quiet.
+      sensor.add(52100);
+      await Future<void>.delayed(Duration.zero);
+      expect(signals, hasLength(2));
+    });
+
+    test('a disposed trigger goes quiet rather than asking again', () async {
+      final sensor = StreamController<int>();
+      final trigger = StepCadenceTrigger(
+        intervalSteps: 500,
+        source: sensor.stream,
+      );
+
+      final signals = <void>[];
+      trigger.due.listen(signals.add);
+
+      final ready = trigger.prepare();
+      sensor.add(0);
+      await ready;
+
+      trigger.dispose();
+      sensor.add(5000);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        signals,
+        isEmpty,
+        reason: 'a finished walk must not be able to ask for one more verse',
+      );
+    });
+
     test('a sensor that never answers reports itself unavailable', () async {
       // The failure mode on hardware with no step counter: no error, no data,
       // just silence — so it has to be timed rather than caught.

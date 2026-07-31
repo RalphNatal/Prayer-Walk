@@ -26,10 +26,34 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
-		<!-- Foreground route recording only. No NSLocationAlwaysAndWhenInUse key
-	     this phase — the app does not track with the screen locked. -->
+		<!-- RECORDING IN A POCKET
+
+	     The `location` background mode is what lets a walk carry on once the
+	     phone goes into a pocket and the screen locks. It is paired with
+	     `allowBackgroundLocationUpdates` in location_service.dart, which is set
+	     only while a recording is running — iOS raises an exception if that flag
+	     is set without this key, and shows the blue background-location
+	     indicator for exactly as long as it is set.
+
+	     Note what is *not* here: the app never calls
+	     `requestAlwaysAuthorization` for its own sake. When-in-use plus this
+	     background mode is enough to record a whole walk with the screen locked,
+	     which is the entire requirement. -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>location</string>
+		</array>
+		<!-- Both purpose strings name the one thing the location is for. Vague
+	     strings are the most common reason a location app fails App Review, and
+	     "to improve your experience" is not a purpose. -->
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Prayer Walk records your route while you walk so you can see and reflect on it afterward.</string>
+		<string>Prayer Walk traces the route you walk while you are recording, so you can see and reflect on it afterward. Your location is only read between tapping Start and tapping Finish.</string>
+		<!-- Present because iOS requires it alongside the `location` background
+	     mode, and because it is the string shown if iOS later offers to upgrade
+	     a when-in-use grant. It describes the same single purpose: a walk that
+	     does not stop when the screen does. -->
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Prayer Walk keeps tracing your route while your phone is in your pocket or the screen is locked, so a walk you started is still a whole walk when you finish it. Recording stops the moment you tap Finish, and your location is never read between walks.</string>
 		<!-- Lets the app ask for temporary full accuracy when the person has
 	     granted only approximate location (iOS 14+), which is accurate to
 	     roughly a kilometre and cannot trace a walk. The dictionary key must
@@ -46,6 +70,19 @@
 	     (distance) alone never triggers it. -->
 		<key>NSMotionUsageDescription</key>
 		<string>Prayer Walk counts your steps only if you ask for verses to arrive every so many steps. Nothing about your movement leaves the phone.</string>
+		<!-- Both are reached only from Edit profile, when the person taps Add
+		     photo and picks a source. Nothing else in the app opens a camera or
+		     reads the library, and neither prompt appears unless they do.
+
+		     Worth stating in the strings themselves, because it is true and
+		     because it is the question someone actually has: the photo is
+		     resized and stripped of its metadata — including the GPS
+		     coordinates a camera writes into every picture — before it is
+		     uploaded. See avatar_image.dart. -->
+		<key>NSCameraUsageDescription</key>
+		<string>Prayer Walk opens the camera only when you choose to take a profile photo. The picture is resized and its location data removed before it leaves your phone.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Prayer Walk opens your photos only when you choose one as your profile photo. The picture is resized and its location data removed before it leaves your phone.</string>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>

@@ -60,6 +60,13 @@ class ScriptureQuotation extends StatelessWidget {
 /// drawn and which the walker can switch off in settings. The mark inside
 /// [ScriptureQuotation] is not switchable, which is the difference that
 /// matters — one is presentation, the other is a licence condition.
+///
+/// It no longer renders nothing. An edition that owes no mark used to leave the
+/// credit line empty, and a blank line under a verse is indistinguishable from
+/// a verse in some other edition entirely — which is the state that let a WEBBE
+/// offline fallback pass unnoticed on a build configured for something else.
+/// [BibleTranslation.creditLabel] always has something true to say, including
+/// for a prayer that quotes nobody.
 class TranslationCredit extends StatelessWidget {
   const TranslationCredit({
     super.key,
@@ -77,12 +84,68 @@ class TranslationCredit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final translation = BibleTranslation.of(translationId);
-    if (!translation.isQuotation) return const SizedBox.shrink();
     return Text(
       long && translation.displayName.isNotEmpty
           ? translation.displayName
-          : translation.shortCode,
+          : translation.creditLabel,
       style: style ?? Theme.of(context).textTheme.labelSmall,
+    );
+  }
+}
+
+/// A quotation that has outlived the column that named its edition.
+///
+/// One case, and it is worth naming precisely: a scripture waypoint's note. It
+/// is JSONB on `activities` with no `translation` beside it, so by the time the
+/// summary and detail lists draw it there is nothing left but a string. The
+/// string is not silent — `RecordingController` writes it through
+/// [BibleTranslation.attributed] at the one moment the edition is still known,
+/// so a licensed quotation still carries its `(NLT)`.
+///
+/// This widget reads that mark back with [BibleTranslation.declaredIn] and
+/// names the edition underneath, so a saved verse is as identifiable as a live
+/// one. Where no mark was written the credit says so plainly rather than
+/// guessing an edition — see [BibleTranslation.creditLabel].
+///
+/// The text itself is drawn exactly as stored: nothing here may add a mark,
+/// because the stored string is the record of what was actually delivered.
+class MarkedQuotation extends StatelessWidget {
+  const MarkedQuotation({
+    super.key,
+    required this.markedText,
+    this.style,
+    this.creditStyle,
+    this.showTranslation = true,
+  });
+
+  /// The persisted note, already attributed.
+  final String markedText;
+
+  final TextStyle? style;
+  final TextStyle? creditStyle;
+
+  /// The walker's preference about the courtesy credit. It governs the label
+  /// under the text and nothing above it: a required mark is inside
+  /// [markedText] itself, so no setting can reach it.
+  final bool showTranslation;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final declared = BibleTranslation.declaredIn(markedText);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(markedText, style: style),
+        if (showTranslation) ...[
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            declared.creditLabel,
+            style: creditStyle ?? theme.textTheme.labelSmall,
+          ),
+        ],
+      ],
     );
   }
 }

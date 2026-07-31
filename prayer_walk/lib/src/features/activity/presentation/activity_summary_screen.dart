@@ -13,6 +13,9 @@ import '../../privacy/domain/activity_visibility.dart';
 import '../../privacy/domain/privacy_zone.dart';
 import '../../privacy/domain/zone_trimming.dart';
 import '../../privacy/presentation/visibility_picker.dart';
+import '../../scripture/data/scripture_providers.dart'
+    show scriptureSettingsProvider;
+import '../../scripture/presentation/scripture_quotation.dart';
 import '../data/activity_providers.dart';
 import '../data/recording_controller.dart';
 import '../domain/activity.dart';
@@ -463,13 +466,13 @@ class _IntentionsEditor extends StatelessWidget {
   }
 }
 
-class _WaypointRow extends StatelessWidget {
+class _WaypointRow extends ConsumerWidget {
   const _WaypointRow({required this.waypoint});
 
   final Waypoint waypoint;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     // Verse stops read in the same green they are drawn in on the trail, so a
     // marker on the map and its line in this list are the same thing.
@@ -508,9 +511,21 @@ class _WaypointRow extends StatelessWidget {
                 ),
                 // The verse itself. A scripture stop whose text is missing from
                 // the list is a reference with nothing behind it.
+                //
+                // Drawn through [MarkedQuotation] rather than a bare Text: the
+                // note was attributed on its way into the walk, so it still
+                // knows which edition it came from, and this is where it says
+                // so. A saved verse with no edition under it is exactly as
+                // unreadable as a live one with none.
                 if (waypoint.note.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.xxs),
-                  Text(waypoint.note, style: theme.textTheme.bodyMedium),
+                  MarkedQuotation(
+                    markedText: waypoint.note,
+                    style: theme.textTheme.bodyMedium,
+                    showTranslation: ref.watch(
+                      scriptureSettingsProvider.select((s) => s.showTranslation),
+                    ),
+                  ),
                 ],
               ],
             ),

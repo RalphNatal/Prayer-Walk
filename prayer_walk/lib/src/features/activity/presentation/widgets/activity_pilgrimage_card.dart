@@ -58,6 +58,7 @@ class ActivityPilgrimageCard extends ConsumerWidget {
         authorName: author?.displayName,
         authorInitials: author?.initials,
         authorAccentIndex: author?.accentIndex ?? 0,
+        authorAvatarUrl: author?.avatarUrl,
         encouragementCount: activity.encouragementCount + delta,
         commentCount: activity.commentCount,
         encouraged: encouraged,

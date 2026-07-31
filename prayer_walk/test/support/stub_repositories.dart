@@ -9,7 +9,11 @@ import 'package:prayer_walk/src/features/feed/domain/feed_repository.dart';
 import 'package:prayer_walk/src/features/privacy/domain/activity_visibility.dart';
 import 'package:prayer_walk/src/features/privacy/domain/privacy_repository.dart';
 import 'package:prayer_walk/src/features/privacy/domain/privacy_zone.dart';
+import 'package:prayer_walk/src/features/profile/domain/profile_fields.dart';
+import 'package:prayer_walk/src/features/profile/domain/profile_repository.dart';
 import 'package:prayer_walk/src/features/profile/domain/user_profile.dart';
+import 'package:prayer_walk/src/features/scripture/domain/bible_translation.dart';
+import 'package:prayer_walk/src/features/scripture/domain/scripture_library.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_prompt.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_repository.dart';
 import 'package:prayer_walk/src/features/scripture/domain/scripture_submission.dart';
@@ -276,6 +280,74 @@ class StubAdminRepository implements AdminRepository {
   Future<int> audienceSize(AnnouncementAudience audience) async => 0;
 }
 
+/// One profile in memory, with the writes recorded.
+///
+/// Holds a real [UserProfile] rather than answering from a fixed literal,
+/// because the point of most profile tests is that a write came back changed —
+/// a stub that always returns the same person can only prove that nothing
+/// threw. [edits] and [uploads] are kept so a test can assert on what was
+/// actually sent, not just on what came back.
+class StubProfileRepository implements ProfileRepository {
+  StubProfileRepository(this.profile);
+
+  UserProfile profile;
+
+  /// Every [ProfileEdit] this has been handed, in order.
+  final List<ProfileEdit> edits = [];
+
+  /// Every avatar that reached [uploadAvatar] — including the one that throws,
+  /// so a failure test can tell "refused" from "never got there".
+  final List<AvatarUpload> uploads = [];
+
+  /// Set to make [uploadAvatar] throw, for the case where a photo fails to
+  /// upload and the previous one has to survive it.
+  Object? uploadError;
+
+  /// Set to make [updateProfile] throw — a taken handle, most often.
+  Object? updateError;
+
+  @override
+  Future<UserProfile> profileById(String id) async => profile;
+
+  @override
+  Future<UserProfile> updateProfile(String id, ProfileEdit edit) async {
+    edits.add(edit);
+    final error = updateError;
+    if (error != null) throw error;
+    profile = profile.copyWith(
+      displayName: edit.displayName.trim(),
+      handle: canonicalHandle(edit.handle),
+      bio: edit.bio.trim(),
+      parish: edit.parish.trim(),
+      pronouns: edit.pronouns.trim(),
+      location: edit.location.trim(),
+      links: profileLink(edit.links) ?? '',
+    );
+    return profile;
+  }
+
+  @override
+  Future<UserProfile> uploadAvatar(String id, AvatarUpload upload) async {
+    uploads.add(upload);
+    final error = uploadError;
+    // Thrown *after* recording and *before* the profile changes, which is the
+    // real repository's ordering too: the row is only re-pointed once the
+    // object is written.
+    if (error != null) throw error;
+    profile = profile.copyWith(
+      avatarUrl: 'https://example.test/storage/v1/object/public/avatars/'
+          '$id/${uploads.length}.jpg',
+    );
+    return profile;
+  }
+
+  @override
+  Future<UserProfile> removeAvatar(String id) async {
+    profile = profile.copyWith(avatarUrl: UserProfile.noAvatar);
+    return profile;
+  }
+}
+
 /// Fails every write, so the callers' rollback paths can be exercised.
 class FailingSocialRepository extends FakeSocialRepository {
   @override
@@ -328,10 +400,26 @@ class StubScriptureRepository implements ScriptureRepository {
   @override
   Future<List<ScripturePrompt>> publishedPrompts({
     DevotionalCategory? category,
-  }) async => prompts
-      .where((p) => p.isPublished)
-      .where((p) => category == null || p.category == category)
-      .toList();
+  }) async => (await publishedLibrary(category: category)).prompts;
+
+  /// An in-memory library reports itself as cached: it is neither a live read
+  /// nor the asset in the binary, and claiming either would make the diagnostic
+  /// readout lie in the one place a test could not notice.
+  @override
+  Future<ScriptureLibrary> publishedLibrary({
+    DevotionalCategory? category,
+  }) async {
+    final available = prompts
+        .where((p) => p.isPublished)
+        .where((p) => category == null || p.category == category)
+        .toList();
+    return ScriptureLibrary(
+      prompts: available,
+      source: ScriptureLibrarySource.cache,
+      requested: BibleTranslation.fallback,
+      available: available,
+    );
+  }
 
   @override
   Future<List<ScripturePrompt>> allPrompts() async => List.of(prompts);

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
 import '../domain/bible_translation.dart';
+import '../domain/scripture_library.dart';
 import '../domain/scripture_prompt.dart';
 import '../domain/scripture_repository.dart';
 import '../domain/scripture_submission.dart';
@@ -30,18 +31,24 @@ final scriptureRepositoryProvider = Provider<ScriptureRepository>(
   ),
 );
 
-/// The whole published library, fetched once per app run.
+/// The whole published library, fetched once per app run, with its provenance.
 ///
 /// Watched by the record screen so the set is in memory before anyone presses
 /// start — a walk must never wait on a network call, and this is where that is
 /// arranged. Not auto-disposed on purpose: it is the walk's copy, and it has to
 /// outlive the screen that warmed it.
 ///
-/// It resolves to a list rather than failing, because [ScriptureRepository]
-/// falls back through the cache and the bundled asset. An empty result means
-/// the library is genuinely empty, not that the network is down.
+/// It resolves rather than failing, because [ScriptureRepository] falls back
+/// through the cache and the bundled asset. An empty result means the library
+/// is genuinely empty, not that the network is down — and [ScriptureLibrary]
+/// says which of those it was.
+final loadedScriptureLibraryProvider = FutureProvider<ScriptureLibrary>(
+  (ref) => ref.watch(scriptureRepositoryProvider).publishedLibrary(),
+);
+
+/// The verses alone — what everything except the diagnostic readout wants.
 final scriptureLibraryProvider = FutureProvider<List<ScripturePrompt>>(
-  (ref) => ref.watch(scriptureRepositoryProvider).publishedPrompts(),
+  (ref) async => (await ref.watch(loadedScriptureLibraryProvider.future)).prompts,
 );
 
 /// The whole table, drafts included — what the admin curation screen lists.

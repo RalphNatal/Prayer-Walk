@@ -5,6 +5,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../devotionals/domain/devotional.dart' show DevotionalCategory;
 import '../data/scripture_settings_controller.dart';
 import '../domain/scripture_settings.dart';
+import 'scripture_diagnostics.dart';
 import 'scripture_library_progress.dart';
 
 /// The one place scripture on the trail is configured.
@@ -59,6 +60,7 @@ class ScriptureSettingsPanel extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             _CustomDistance(
               meters: cadence.intervalMeters,
+              source: cadence.source,
               onChanged: controller.setIntervalMeters,
             ),
           ],
@@ -150,6 +152,13 @@ class ScriptureSettingsPanel extends ConsumerWidget {
           // door; Settings is where an irreversible choice belongs.
           ScriptureLibraryProgress(allowReset: !showHeader),
         ],
+
+        // Outside the `enabled` branch on purpose: the question it answers —
+        // which edition is this build serving, and where did the verses come
+        // from — is worth asking whether or not verses are switched on, and a
+        // maintainer looking for it should not have to turn the feature on
+        // first. Builds to nothing outside debug.
+        const ScriptureDiagnostics(),
       ],
     );
   }
@@ -228,16 +237,28 @@ class _IntervalChoices extends StatelessWidget {
   }
 }
 
+/// The custom interval.
+///
+/// Set in metres whichever idiom is chosen, because metres are what the slider
+/// can offer honestly — and read back leading with the idiom the walk will
+/// actually be paced by, so a walker on step cadence is shown the number their
+/// verses will arrive on rather than the one underneath it.
 class _CustomDistance extends StatelessWidget {
-  const _CustomDistance({required this.meters, required this.onChanged});
+  const _CustomDistance({
+    required this.meters,
+    required this.source,
+    required this.onChanged,
+  });
 
   final double meters;
+  final CadenceSource source;
   final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final steps = (meters / kAverageStrideMeters).round();
+    final byStep = source == CadenceSource.steps;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -246,13 +267,17 @@ class _CustomDistance extends StatelessWidget {
           min: 200,
           max: 2000,
           divisions: 18,
-          label: '${meters.round()} m',
-          semanticFormatterCallback: (value) =>
-              'Every ${value.round()} metres',
+          label: byStep ? 'about $steps steps' : '${meters.round()} m',
+          semanticFormatterCallback: (value) => byStep
+              ? 'Every ${(value / kAverageStrideMeters).round()} steps, '
+                    'about ${value.round()} metres'
+              : 'Every ${value.round()} metres',
           onChanged: onChanged,
         ),
         Text(
-          'Every ${meters.round()} m — roughly $steps steps.',
+          byStep
+              ? 'Every $steps steps — roughly ${meters.round()} m.'
+              : 'Every ${meters.round()} m — roughly $steps steps.',
           style: theme.textTheme.bodySmall,
         ),
       ],

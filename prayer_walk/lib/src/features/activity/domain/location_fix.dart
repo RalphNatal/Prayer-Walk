@@ -95,6 +95,38 @@ enum LocationAccess {
   bool get isPrecise => this == granted;
 }
 
+/// Whether the app may keep reading position once it is no longer the thing on
+/// screen — Android's "Allow all the time", iOS's Always.
+///
+/// Deliberately separate from [LocationAccess] rather than another value on it,
+/// because it is not another rung on the same ladder. A recording does not need
+/// this: on Android the foreground service carries the walk, on iOS the
+/// `location` background mode does, and both run on the ordinary when-in-use
+/// grant. What this adds is survival across a process restart, which is the
+/// difference between an hour's walk recovered and an hour's walk offered back
+/// as a draft. So it is asked for once, late, and a refusal changes nothing the
+/// walker will notice on an ordinary walk.
+enum BackgroundLocationAccess {
+  /// Granted. The service can be restarted by the system and keep reading.
+  granted,
+
+  /// Asked and refused, or never asked. Recording still works.
+  denied,
+
+  /// Refused in a way only the system settings app can undo. On Android 11+
+  /// this is the *ordinary* outcome of asking: the platform stopped showing a
+  /// dialog for background location and moved it to a settings page, so the
+  /// only honest next step is to offer that page.
+  deniedForever,
+
+  /// Nothing to ask for here — iOS, older Android, desktop, a test with no
+  /// plugins. Never shown to anyone.
+  notApplicable;
+
+  /// Whether there is any point offering the walker a way to change this.
+  bool get isActionable => this == denied || this == deniedForever;
+}
+
 /// Everything one look at the device produced: how much access we have, and
 /// the fix that access yielded.
 ///

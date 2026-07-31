@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +11,7 @@ import '../../../../core/widgets/widgets.dart';
 import '../../../activity/data/activity_providers.dart';
 import '../../../activity/domain/activity.dart';
 import '../../../activity/presentation/trail_mapping.dart';
+import '../../domain/profile_fields.dart';
 import '../../domain/user_profile.dart';
 
 /// Avatar, name, parish, bio, and the follow counts.
@@ -31,6 +33,7 @@ class ProfileHeader extends StatelessWidget {
             UserAvatar(
               initials: profile.initials,
               accentIndex: profile.accentIndex,
+              imageUrl: profile.avatarUrl,
               size: AppSizes.avatarLg,
               ring: isSelf,
             ),
@@ -43,27 +46,32 @@ class ProfileHeader extends StatelessWidget {
                     profile.displayName,
                     style: theme.textTheme.displaySmall,
                   ),
-                  Text(profile.handle, style: theme.textTheme.bodyMedium),
-                  if (profile.parish.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.place_outlined,
-                          size: 14,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Expanded(
-                          child: Text(
-                            profile.parish,
-                            style: theme.textTheme.bodySmall,
-                            overflow: TextOverflow.ellipsis,
+                  // Handle and pronouns on one line, wrapping rather than
+                  // ellipsing: a pronoun set that gets cut in half is worse
+                  // than one that takes a second line.
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    children: [
+                      Text(profile.handle, style: theme.textTheme.bodyMedium),
+                      if (profile.pronouns.isNotEmpty)
+                        Text(
+                          profile.pronouns,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
-                      ],
+                    ],
+                  ),
+                  if (profile.parish.isNotEmpty)
+                    _HeaderDetail(
+                      icon: Icons.church_outlined,
+                      text: profile.parish,
                     ),
-                  ],
+                  if (profile.location.isNotEmpty)
+                    _HeaderDetail(
+                      icon: Icons.place_outlined,
+                      text: profile.location,
+                    ),
                 ],
               ),
             ),
@@ -72,6 +80,10 @@ class ProfileHeader extends StatelessWidget {
         if (profile.bio.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.lg),
           Text(profile.bio, style: theme.textTheme.bodyLarge),
+        ],
+        if (profile.links.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _ProfileLink(url: profile.links),
         ],
         const SizedBox(height: AppSpacing.lg),
         // Two counts with their words spelled out are wider than a narrow
@@ -99,6 +111,96 @@ class ProfileHeader extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// One icon-and-text line under the name — parish, or location.
+class _HeaderDetail extends StatelessWidget {
+  const _HeaderDetail({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A member's own link, shown as text and copyable — never opened in the app.
+///
+/// This is deliberately not a tappable link, and the reason is the guardrail
+/// rather than laziness: a member-supplied URL opened in an in-app webview runs
+/// inside this app's session and chrome, which is how a page nobody vetted gets
+/// to look like part of Prayer Walk. The two honest options were plain text or
+/// a hand-off to the system browser, and plain text needs no new dependency and
+/// no `queries` entry in the manifest to work on Android 11+.
+///
+/// Tapping copies rather than navigates, so the affordance still does
+/// something: someone can paste it into the browser they already trust. The URL
+/// is re-checked here even though it was validated before it was stored — the
+/// row may have been written by an older build, and this is the last point
+/// before it reaches a person.
+class _ProfileLink extends StatelessWidget {
+  const _ProfileLink({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final safe = profileLink(url);
+    if (safe == null) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () async {
+        await Clipboard.setData(ClipboardData(text: safe));
+        if (context.mounted) showAppSnackBar(context, 'Link copied.');
+      },
+      borderRadius: AppRadius.control,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.link,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(
+              child: Text(
+                // The scheme is noise on a profile; what someone reads is the
+                // host and path.
+                safe.replaceFirst(RegExp(r'^https?://'), ''),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

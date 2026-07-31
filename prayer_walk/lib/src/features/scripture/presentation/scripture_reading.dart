@@ -55,10 +55,13 @@ class ScriptureBody extends StatelessWidget {
           maxLines: maxLines,
           style: theme.textTheme.bodyLarge?.copyWith(color: primary, height: 1.5),
         ),
-        // The credit. Small, always present when there is an edition to name —
-        // good practice for public-domain text, and shown alongside the full
-        // notice in Settings for a licensed one.
-        if (showTranslation && prompt.hasTranslation) ...[
+        // The credit. Small, and always present — good practice for
+        // public-domain text, shown alongside the full notice in Settings for a
+        // licensed one, and the only way a walker can tell at a glance which
+        // edition actually reached them. It used to be skipped when a prompt
+        // carried no translation, which made a prayer and an unattributed verse
+        // look identical.
+        if (showTranslation) ...[
           const SizedBox(height: AppSpacing.sm),
           TranslationCredit(
             translationId: prompt.translation,

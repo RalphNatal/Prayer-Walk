@@ -22,12 +22,40 @@ class _FakeLocationService extends LocationService {
   int streamsOpened = 0;
   int streamsClosed = 0;
 
-  @override
-  Future<LocationAccess> ensureAccess() async => access;
+  /// What the recorder asked for on each stream it opened. `true` means the
+  /// Android foreground service and the iOS background flag were requested, so
+  /// this is how a test asserts that they exist only inside a recording.
+  final List<bool> backgroundRequests = [];
+
+  /// Every permission the recorder asked for, in order.
+  final List<String> asked = [];
 
   @override
-  Stream<LocationFix> positionStream() {
+  Future<LocationAccess> ensureAccess() async {
+    asked.add('whenInUse');
+    return access;
+  }
+
+  @override
+  Future<bool> ensureNotificationAccess() async {
+    asked.add('notification');
+    return true;
+  }
+
+  @override
+  Future<BackgroundLocationAccess> backgroundAccess() async =>
+      BackgroundLocationAccess.denied;
+
+  @override
+  Future<BackgroundLocationAccess> requestBackgroundAccess() async {
+    asked.add('background');
+    return BackgroundLocationAccess.granted;
+  }
+
+  @override
+  Stream<LocationFix> positionStream({bool background = false}) {
     streamsOpened++;
+    backgroundRequests.add(background);
     // Counts cancellations so a leaked subscription is visible to the test.
     return controller.stream.transform(
       StreamTransformer<LocationFix, LocationFix>.fromHandlers(

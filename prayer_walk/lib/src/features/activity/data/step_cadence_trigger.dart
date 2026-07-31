@@ -14,8 +14,16 @@ import '../domain/cadence_trigger.dart';
 /// `route_map_view.dart` makes with flutter_map: the plugin is sealed in one
 /// file, and everything above it speaks [CadenceTrigger].
 ///
-/// Three things make step counting harder than it sounds, and all three are
+/// Four things make step counting harder than it sounds, and all four are
 /// handled here:
+///
+///  * **Nobody else knows when it has advanced.** Distance is accumulated by
+///    the recorder, so the recorder knows the moment it moves. Steps are not:
+///    they arrive on a sensor stream this class owns, and a walk paced by them
+///    is invisible to a recorder that only evaluates after a GPS fix. That was
+///    the bug — on a slow walk under tree cover the pedometer counted perfectly
+///    and no verse ever arrived, because the question was never asked. So this
+///    trigger pushes [due] when it crosses a threshold.
 ///
 ///  * **The reading is not a walk's step count.** Android's `TYPE_STEP_COUNTER`
 ///    reports steps since the device last booted, so the first sample of a walk
@@ -52,10 +60,19 @@ class StepCadenceTrigger implements CadenceTrigger {
 
   StreamSubscription<int>? _subscription;
 
+  /// How the walk hears about a threshold this trigger crossed by itself.
+  ///
+  /// Broadcast because the recorder subscribes only once the sensor probe has
+  /// come back ready, which is after this controller exists.
+  final StreamController<void> _due = StreamController<void>.broadcast();
+
   /// The reading at the moment the walk began. Everything is measured from it.
   int? _baseline;
   int _steps = 0;
   int _next;
+
+  @override
+  Stream<void> get due => _due.stream;
 
   @override
   Future<CadenceReadiness> prepare() async {
@@ -68,6 +85,7 @@ class StepCadenceTrigger implements CadenceTrigger {
           _baseline ??= steps;
           _steps = steps - _baseline!;
           if (!first.isCompleted) first.complete();
+          _signalIfDue();
         },
         onError: (Object error) {
           if (!first.isCompleted) first.completeError(error);
@@ -104,6 +122,23 @@ class StepCadenceTrigger implements CadenceTrigger {
   /// Steps taken since [prepare] captured the baseline. Zero before then.
   int get steps => _steps;
 
+  /// Raises a hand when the count has reached the next threshold.
+  ///
+  /// Deliberately *only* when it has: this fires from the sensor callback,
+  /// which on some handsets is every step, and waking the recorder that often
+  /// to be told nothing is due would be a battery cost for no verse.
+  ///
+  /// It is a nudge and not a delivery — the recorder re-asks [isDue], and
+  /// [isDue] is the only thing that advances `_next`. That is what lets the
+  /// signal repeat harmlessly while a walk is paused or warming up: nothing is
+  /// consumed until there is somewhere truthful to put it.
+  void _signalIfDue() {
+    if (intervalSteps <= 0) return;
+    if (_steps < _next) return;
+    if (_due.isClosed) return;
+    _due.add(null);
+  }
+
   @override
   bool isDue(double distanceMeters) {
     // Distance is not consulted: this trigger is paced by the sensor, and the
@@ -128,6 +163,8 @@ class StepCadenceTrigger implements CadenceTrigger {
   void dispose() {
     _subscription?.cancel();
     _subscription = null;
+    // A walk that has ended must not be left able to ask for one more verse.
+    unawaited(_due.close());
   }
 
   Stream<int> _stream() =>

@@ -316,6 +316,7 @@ class _SignupRow extends StatelessWidget {
         leading: UserAvatar(
           initials: person.initials,
           accentIndex: person.accentIndex,
+          imageUrl: person.avatarUrl,
           size: AppSizes.avatarSm,
         ),
         title: Text(person.displayName),

@@ -49,6 +49,7 @@ class AdminSettingsScreen extends ConsumerWidget {
                   UserAvatar(
                     initials: person.initials,
                     accentIndex: person.accentIndex,
+                    imageUrl: person.avatarUrl,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(

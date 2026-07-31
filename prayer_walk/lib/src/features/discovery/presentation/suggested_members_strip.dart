@@ -93,6 +93,7 @@ class _SuggestionCard extends ConsumerWidget {
                 UserAvatar(
                   initials: person.initials,
                   accentIndex: person.accentIndex,
+                  imageUrl: person.avatarUrl,
                   size: AppSizes.avatarMd,
                 ),
                 const SizedBox(height: AppSpacing.sm),

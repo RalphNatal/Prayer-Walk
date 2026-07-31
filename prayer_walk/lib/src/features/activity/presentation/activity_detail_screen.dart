@@ -16,6 +16,9 @@ import '../../privacy/data/privacy_actions.dart';
 import '../../privacy/presentation/visibility_picker.dart';
 import '../../profile/data/profile_providers.dart';
 import '../../profile/domain/user_profile.dart';
+import '../../scripture/data/scripture_providers.dart'
+    show scriptureSettingsProvider;
+import '../../scripture/presentation/scripture_quotation.dart';
 import '../../social/data/social_actions.dart';
 import '../../social/data/social_providers.dart';
 import '../../social/data/supabase_social_repository.dart' show SocialFailure;
@@ -450,6 +453,7 @@ class _AuthorRow extends StatelessWidget {
           UserAvatar(
             initials: profile.initials,
             accentIndex: profile.accentIndex,
+            imageUrl: profile.avatarUrl,
             ring: isOwn,
           ),
           const SizedBox(width: AppSpacing.md),
@@ -567,13 +571,13 @@ class _IntentionRow extends StatelessWidget {
   }
 }
 
-class _WaypointTile extends StatelessWidget {
+class _WaypointTile extends ConsumerWidget {
   const _WaypointTile({required this.waypoint});
 
   final Waypoint waypoint;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     // Matches the cooler marker a verse gets on the trail.
     final tint = waypoint.kind == WaypointKind.scripture
@@ -609,9 +613,19 @@ class _WaypointTile extends StatelessWidget {
                   '${waypoint.kind.label}  ·  ${Fmt.durationShort(waypoint.elapsed)} in',
                   style: theme.textTheme.bodySmall,
                 ),
+                // Same seam the summary list uses: the note carries whatever
+                // mark its edition required, and [MarkedQuotation] reads it
+                // back and names the edition underneath. See the summary
+                // screen's row for why a bare Text is not enough here.
                 if (waypoint.note.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.xs),
-                  Text(waypoint.note, style: theme.textTheme.bodyMedium),
+                  MarkedQuotation(
+                    markedText: waypoint.note,
+                    style: theme.textTheme.bodyMedium,
+                    showTranslation: ref.watch(
+                      scriptureSettingsProvider.select((s) => s.showTranslation),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -697,6 +711,7 @@ class _EncouragementBar extends ConsumerWidget {
                   UserAvatar(
                     initials: person.initials,
                     accentIndex: person.accentIndex,
+                    imageUrl: person.avatarUrl,
                     size: AppSizes.avatarSm,
                     semanticLabel: '${person.displayName} sent encouragement',
                   ),
@@ -727,6 +742,7 @@ class _CommentTile extends ConsumerWidget {
           UserAvatar(
             initials: entry.author.initials,
             accentIndex: entry.author.accentIndex,
+            imageUrl: entry.author.avatarUrl,
             size: AppSizes.avatarSm,
           ),
           const SizedBox(width: AppSpacing.md),
