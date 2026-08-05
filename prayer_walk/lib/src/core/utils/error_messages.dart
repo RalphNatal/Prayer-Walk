@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'
     show
         AuthException,
         AuthRetryableFetchException,
+        FunctionException,
         PostgrestException,
         StorageException;
 
@@ -106,7 +107,10 @@ AppErrorInfo describeFailure(
     return AppErrorInfo(
       message: '$fallback Check your connection, then try again.',
       code: 'transport:${error.runtimeType}',
-      diagnostic: 'transport ${error.runtimeType}: $error',
+      // Same reasoning as the unhandled branch below: `diagnostic` reaches
+      // release logcat unconditionally, so it gets the type only. `details`
+      // stays raw for the opt-in dialog.
+      diagnostic: 'transport ${error.runtimeType}',
       details: '$error',
       isTransport: true,
       isMapped: true,
@@ -133,6 +137,23 @@ AppErrorInfo describeFailure(
       details: '$error',
     );
   }
+  // An Edge Function call (`supabase.functions.invoke(...)`) that returned a
+  // non-2xx status or failed outright. `details` is whatever body the
+  // function sent back — this project's own functions always send
+  // `{"error": "a_short_code"}`, never a raw exception, so there is nothing
+  // here that needs the same redaction as the unhandled branch below.
+  if (error is FunctionException) {
+    final reported = _functionErrorCode(error.details);
+    return AppErrorInfo(
+      message: reported == 'unauthorized'
+          ? 'Your session has expired. Sign in again.'
+          : fallback,
+      code: 'function:${error.status}${reported == null ? '' : ':$reported'}',
+      diagnostic: 'FunctionException status=${error.status}: ${error.details}',
+      details: '${error.details}',
+      isMapped: reported != null,
+    );
+  }
   // Already written for the person by whoever threw it.
   if (error is AppException) {
     return AppErrorInfo(
@@ -146,7 +167,12 @@ AppErrorInfo describeFailure(
   return AppErrorInfo(
     message: fallback,
     code: 'unhandled:${error.runtimeType}',
-    diagnostic: 'unhandled ${error.runtimeType}: $error',
+    // Unlike `details` below, `diagnostic` unconditionally reaches
+    // `AppLogger.error`'s *message* in `reportFailure` — which stays live in
+    // release — so it must not carry the raw object. `details` stays raw: it
+    // only reaches a screen when someone taps "Details", which is the
+    // in-app support feature `AppErrorInfo`'s own doc comment describes.
+    diagnostic: 'unhandled ${error.runtimeType}',
     details: '$error',
   );
 }
@@ -316,6 +342,17 @@ String? _missingObjectName(String message) {
   final bare = RegExp(r'\b(?:public|auth)\.([A-Za-z_][A-Za-z0-9_]*)')
       .firstMatch(message);
   return bare?.group(1);
+}
+
+/// The short `error` code this project's own Edge Functions send back, e.g.
+/// `{"error": "unauthorized"}` (see `supabase/functions/_shared/cors.ts`'s
+/// `jsonResponse`). Null for a body that isn't shaped that way — a transport
+/// failure never reaching the function, for instance.
+String? _functionErrorCode(Object? details) {
+  if (details is Map && details['error'] is String) {
+    return details['error'] as String;
+  }
+  return null;
 }
 
 /// A genuine transport failure: the request never reached the server, or never

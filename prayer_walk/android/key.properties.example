@@ -1,0 +1,49 @@
+# Release signing credentials for the Android build.
+#
+# Copy this file to `key.properties` (same directory) and fill in the four
+# values below. `key.properties` is git-ignored — never commit it, and never
+# commit the .jks/.keystore file it points at either.
+#
+# --------------------------------------------------------------- how to get these ---
+#
+# 1. Generate an upload keystore, once, outside this repository:
+#
+#      keytool -genkey -v -keystore prayer-walk-upload.jks -keyalg RSA \
+#        -keysize 2048 -validity 10000 -alias prayer_walk_upload
+#
+#    `keytool` ships with any JDK (Android Studio bundles one). It will ask
+#    for a store password, your name/organisation, and a key password — the
+#    key password can be the same as the store password if you prefer one
+#    secret to keep track of.
+#
+# 2. Move the resulting .jks into this `android/` directory (it's git-ignored
+#    — see `.gitignore` — so it never gets committed) and also back it up
+#    somewhere outside this repo, such as a password manager or an encrypted
+#    backup. Losing it is recoverable via Play Console's key-loss process, but
+#    only after a support round trip, so back it up.
+#
+# 3. Fill in the four values below. `storeFile` is resolved relative to this
+#    `android/` directory — the bare filename below is correct as long as the
+#    .jks sits directly in `android/`, which is where it normally lives. An
+#    absolute path works too if you'd rather keep it elsewhere.
+#
+# ------------------------------------------------------------- after first upload ---
+#
+# Play App Signing re-signs your upload with its own key before distributing
+# it, so the certificate that matters to the outside world is Play's, not the
+# one you just generated. After your FIRST successful upload to Play Console:
+#
+#   1. Play Console → your app → Release → Setup → App integrity →
+#      App signing key certificate → copy the SHA-1 fingerprint.
+#   2. Google Cloud Console → APIs & Services → Credentials → the Android
+#      OAuth client for this app's package name → add that SHA-1.
+#
+# Skip this and Google Sign-In will keep working for your own installs (which
+# use the upload key's SHA-1, already registered from local testing) and fail
+# for everyone who installs from the Play Store — a classic "works for me"
+# bug that only shows up in production.
+
+storeFile=prayer-walk-upload.jks
+storePassword=
+keyAlias=prayer_walk_upload
+keyPassword=

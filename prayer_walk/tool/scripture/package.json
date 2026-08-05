@@ -1,0 +1,12 @@
+{
+  "name": "prayer-walk-scripture-tools",
+  "private": true,
+  "description": "Build-time tooling for the scripture library. Not part of the app; never bundled.",
+  "scripts": {
+    "generate": "node generate.js",
+    "verify": "node verify.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  }
+}

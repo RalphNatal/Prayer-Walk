@@ -200,3 +200,28 @@ To go back, set it to `WEBBE`. No content is rewritten either way.
 | Filter not filtering | `Delivering: NLT, WEBBE` | A bug in `_inTranslation` — it should never report two editions |
 | Device is offline / sync failed | `Loaded from: bundled asset` or `cache` | Expected. The asset is WEBBE by design |
 | Rows are right, walker cannot tell | — | Fixed: every surface names its edition |
+
+---
+
+## Verifying the WEBBE text against its source
+
+The seed file's own header already says this: the passages were selected and
+transcribed for this library rather than pulled programmatically, so
+byte-exactness was never guaranteed and needs checking before a production
+seed.
+
+`tool/scripture/verify.js` does that check — every `kind: 'scripture'` row
+against eBible.org's own WEBBE download, reported by reference, never
+rewritten automatically:
+
+```bash
+cd tool/scripture
+npm install
+node verify.js
+```
+
+It exits non-zero if anything is mismatched or a reference could not be
+resolved against the source. A mismatch is the maintainer's to correct in the
+relevant `tool/scripture/*.js` theme file, against the source — never rewritten
+from memory. See the comment at the top of `verify.js` for the source URL and
+what to do if the source file's format has changed since this was written.

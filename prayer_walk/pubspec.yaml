@@ -52,6 +52,9 @@ dependencies:
   permission_handler: ^12.0.3
   image_picker: ^1.2.3
   image: ^4.9.1
+  # Runtime package name / applicationId, read for the debug-only Google
+  # sign-in config diagnostic — see auth_diagnostics_screen.dart.
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:

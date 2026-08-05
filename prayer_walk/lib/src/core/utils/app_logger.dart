@@ -57,7 +57,11 @@ abstract final class AppLogger {
     _write(
       LogLevel.error,
       _fatalTag,
-      '$source → ${error.runtimeType}: $error',
+      // The object itself travels via the `error` parameter below, which
+      // `_write` already redacts to its type in release — baking `$error`
+      // into the message text too would bypass that redaction, since the
+      // message is never gated at the `error` level.
+      '$source → ${error.runtimeType}',
       error,
       stackTrace,
     );
@@ -81,21 +85,31 @@ abstract final class AppLogger {
     Object? error,
     StackTrace? stackTrace,
   ]) {
-    // `debug` is developer chatter; keep it out of release consoles. Everything
-    // from `info` up is diagnostic and stays.
-    if (level == LogLevel.debug && !kDebugMode) return;
+    // debug/info/warn are developer chatter; keep all of it out of release
+    // consoles. Only `error` (and `fatal`, which is `error` under another
+    // name) stays live in release — it is genuinely useful in crash triage.
+    if (level != LogLevel.error && !kDebugMode) return;
 
     final line = '${_timestamp()} [$tag][${level.label}] $message';
     debugPrint(line);
-    if (error != null) debugPrint('  └─ error: $error');
-    if (stackTrace != null) debugPrint('  └─ stack:\n$stackTrace');
+    // The raw error object and its stack trace are printed in full only in
+    // debug. In release, a third-party SDK's `Exception.toString()` is not
+    // something this app controls the contents of, so an `error`-level call
+    // — the one level that always reaches release logcat — reports only the
+    // type, never the object itself, and drops the stack trace entirely.
+    if (error != null) {
+      debugPrint('  └─ error: ${kDebugMode ? error : error.runtimeType}');
+    }
+    if (stackTrace != null && kDebugMode) {
+      debugPrint('  └─ stack:\n$stackTrace');
+    }
 
     developer.log(
       message,
       name: tag,
       level: level.value,
-      error: error,
-      stackTrace: stackTrace,
+      error: error == null ? null : (kDebugMode ? error : error.runtimeType),
+      stackTrace: kDebugMode ? stackTrace : null,
     );
   }
 

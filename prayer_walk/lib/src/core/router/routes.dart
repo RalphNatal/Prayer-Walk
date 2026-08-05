@@ -13,6 +13,13 @@ abstract final class Routes {
   static const signIn = 'signIn';
   static const signInPath = '/sign-in';
 
+  /// Debug-only. Registered as a top-level route (not inside a shell) and
+  /// explicitly exempted in the router's redirect, so it stays reachable
+  /// with no session — see `AuthDiagnosticsScreen`'s doc comment for why
+  /// that's the point of it.
+  static const authDiagnostics = 'authDiagnostics';
+  static const authDiagnosticsPath = '/auth-diagnostics';
+
   // ---------------------------------------------------------- member shell ---
   static const feed = 'feed';
   static const feedPath = '/feed';
@@ -56,6 +63,9 @@ abstract final class Routes {
 
   static const blockedMembers = 'blockedMembers';
   static const blockedMembersPath = '/blocked';
+
+  static const deleteAccount = 'deleteAccount';
+  static const deleteAccountPath = '/delete-account';
 
   /// Finding people. Pushed above the shell rather than given a tab: it is a
   /// door out of an empty feed, not a fifth place to live.

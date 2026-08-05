@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -97,17 +98,31 @@ class ErrorReport {
 /// from [ColorScheme]. This dialog exists to report failures that may have
 /// happened while the app was half-initialized, so it must not depend on the
 /// very theme, providers or router that might be the thing that broke.
-Future<void> showErrorReport(BuildContext context, ErrorReport report) {
+///
+/// [onRunDiagnostics], when given, adds a "Run diagnostics" action beside
+/// "Copy details" — debug builds only, regardless of whether a caller passes
+/// one. A screen wires this up when the failure it is reporting has a
+/// dedicated diagnostic (Google sign-in's `AuthDiagnosticsScreen` today); most
+/// callers pass nothing and get the dialog exactly as before.
+Future<void> showErrorReport(
+  BuildContext context,
+  ErrorReport report, {
+  VoidCallback? onRunDiagnostics,
+}) {
   return showDialog<void>(
     context: context,
-    builder: (dialogContext) => _ErrorReportDialog(report: report),
+    builder: (dialogContext) => _ErrorReportDialog(
+      report: report,
+      onRunDiagnostics: onRunDiagnostics,
+    ),
   );
 }
 
 class _ErrorReportDialog extends StatelessWidget {
-  const _ErrorReportDialog({required this.report});
+  const _ErrorReportDialog({required this.report, this.onRunDiagnostics});
 
   final ErrorReport report;
+  final VoidCallback? onRunDiagnostics;
 
   static const _surface = Color(0xFF1F1F1F);
   static const _danger = Color(0xFFFF6B6B);
@@ -195,6 +210,19 @@ class _ErrorReportDialog extends StatelessWidget {
                 spacing: 4,
                 runSpacing: 4,
                 children: [
+                  // Debug-only regardless of what the caller passes — the
+                  // same rule as the diagnostic screen this opens.
+                  if (kDebugMode && onRunDiagnostics != null)
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        onRunDiagnostics!();
+                      },
+                      child: const Text(
+                        'Run diagnostics',
+                        style: TextStyle(color: Color(0xFF8AB4F8)),
+                      ),
+                    ),
                   TextButton(
                     onPressed: () async {
                       await Clipboard.setData(

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,7 @@ import '../../features/admin/presentation/admin_scripture_screen.dart';
 import '../../features/admin/presentation/admin_scripture_submissions_screen.dart';
 import '../../features/admin/presentation/admin_settings_screen.dart';
 import '../../features/auth/data/auth_providers.dart';
+import '../../features/auth/presentation/auth_diagnostics_screen.dart';
 import '../../features/auth/presentation/auth_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
@@ -31,6 +33,7 @@ import '../../features/privacy/presentation/blocked_members_screen.dart';
 import '../../features/privacy/presentation/privacy_zones_screen.dart';
 import '../../features/privacy/presentation/safety_screen.dart';
 import '../../features/profile/domain/user_profile.dart';
+import '../../features/profile/presentation/delete_account_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/follow_list_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -80,6 +83,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: Routes.signIn,
         builder: (context, state) => const AuthScreen(),
       ),
+
+      // Debug-only, and deliberately top-level rather than nested under
+      // sign-in: a route nested anywhere inside the authenticated shells
+      // would be exactly what [_redirect] bounces a signed-out visitor away
+      // from, which is the one thing a tool for diagnosing broken sign-in
+      // cannot tolerate. `AuthDiagnosticsScreen` gates its own body on
+      // kDebugMode too, as a second line of defence if this route is ever
+      // reached some other way.
+      if (kDebugMode)
+        GoRoute(
+          path: Routes.authDiagnosticsPath,
+          name: Routes.authDiagnostics,
+          builder: (context, state) => const AuthDiagnosticsScreen(),
+        ),
 
       // Pushed above whichever shell is showing.
       GoRoute(
@@ -148,6 +165,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: Routes.blockedMembers,
         pageBuilder: (context, state) =>
             fadeThroughPage(context, state, const BlockedMembersScreen()),
+      ),
+      GoRoute(
+        path: Routes.deleteAccountPath,
+        name: Routes.deleteAccount,
+        pageBuilder: (context, state) =>
+            fadeThroughPage(context, state, const DeleteAccountScreen()),
       ),
       GoRoute(
         path: Routes.submitScripturePath,
@@ -448,6 +471,14 @@ const _authLocations = {
 /// signed-in person to the shell their real `profiles.role` belongs to.
 String? _redirect(Ref ref, GoRouterState state) {
   final location = state.matchedLocation;
+
+  // Reachable regardless of session state, loading or otherwise — the entire
+  // point of this screen is to be usable when sign-in itself is broken, so it
+  // cannot be gated behind the sign-in it exists to diagnose. The route is
+  // only ever registered in debug builds (see the router's route list), so
+  // this branch is dead code in release regardless.
+  if (location == Routes.authDiagnosticsPath) return null;
+
   final phase = ref.read(authPhaseProvider);
 
   // Session itself not resolved yet (defensive — normally resolves synchronously

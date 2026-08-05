@@ -50,3 +50,9 @@ app.*.map.json
 
 # Supabase CLI scratch state (project ref, pooler host) — never tracked.
 supabase/.temp/
+
+# Android release signing — real credentials and the keystore they point at.
+# See android/key.properties.example.
+android/key.properties
+*.jks
+*.keystore

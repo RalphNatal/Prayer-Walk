@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,15 +8,6 @@ import '../../../core/supabase/supabase_client.dart';
 import '../../../core/utils/app_logger.dart';
 import '../domain/profile.dart';
 
-/// A sign-in problem worth showing the person, phrased in the app's voice.
-///
-/// Anything the repository throws as an [AuthFailure] is safe — and intended —
-/// to display inline on the auth screen.
-///
-/// [code] and [details] are the diagnostic half: the machine-readable cause
-/// (e.g. `unknownError`) and the raw exception text. They let the screen show
-/// what actually failed, and let it be copied off the device, without putting
-/// SDK vocabulary into [message].
 class AuthFailure implements Exception {
   const AuthFailure(this.message, {this.code, this.details, this.stackTrace});
 
@@ -28,11 +20,6 @@ class AuthFailure implements Exception {
   String toString() => code == null ? message : '$message ($code)';
 }
 
-/// A deliberate cancellation — the person dismissed the Google sheet.
-///
-/// This is not an error. The screen catches it and quietly returns to the login
-/// form: no toast, no spinner left spinning. It exists as its own type so a
-/// dismiss is never mistaken for a failure worth reporting.
 class AuthCancelled implements Exception {
   const AuthCancelled();
 }
@@ -123,6 +110,46 @@ class AuthRepository {
 
   Future<void> signOut() => supabase.auth.signOut();
 
+  // ----------------------------------------------------------- deletion ---
+
+  static const _deletionTag = 'PW-DELETE';
+
+  /// Deletes the signed-in member's own account and everything that belongs
+  /// to it, via the `delete-account` Edge Function — see its own doc comment
+  /// for exactly what that covers. The function derives the account to delete
+  /// from the caller's own verified session token; there is no id to pass.
+  ///
+  /// Always finishes by clearing the local session, even though the server
+  /// side has already made it unusable — the point is the app's own state
+  /// (cached session, in-memory user) does not outlive the account by even
+  /// one frame. A [SignOutScope.local] sign-out is used deliberately: a
+  /// server-scoped sign-out would try to revoke a session for a user that, by
+  /// this point, no longer exists.
+  Future<void> deleteAccount() async {
+    await supabase.functions.invoke('delete-account');
+    try {
+      await supabase.auth.signOut(scope: SignOutScope.local);
+    } catch (error, stack) {
+      // The account is already gone — the one thing that mattered already
+      // succeeded. A local sign-out hiccup here must not read as the
+      // deletion having failed.
+      AppLogger.warn(
+        _deletionTag,
+        'local sign-out after deleteAccount failed',
+        error,
+        stack,
+      );
+    }
+  }
+
+  /// The signed-in member's own data, as one JSON object, via the
+  /// `export-data` Edge Function. Offered alongside deletion so someone has a
+  /// copy before they choose to lose it.
+  Future<Map<String, dynamic>> exportData() async {
+    final response = await supabase.functions.invoke('export-data');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   // -------------------------------------------------------------- google ---
 
   /// The tag every line of the Google flow is logged under. Grep for this.
@@ -194,12 +221,7 @@ class AuthRepository {
     } catch (error, stack) {
       // Nothing typed matched. This is the branch that used to lose the error
       // entirely, so it is the loudest.
-      AppLogger.error(
-        _tag,
-        '[UNHANDLED] ${error.runtimeType}: $error',
-        error,
-        stack,
-      );
+      AppLogger.error(_tag, '[UNHANDLED] ${error.runtimeType}', error, stack);
       throw AuthFailure(
         'Google sign-in didn\'t go through. Try again.',
         code: 'unhandled:${error.runtimeType}',
@@ -405,15 +427,32 @@ class AuthRepository {
     required String stage,
   }) {
     final code = error.code.name;
+    final nested = error.details;
+    // Every field the native exception actually carries — not just the two
+    // (`code`, `description`) the old copy of this method surfaced. `nested`
+    // is `Object?`: on Android it is sometimes itself a wrapped
+    // exception/error rather than a string, so its own runtimeType travels
+    // too rather than only whatever its toString() happens to produce. This
+    // whole string is what reaches AuthFailure.details, and from there
+    // "Copy details" — if it's genuinely empty, that says so explicitly
+    // instead of leaving a bare, unexplained `details=null`.
     final details =
-        'code=$code\ndescription=${error.description}\ndetails=${error.details}';
+        'type=${error.runtimeType}\n'
+        'code=$code\n'
+        'description=${error.description ?? '(none)'}\n'
+        'details=${nested == null ? '(none)' : '$nested (${nested.runtimeType})'}';
 
     AppLogger.error(
       _tag,
-      '$stage FAILED — GoogleSignInException code.name="$code" :: $error',
+      '$stage FAILED — GoogleSignInException code.name="$code"',
       error,
       stack,
     );
+    // The composed payload above — not just the exception's own toString() —
+    // is what "Copy details" shows. Log it explicitly, under the same tag,
+    // before any mapping to user-facing copy happens below, so adb logcat
+    // carries exactly what the screen will.
+    AppLogger.error(_tag, '$stage raw payload:\n$details');
 
     switch (code) {
       // Dismissed the sheet. Not an error, and the only quiet path.
@@ -447,24 +486,10 @@ class AuthRepository {
           stackTrace: stack,
         );
 
-      // Credential Manager had nothing to hand back. Two common causes on an
-      // emulator: no Google account added, or this build's signing SHA-1 isn't
-      // registered on the Android OAuth client.
+      // Credential Manager had nothing to hand back. This code alone is
+      // ambiguous — see [_mapUnknownError].
       case 'unknownError':
-        AppLogger.error(
-          _tag,
-          '[CONFIG] "No credential available" here means either no Google '
-          'account is signed in on this device, or the debug SHA-1 for '
-          'com.calledpresentations.prayer_walk is not registered on the '
-          'Android OAuth client. Run: gradlew signingReport',
-        );
-        return AuthFailure(
-          'Google couldn\'t sign you in. Check a Google account is added on '
-          'this device, then try again.',
-          code: code,
-          details: details,
-          stackTrace: stack,
-        );
+        return _mapUnknownError(error, code: code, details: details, stack: stack);
 
       // Play Services or the credential UI isn't usable here.
       case 'providerConfigurationError':
@@ -496,6 +521,99 @@ class AuthRepository {
           stackTrace: stack,
         );
     }
+  }
+
+  /// The four things worth checking, in the order they're most likely wrong
+  /// for a rebuilt-from-scratch dev machine — see `docs/new_machine_setup.md`.
+  /// Debug-only copy: none of this belongs in front of someone who isn't the
+  /// maintainer, and in release the friendly message plus [AuthFailure.details]
+  /// (still the raw `code=…\ndescription=…` text) is all that ships.
+  static const _devConsoleChecklist =
+      '1. GOOGLE_WEB_CLIENT_ID is the Web client ID, not the Android one.\n'
+      '2. The signing-in Google account is a Test user, if the OAuth consent '
+      'screen is in Testing.\n'
+      '3. Supabase → Auth → Providers → Google → Authorized Client IDs '
+      'contains that Web client ID.\n'
+      '4. The package name and SHA-1 are registered on an Android OAuth '
+      'client.';
+
+  /// `unknownError` is Credential Manager's catch-all for "nothing to hand
+  /// back", and it is the same code whether the cause is a device with no
+  /// Google account or a dashboard that was never finished. [error.description]
+  /// is the only thing that can tell the two apart — a `[28444]` /
+  /// "Developer console is not set up correctly" description names the
+  /// dashboard fault outright; a description naming missing accounts or
+  /// credentials names the device instead. When the description says neither,
+  /// this can't honestly claim to know which one it is, so it says both and
+  /// names the likelier cause rather than guessing.
+  Exception _mapUnknownError(
+    GoogleSignInException error, {
+    required String code,
+    required String details,
+    required StackTrace stack,
+  }) {
+    final description = (error.description ?? '').toLowerCase();
+    final looksLikeDevConsole =
+        description.contains('28444') ||
+        description.contains('developer console');
+    final looksLikeNoAccount =
+        !looksLikeDevConsole &&
+        (description.contains('no accounts') ||
+            description.contains('no credentials available') ||
+            description.contains('add a google account'));
+
+    if (looksLikeDevConsole) {
+      AppLogger.error(
+        _tag,
+        '[CONFIG] Developer console is not set up correctly. Check, in '
+        'order:\n$_devConsoleChecklist',
+      );
+      return AuthFailure(
+        kDebugMode
+            ? 'Google sign-in isn\'t set up correctly in this build. Check, '
+                  'in order:\n$_devConsoleChecklist'
+            : 'Google sign-in isn\'t available right now.',
+        code: code,
+        details: details,
+        stackTrace: stack,
+      );
+    }
+
+    if (looksLikeNoAccount) {
+      AppLogger.error(
+        _tag,
+        '[CONFIG] Credential Manager reports no account on this device.',
+      );
+      return AuthFailure(
+        'Google couldn\'t find an account on this device. Add a Google '
+        'account, then try again.',
+        code: code,
+        details: details,
+        stackTrace: stack,
+      );
+    }
+
+    // The description didn't say which. Both are real possibilities; a
+    // rebuilt dev machine makes the console the likelier one, but this must
+    // not present a guess as a fact.
+    AppLogger.error(
+      _tag,
+      '[CONFIG] "No credential available" and the description does not say '
+      'why. Likeliest is the developer console, not the device — check, in '
+      'order:\n$_devConsoleChecklist\nOtherwise, check a Google account is '
+      'signed in on this device.',
+    );
+    return AuthFailure(
+      kDebugMode
+          ? 'Google couldn\'t sign you in. Likeliest cause is the console, '
+                'not the device — check, in order:\n$_devConsoleChecklist\n'
+                'Otherwise, add a Google account on this device.'
+          : 'Google couldn\'t sign you in. Check a Google account is added '
+                'on this device, then try again.',
+      code: code,
+      details: details,
+      stackTrace: stack,
+    );
   }
 
   String _emailMessage(AuthException error) {

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -200,6 +201,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
 
+          // Debug-only, same gating as ScriptureDiagnostics: a maintainer's
+          // readout, not a feature a walker should ever see.
+          if (kDebugMode) ...[
+            const SizedBox(height: AppSpacing.xxl),
+            const SectionHeader(
+              title: 'Diagnostics',
+              subtitle: 'Debug builds only.',
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.bug_report_outlined),
+              title: Text(
+                'Google sign-in config',
+                style: theme.textTheme.titleSmall,
+              ),
+              subtitle: Text(
+                'Which link in the chain — env.json, Google Cloud, Supabase — '
+                'is broken.',
+                style: theme.textTheme.bodySmall,
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.pushNamed(Routes.authDiagnostics),
+            ),
+          ],
+
           const SizedBox(height: AppSpacing.xxl),
           const SectionHeader(title: 'Account'),
           ListTile(
@@ -212,6 +238,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             onTap: _signOut,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              Icons.delete_forever_rounded,
+              color: theme.colorScheme.error,
+            ),
+            title: Text(
+              'Delete account',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+            subtitle: Text(
+              'Permanently removes your account and everything tied to it.',
+              style: theme.textTheme.bodySmall,
+            ),
+            onTap: () => context.pushNamed(Routes.deleteAccount),
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(

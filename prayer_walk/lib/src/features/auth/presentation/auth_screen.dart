@@ -1,8 +1,10 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/widgets.dart';
@@ -117,8 +119,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   Future<void> _report(ErrorReport report) async {
     if (!mounted) return;
-    await showErrorReport(context, report);
+    // Every failure reported from this screen is, by definition, a sign-in
+    // failure — so unlike other screens that show this same dialog, this one
+    // always has a relevant diagnostic to offer.
+    await showErrorReport(
+      context,
+      report,
+      onRunDiagnostics: kDebugMode ? _openDiagnostics : null,
+    );
   }
+
+  void _openDiagnostics() => context.pushNamed(Routes.authDiagnostics);
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -309,6 +320,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         ),
                       ],
                     ),
+
+                    // Debug-only, and reachable with no session — this exists
+                    // for the case sign-in itself is broken, so it cannot
+                    // live anywhere that requires signing in to reach first.
+                    // See AuthDiagnosticsScreen's doc comment.
+                    if (kDebugMode) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Center(
+                        child: AppTextButton(
+                          label: 'Diagnostics',
+                          onPressed: _openDiagnostics,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
