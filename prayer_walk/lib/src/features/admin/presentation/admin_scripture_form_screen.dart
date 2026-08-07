@@ -386,9 +386,9 @@ class _LicensingWarning extends StatelessWidget {
               'and each quotation carries ${translation.quotationMark} '
               'automatically wherever it appears.'
         : 'This build carries no licence terms for '
-              '${translation.shortCode}. Its text may not be published here '
-              'until its terms and credit line are added in '
-              'bible_translation.dart.';
+              '${translation.shortCode}. Its text can\'t be published here '
+              'until its terms and credit line are added to the app — ask '
+              'your developer.';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -95,6 +95,22 @@ class _SubmitScriptureScreenState
     }
   }
 
+  Future<void> _showLicenceInfo(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Why only certain wording?'),
+        content: const Text(ScriptureSubmissionDraft.licenceNoteDetail),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -191,25 +207,23 @@ class _SubmitScriptureScreenState
 
           if (isScripture) ...[
             const SectionHeader(
-              title: 'The text (optional)',
-              subtitle: 'Public domain only.',
+              title: 'Add the wording (optional)',
+              subtitle: "Leave it blank and we'll supply the passage.",
             ),
-            const _LicenceNote(),
-            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _body,
               minLines: 2,
               maxLines: 6,
               textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText:
-                    '${ScriptureSubmissionDraft.allowedTranslation.shortCode} '
-                    'text',
+              decoration: const InputDecoration(
+                labelText: 'The passage, word for word',
                 hintText:
                     'Leave blank and a moderator will match the reference.',
                 alignLabelWithHint: true,
               ),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _LicenceNote(onLearnMore: () => _showLicenceInfo(context)),
             const SizedBox(height: AppSpacing.xxl),
           ],
 
@@ -236,40 +250,39 @@ class _SubmitScriptureScreenState
 /// ⚖️ The copyright position, stated beside the field it governs.
 ///
 /// The rule is enforced by the insert policy on `scripture_prompts`, which
-/// refuses any translation this app does not own outright. This paragraph
-/// exists so that nobody types out a licensed passage in good faith and has it
-/// bounce back at them with a Postgres code.
+/// refuses any translation this app does not own outright. This is guidance,
+/// not an error, so it reads that way: quiet text, not a coloured panel — with
+/// the reasoning behind it one tap away on "Why?" rather than in front of
+/// everyone whether they want it or not.
 class _LicenceNote extends StatelessWidget {
-  const _LicenceNote();
+  const _LicenceNote({required this.onLearnMore});
+
+  final VoidCallback onLearnMore;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.tertiaryContainer,
-        borderRadius: AppRadius.control,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.balance_outlined,
-            size: 18,
-            color: theme.colorScheme.onTertiaryContainer,
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              ScriptureSubmissionDraft.licenceNote,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onTertiaryContainer,
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            ScriptureSubmissionDraft.licenceNoteShort,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-        ],
-      ),
+        ),
+        TextButton(
+          onPressed: onLearnMore,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('Why?'),
+        ),
+      ],
     );
   }
 }

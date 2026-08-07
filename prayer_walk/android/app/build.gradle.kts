@@ -22,9 +22,13 @@ if (hasKeyProperties) {
     FileInputStream(keyPropertiesFile).use { keyProperties.load(it) }
 }
 
+
 android {
     namespace = "com.calledpresentations.prayer_walk"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned rather than left to flutter.compileSdkVersion: Play requires new
+    // and updated apps to target API 36 (Android 16) from 31 Aug 2026, and a
+    // Flutter engine bump must not silently move this back down.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -40,7 +44,9 @@ android {
         // Credential Manager (google_sign_in v7) requires API 23+; never go below
         // Flutter's own floor either.
         minSdk = maxOf(flutter.minSdkVersion, 23)
-        targetSdk = flutter.targetSdkVersion
+        // Pinned to 36 (Android 16) rather than flutter.targetSdkVersion — see
+        // the compileSdk comment above; same reasoning, same deadline.
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

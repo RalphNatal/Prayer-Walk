@@ -73,14 +73,23 @@ class ScriptureSubmissionDraft {
   /// Public domain: no fee, no permission, no ceiling, and nothing to count.
   static const allowedTranslation = BibleTranslation.webbe;
 
-  /// Said inline on the form, next to the field it governs. Not in a help page
-  /// and not in a checkbox nobody reads.
-  static const licenceNote =
-      'Only public-domain text may be typed here — the World English Bible '
-      '(WEBBE), which is free of copyright. Do not paste from the NLT, NIV, '
-      'ESV, NASB or CSB: those are licensed, and this app cannot carry them '
-      'from an open form. If you leave it blank, the reference alone is '
-      'enough — a moderator will match it to text the app already holds.';
+  /// Said inline on the form, next to the field it governs. Quiet on purpose —
+  /// not a warning, just a fact — with the reasoning one tap away rather than
+  /// read by everyone whether they want it or not.
+  static const licenceNoteShort =
+      "Only text that's free of copyright can go here.";
+
+  /// The reasoning, for whoever taps "Why?" — including the translations it
+  /// rules out. Not in a help page and not in a checkbox nobody reads; just
+  /// not in front of everyone by default either.
+  static const licenceNoteDetail =
+      'Most Bible translations are copyrighted, and this open form has no way '
+      "to check what's typed into it before it's stored. The World English "
+      "Bible is public domain, so it's the one edition safe to type here "
+      'directly.\n\n'
+      'Quoting from something like the NIV, NLT or ESV? Leave this blank and '
+      'just give the reference above — a moderator will add the right '
+      'wording from a translation the app already holds.';
 
   ScriptureSubmissionDraft copyWith({
     String? reference,

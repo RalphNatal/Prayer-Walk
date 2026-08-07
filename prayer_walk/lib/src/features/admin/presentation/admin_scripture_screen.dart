@@ -159,7 +159,7 @@ class AdminScriptureScreen extends ConsumerWidget {
           title: 'No prompts yet',
           message:
               'Nothing will be delivered on a walk until there is something '
-              'here. Add the first, or run the seed file.',
+              'here.',
           actionLabel: 'New prompt',
           onAction: () => context.goNamed(Routes.adminScriptureCreate),
         ),

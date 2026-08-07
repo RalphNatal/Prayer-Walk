@@ -6,65 +6,15 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
-    <!-- RECORDING IN A POCKET
-
-         The mechanism that keeps a walk alive with the screen locked is the
-         **foreground service**, not ACCESS_BACKGROUND_LOCATION. A service typed
-         `location`, started while the app is on screen, may read location for as
-         long as it runs on nothing more than ACCESS_FINE_LOCATION. That is what
-         the persistent notification is for, and it is the whole of the
-         locked-screen story on a phone that behaves.
-
-         ACCESS_BACKGROUND_LOCATION is the resilience layer on top: it is what
-         lets the service keep reading if Android tears the process down and
-         restarts it, and it is requested separately, later, and only when
-         somebody starts a walk — see `LocationService.requestBackgroundAccess`.
-         A refusal costs nothing on an ordinary walk.
-
-         Declaring it is not free. It is what puts this app into Google Play's
-         background-location declaration and review process, which adds weeks to
-         a release. See docs/background_tracking.md — removing this one line is
-         the supported way to opt out of that review, at the cost of the
-         process-restart case. -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-    <!-- Android 13+ will not *display* the foreground-service notification
-         without this, and a foreground service the walker cannot see is both a
-         support problem and a store-review one. Requested at the same moment as
-         the walk, never at launch. -->
+
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- A PARTIAL_WAKE_LOCK held for the length of a recording, and released
-         with it. Without it Doze batches fixes and hands them over in a clump
-         when the device next wakes, which reads on screen as a walk that
-         stopped and then teleported. Acquired by the geolocator service only
-         when `enableWakeLock` is set, which this app only sets while
-         recording. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <!-- Step-paced scripture on the trail, and nothing else. Declared here
-         because Android requires it declared, but it is only ever *requested*
-         from StepCadenceTrigger, which is only constructed when the walker has
-         chosen step cadence. A walker who leaves the default (distance) alone
-         is never asked for it. The device is marked as not requiring a step
-         sensor so handsets without one still see the app on Play. -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
     <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false"/>
     <uses-feature android:name="android.hardware.sensor.stepdetector" android:required="false"/>
-
-    <!-- Profile photos, from Edit profile and nowhere else.
-
-         CAMERA is declared but never *required*: `image_picker` hands the shot
-         off to whatever camera app is installed rather than opening one itself,
-         so a device without a camera should still install and still be able to
-         pick from the library. Hence `required="false"` below — without it,
-         Play hides the app from tablets that have no rear camera.
-
-         There is deliberately no READ_EXTERNAL_STORAGE or READ_MEDIA_IMAGES
-         here. `image_picker` uses the system photo picker, which returns one
-         file the person chose and grants access to that file alone. Asking for
-         the library permission would let this app read every photo on the
-         device, to do a job that needs exactly one — and would put a
-         "Photos and videos" line on the store listing of a walking app. -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.any" android:required="false"/>
@@ -72,7 +22,15 @@
     <application
         android:label="Prayer Walk"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+        <!-- Opts into predictive back (Android 13+; required from apps
+             targeting API 36 onward). Safe with the app's one PopScope
+             (live_tracking_screen.dart), which already uses
+             onPopInvokedWithResult rather than the deprecated WillPopScope,
+             so the confirm-before-leaving-mid-walk gesture participates in
+             the predictive-back preview correctly instead of intercepting a
+             gesture it can't animate. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

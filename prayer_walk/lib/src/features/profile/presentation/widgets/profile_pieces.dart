@@ -314,9 +314,18 @@ class LifetimeStatsPanel extends StatelessWidget {
 
 /// A horizontal strip of recent walks, each led by its trail.
 class RecentActivitiesStrip extends ConsumerWidget {
-  const RecentActivitiesStrip({super.key, required this.userId});
+  const RecentActivitiesStrip({
+    super.key,
+    required this.userId,
+    this.isSelf = false,
+  });
 
   final String userId;
+
+  /// Whether this is the signed-in member's own strip. Someone else's empty
+  /// strip is just a fact about them; only your own empty strip is a place to
+  /// point you toward recording a walk.
+  final bool isSelf;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -348,12 +357,22 @@ class RecentActivitiesStrip extends ConsumerWidget {
           ),
         ),
       ),
-      empty: () => Text(
-        'No walks recorded yet.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
+      empty: () => isSelf
+          ? InkWell(
+              onTap: () => context.goNamed(Routes.record),
+              child: Text(
+                'Record your first walk to see it here.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            )
+          : Text(
+              'No walks recorded yet.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
       data: (items) => SizedBox(
         height: 178,
         child: ListView.separated(

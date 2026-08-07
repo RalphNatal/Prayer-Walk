@@ -93,7 +93,7 @@ class AdminSettingsScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xxl),
           const SectionHeader(
             title: 'Console',
-            subtitle: 'Configurable once there is a backend to configure.',
+            subtitle: 'Not yet configurable — on the way.',
             dense: true,
           ),
           const _PlaceholderRow(

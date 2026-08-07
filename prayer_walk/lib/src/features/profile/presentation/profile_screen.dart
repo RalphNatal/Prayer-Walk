@@ -88,7 +88,7 @@ class ProfileScreen extends ConsumerWidget {
                 actionLabel: 'See all',
                 onAction: () => context.goNamed(Routes.history),
               ),
-              RecentActivitiesStrip(userId: item.id),
+              RecentActivitiesStrip(userId: item.id, isSelf: true),
             ],
           ),
         ),

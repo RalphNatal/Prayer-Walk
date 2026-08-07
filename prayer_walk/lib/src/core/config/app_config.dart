@@ -79,6 +79,14 @@ abstract final class AppConfig {
     defaultValue: 30,
   );
 
+  /// An internal marker appended to the version shown in Settings — e.g.
+  /// `internal` or `qa` — for a build handed out ahead of a store release.
+  /// Empty by default, so a store build shows a plain version number with
+  /// nothing hardcoded to say otherwise.
+  ///
+  /// Set with `--dart-define=PW_BUILD_LABEL=internal`.
+  static const buildLabel = String.fromEnvironment('PW_BUILD_LABEL');
+
   /// Throws a [StateError] naming **every** missing key at once if any required
   /// compile-time value is absent.
   ///

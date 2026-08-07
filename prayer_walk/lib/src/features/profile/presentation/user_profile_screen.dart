@@ -67,7 +67,7 @@ class UserProfileScreen extends ConsumerWidget {
               LifetimeStatsPanel(stats: item.stats),
               const SizedBox(height: AppSpacing.xxl),
               const SectionHeader(title: 'Recent walks'),
-              RecentActivitiesStrip(userId: userId),
+              RecentActivitiesStrip(userId: userId, isSelf: isSelf),
             ],
           ),
         ),

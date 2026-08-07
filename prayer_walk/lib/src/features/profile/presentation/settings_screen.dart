@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/theme_controller.dart';
@@ -35,6 +37,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _comments = true;
   bool _newDevotionals = true;
   bool _weeklySummary = false;
+
+  String? _versionLabel;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _versionLabel = 'Prayer Walk ${info.version} (${info.buildNumber})'
+          '${AppConfig.buildLabel.isEmpty ? '' : ' · ${AppConfig.buildLabel}'}';
+    });
+  }
 
   Future<void> _signOut() async {
     final confirmed = await showConfirmDialog(
@@ -133,7 +152,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: AppSpacing.xxl),
           const SectionHeader(
             title: 'Notifications',
-            subtitle: 'Preview build — these are not wired to anything yet.',
+            subtitle: "Choices here aren't saved between sessions yet.",
           ),
           _SettingSwitch(
             title: 'Encouragement',
@@ -259,7 +278,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
-            'Prayer Walk · preview build',
+            _versionLabel ?? 'Prayer Walk',
             style: theme.textTheme.bodySmall,
           ),
         ],
