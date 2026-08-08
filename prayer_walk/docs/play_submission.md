@@ -154,8 +154,14 @@ is keyed to a specific SHA-1 — needs a second entry.
 
 ## 8. Version
 
-`pubspec.yaml` is `1.0.0+1` — correct for a first submission. Confirm before
-building. **Every subsequent Play upload needs a strictly higher build
-number** (the `+N` after the version name) — Play rejects an upload whose
-build number doesn't exceed the last one, regardless of whether the version
-name (`1.0.0`) changes.
+`pubspec.yaml` is currently `1.0.0+4`. Confirm the build number in
+`pubspec.yaml` before every build — don't trust this doc, which drifts.
+
+**The rule: increment the build number (the `+N` after the version name)
+before every upload. Play permanently reserves every version code it has
+ever seen, even for a release that was later discarded or never promoted
+out of a track — there is no way to free up or reuse a number.** Codes 1,
+2, and 3 were already consumed by earlier upload attempts (including one to
+Production that was discarded); +4 is the next available number. The
+version *name* (`1.0.0`) is what users see and does not need to change
+between these attempts — only the build number does.
