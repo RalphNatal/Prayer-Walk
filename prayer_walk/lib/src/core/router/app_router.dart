@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +40,7 @@ import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/profile/presentation/user_profile_screen.dart';
 import '../../features/scripture/presentation/my_submissions_screen.dart';
 import '../../features/scripture/presentation/submit_scripture_screen.dart';
+import '../config/app_config.dart';
 import 'admin_shell.dart';
 import 'member_shell.dart';
 import 'not_found_screen.dart';
@@ -84,14 +84,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AuthScreen(),
       ),
 
-      // Debug-only, and deliberately top-level rather than nested under
-      // sign-in: a route nested anywhere inside the authenticated shells
-      // would be exactly what [_redirect] bounces a signed-out visitor away
-      // from, which is the one thing a tool for diagnosing broken sign-in
-      // cannot tolerate. `AuthDiagnosticsScreen` gates its own body on
-      // kDebugMode too, as a second line of defence if this route is ever
-      // reached some other way.
-      if (kDebugMode)
+      // Debug builds, plus any build launched with
+      // `--dart-define=PW_ENABLE_DIAGNOSTICS=true` — a Play-distributed
+      // release build is the one this diagnostic is currently needed in, and
+      // gating on kDebugMode alone put it in every build except that one.
+      //
+      // Deliberately top-level rather than nested under sign-in: a route
+      // nested anywhere inside the authenticated shells would be exactly what
+      // [_redirect] bounces a signed-out visitor away from, which is the one
+      // thing a tool for diagnosing broken sign-in cannot tolerate.
+      // `AuthDiagnosticsScreen` gates its own body on the same flag too, as a
+      // second line of defence if this route is ever reached some other way.
+      if (AppConfig.diagnosticsEnabled)
         GoRoute(
           path: Routes.authDiagnosticsPath,
           name: Routes.authDiagnostics,
@@ -475,8 +479,9 @@ String? _redirect(Ref ref, GoRouterState state) {
   // Reachable regardless of session state, loading or otherwise — the entire
   // point of this screen is to be usable when sign-in itself is broken, so it
   // cannot be gated behind the sign-in it exists to diagnose. The route is
-  // only ever registered in debug builds (see the router's route list), so
-  // this branch is dead code in release regardless.
+  // only registered when [AppConfig.diagnosticsEnabled] (see the router's
+  // route list), so this branch is dead code in a build that didn't ask for
+  // it, and unreachable rather than merely exempted.
   if (location == Routes.authDiagnosticsPath) return null;
 
   final phase = ref.read(authPhaseProvider);

@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -175,9 +176,24 @@ class AuthRepository {
       await GoogleSignIn.instance.initialize(
         // iOS uses clientId; Android uses serverClientId (the Web client ID).
         // Empty → null so the SDK falls back to its platform config file.
-        clientId: AppConfig.googleIosClientId.isEmpty
-            ? null
-            : AppConfig.googleIosClientId,
+        //
+        // The platform guard is a correctness fix, not a bug fix: until now the
+        // iOS client ID was passed on every platform. It is **not** the cause
+        // of the Play Store failure, and must not be recorded as its
+        // resolution — `google_sign_in_android` discards `clientId` before it
+        // reaches the native layer ("not supported on Android"), and
+        // `GoogleSignInPlugin.java` reads only `getServerClientId()`. Passing
+        // it did nothing; not passing it does nothing. It is corrected because
+        // code that contradicts the comment above it is a trap for whoever
+        // reads this next.
+        //
+        // [kIsWeb] first because [defaultTargetPlatform] reports the browser's
+        // host OS on web, where iOS would be the wrong answer.
+        clientId: (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+            ? (AppConfig.googleIosClientId.isEmpty
+                  ? null
+                  : AppConfig.googleIosClientId)
+            : null,
         serverClientId: AppConfig.googleWebClientId.isEmpty
             ? null
             : AppConfig.googleWebClientId,

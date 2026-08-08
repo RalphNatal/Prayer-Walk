@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/app_logger.dart';
@@ -125,7 +126,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     await showErrorReport(
       context,
       report,
-      onRunDiagnostics: kDebugMode ? _openDiagnostics : null,
+      onRunDiagnostics: AppConfig.diagnosticsEnabled ? _openDiagnostics : null,
     );
   }
 
@@ -321,11 +322,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ],
                     ),
 
-                    // Debug-only, and reachable with no session — this exists
-                    // for the case sign-in itself is broken, so it cannot
-                    // live anywhere that requires signing in to reach first.
-                    // See AuthDiagnosticsScreen's doc comment.
-                    if (kDebugMode) ...[
+                    // Debug builds and diagnostics-enabled ones, and reachable
+                    // with no session — this exists for the case sign-in
+                    // itself is broken, so it cannot live anywhere that
+                    // requires signing in to reach first. On an internal
+                    // testing build this is the only way in: the Settings
+                    // entry needs a session, which is the thing that's
+                    // failing. See AuthDiagnosticsScreen's doc comment.
+                    if (AppConfig.diagnosticsEnabled) ...[
                       const SizedBox(height: AppSpacing.md),
                       Center(
                         child: AppTextButton(

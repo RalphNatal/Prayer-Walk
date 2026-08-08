@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -11,6 +10,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/widgets/widgets.dart';
+import '../data/signing_certificate.dart';
 import '../domain/auth_diagnostics_verdict.dart';
 import '../domain/google_config_diagnostics.dart';
 import '../domain/google_id_token.dart';
@@ -53,15 +53,18 @@ const _googleProbeScopes = <String>['email', 'profile'];
 ///
 /// **Reachable with no session.** This screen exists for when sign-in itself
 /// is what's broken, so it cannot be gated behind signing in: it has its own
-/// debug-only top-level route (see `Routes.authDiagnosticsPath` and the
-/// router's redirect), a link on `AuthScreen` itself, a "Run diagnostics"
-/// action on the sign-in failure dialog, and — for a maintainer who is
-/// already signed in on another account — the existing entry under
-/// Settings → Diagnostics.
+/// top-level route (see `Routes.authDiagnosticsPath` and the router's
+/// redirect), a link on `AuthScreen` itself, a "Run diagnostics" action on the
+/// sign-in failure dialog, and — for a maintainer who is already signed in on
+/// another account — the existing entry under Settings → Diagnostics.
 ///
-/// **Debug builds only**, gated the same way `ScriptureDiagnostics` is: the
-/// route is only ever registered in debug, and this widget's own `build`
-/// refuses to render anything in release as a second line of defence.
+/// **Gated on [AppConfig.diagnosticsEnabled]** — always on in debug, and in
+/// release only with `--dart-define=PW_ENABLE_DIAGNOSTICS=true`. It was
+/// debug-only until a sign-in failure turned up that happens *only* in a
+/// Play-distributed release build, which is to say the one build with no
+/// diagnostic in it. Both defences moved together: the route is only
+/// registered when the flag is set, and this widget's own `build` refuses to
+/// render anything without it.
 class AuthDiagnosticsScreen extends StatefulWidget {
   const AuthDiagnosticsScreen({super.key});
 
@@ -72,6 +75,10 @@ class AuthDiagnosticsScreen extends StatefulWidget {
 class _AuthDiagnosticsScreenState extends State<AuthDiagnosticsScreen> {
   PackageInfo? _packageInfo;
   bool _running = false;
+
+  /// TEMPORARY — the Play Store sign-in investigation. See
+  /// `signing_certificate.dart`.
+  SigningCertificates? _signing;
 
   _Check _supabaseHealthCheck = const _Check.unknown();
   _Check _googleProbeCheck = const _Check.unknown();
@@ -91,12 +98,26 @@ class _AuthDiagnosticsScreenState extends State<AuthDiagnosticsScreen> {
   @override
   void initState() {
     super.initState();
-    if (kDebugMode) _loadPackageInfo();
+    if (AppConfig.diagnosticsEnabled) {
+      _loadPackageInfo();
+      _loadSigningCertificates();
+    }
   }
 
   Future<void> _loadPackageInfo() async {
     final info = await PackageInfo.fromPlatform();
     if (mounted) setState(() => _packageInfo = info);
+  }
+
+  /// TEMPORARY — the Play Store sign-in investigation.
+  ///
+  /// Loaded here rather than behind **Run all** on purpose: it is the one
+  /// reading on this screen that needs no Google account, no network, and no
+  /// interaction, and on a build where the sheet itself fails it may be the
+  /// only reading that comes back at all.
+  Future<void> _loadSigningCertificates() async {
+    final certificates = await readSigningCertificates();
+    if (mounted) setState(() => _signing = certificates);
   }
 
   // ------------------------------------------------------------ run all ---
@@ -569,6 +590,21 @@ class _AuthDiagnosticsScreenState extends State<AuthDiagnosticsScreen> {
                   "OAuth client's package name."
             : null,
       ),
+      // TEMPORARY — the Play Store sign-in investigation.
+      //
+      // Informational, never pass/fail. Nothing in this app can know which
+      // fingerprints are registered in Google Cloud Console, and a row that
+      // guessed would be worse than one that reports. It is here as well as in
+      // its own section below so it travels with "Copy report".
+      _ReportLine(
+        'Installed signing certificate',
+        _signing?.describe() ?? 'reading…',
+        _signing == null ? _Status.checking : _Status.unknown,
+        note:
+            'Compare against Google Cloud Console → Credentials → the Android '
+            'OAuth clients for $_expectedApplicationId. Every fingerprint '
+            'listed needs its own client.',
+      ),
     ];
   }
 
@@ -614,10 +650,10 @@ class _AuthDiagnosticsScreenState extends State<AuthDiagnosticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!kDebugMode) {
+    if (!AppConfig.diagnosticsEnabled) {
       // Unreachable through any of the normal entry points — the router only
-      // registers this route in debug — but this screen must not do anything
-      // useful if it is ever pushed some other way.
+      // registers this route when the same flag is set — but this screen must
+      // not do anything useful if it is ever pushed some other way.
       return const Scaffold(
         body: Center(child: Text('Not available in this build.')),
       );
@@ -687,6 +723,26 @@ class _AuthDiagnosticsScreenState extends State<AuthDiagnosticsScreen> {
             subtitle: 'Read from this build directly — no probe needed.',
           ),
           _CheckCard(lines: configLines),
+
+          // TEMPORARY — the Play Store sign-in investigation. Remove with the
+          // rest of `PW-SIGN`.
+          //
+          // Its own section, with each fingerprint on its own copy button,
+          // because the fingerprints are the one reading here that has to be
+          // transcribed *out* of the app and into Google Cloud Console — and
+          // the device under test has not been reachable over adb, so reading
+          // them off the screen is the only route they have.
+          const SizedBox(height: AppSpacing.xxl),
+          const SectionHeader(
+            title: 'App signing certificate',
+            subtitle:
+                'The keys this installed package is actually signed with. On a '
+                'Play build these are Play App Signing\'s keys, not the upload '
+                'key — which is why they can only be read from the device. '
+                'Each one needs its own Android OAuth client, or Google answers '
+                'UNREGISTERED_ON_API_CONSOLE.',
+          ),
+          _SigningCertificateCard(certificates: _signing),
 
           const SizedBox(height: AppSpacing.xxl),
           const SectionHeader(
@@ -869,6 +925,75 @@ class _CheckRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// TEMPORARY — the Play Store sign-in investigation. Remove with the rest of
+/// `PW-SIGN`.
+///
+/// Every signer on the installed package, each digest on its own copy button.
+/// Deliberately not a [_CheckRow]: these are readings to be transcribed, not
+/// checks to be passed, and nothing on this side of the upload knows which of
+/// them Google Cloud Console has been told about.
+class _SigningCertificateCard extends StatelessWidget {
+  const _SigningCertificateCard({required this.certificates});
+
+  final SigningCertificates? certificates;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final result = certificates;
+
+    final Widget body;
+    if (result == null) {
+      body = Text('Reading…', style: theme.textTheme.bodySmall);
+    } else if (!result.isAvailable) {
+      body = Text(
+        result.error ?? 'No signing certificates came back.',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: _Status.warn.color(theme.colorScheme),
+        ),
+      );
+    } else {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < result.sha1.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.md),
+            // Numbered even when there is only one: "1 of 1" answers a
+            // question that a bare fingerprint leaves open, and how many
+            // signers reach the device is itself part of the finding.
+            Text(
+              'Signer ${i + 1} of ${result.signerCount}',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text('SHA-1', style: theme.textTheme.bodySmall),
+            _CommandBlock(command: result.sha1[i]),
+            if (i < result.sha256.length) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              Text('SHA-256', style: theme.textTheme.bodySmall),
+              _CommandBlock(command: result.sha256[i]),
+            ],
+          ],
+        ],
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: body,
     );
   }
 }

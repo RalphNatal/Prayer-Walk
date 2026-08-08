@@ -11,6 +11,8 @@ import 'src/core/diagnostics/schema_preflight.dart';
 import 'src/core/theme/app_typography.dart';
 import 'src/core/utils/app_haptics.dart';
 import 'src/core/utils/app_logger.dart';
+// Temporary — see [_logSigningCertificates].
+import 'src/features/auth/data/signing_certificate.dart';
 import 'src/features/scripture/domain/bible_translation.dart';
 import 'src/features/scripture/presentation/scripture_credits.dart';
 
@@ -64,6 +66,17 @@ void main() {
         return true;
       };
 
+      // TEMPORARY DIAGNOSTIC SCAFFOLDING — remove with the rest of `PW-SIGN`
+      // once the Play Store sign-in failure is resolved.
+      //
+      // Deliberately before [AppConfig.validate]: the fingerprint is worth
+      // having even from a build whose config is broken enough to fail
+      // validation and never reach the sign-in screen at all. It cannot
+      // prevent startup — [readSigningCertificates] does not throw — and the
+      // only delay it adds is one platform-channel round trip, on builds that
+      // asked for it.
+      if (AppConfig.diagnosticsEnabled) await _logSigningCertificates();
+
       try {
         // Everything runtime-configurable comes from env.json via
         // `--dart-define-from-file=env.json`. Validate first so a missing define
@@ -94,6 +107,31 @@ void main() {
     },
     (error, stackTrace) => AppLogger.fatal('runZonedGuarded', error, stackTrace),
   );
+}
+
+/// TEMPORARY DIAGNOSTIC SCAFFOLDING — remove once the Play Store Google
+/// sign-in failure is resolved.
+///
+/// Puts the installed package's signing fingerprints in the log, so a build
+/// that can reach `adb logcat` needs no further interaction to answer the
+/// question. The screen is the real deliverable — the device under test has
+/// not been reachable over adb — but a log line costs nothing and, unlike the
+/// screen, it lands before anything else can go wrong.
+///
+/// The level is chosen rather than fixed: [AppLogger] drops debug/info/warn in
+/// release (see `AppLogger._write`), and this diagnostic exists *for* a release
+/// build, so in release it goes out at `error` — the wrong severity, but the
+/// only one that reaches logcat at all. The tag says what it really is.
+Future<void> _logSigningCertificates() async {
+  final certificates = await readSigningCertificates();
+  final message = 'installed signing certificate(s): ${certificates.describe()}';
+  if (!kDebugMode) {
+    AppLogger.error(signingCertificateTag, message);
+  } else if (certificates.isAvailable) {
+    AppLogger.info(signingCertificateTag, message);
+  } else {
+    AppLogger.warn(signingCertificateTag, message);
+  }
 }
 
 /// A deliberately plain, dependency-free screen shown when startup fails.

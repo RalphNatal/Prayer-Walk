@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 /// Runtime configuration, read from `--dart-define`s at build time.
 ///
 /// Every value comes from the environment via [String.fromEnvironment], which
@@ -86,6 +88,19 @@ abstract final class AppConfig {
   ///
   /// Set with `--dart-define=PW_BUILD_LABEL=internal`.
   static const buildLabel = String.fromEnvironment('PW_BUILD_LABEL');
+
+  /// Whether the Google sign-in diagnostics screen is reachable.
+  ///
+  /// Always on in debug. In release it is off unless explicitly requested with
+  /// `--dart-define=PW_ENABLE_DIAGNOSTICS=true`, so an internal testing build
+  /// can carry the diagnostic that a store build must not ship.
+  ///
+  /// This exists because the sign-in failure being chased only happens in a
+  /// Play-distributed release build — which, gated on `kDebugMode`, was
+  /// precisely the build with no diagnostic in it. Off by default, so nothing
+  /// changes for a store build unless someone asks for it on the command line.
+  static const diagnosticsEnabled =
+      kDebugMode || bool.fromEnvironment('PW_ENABLE_DIAGNOSTICS');
 
   /// Throws a [StateError] naming **every** missing key at once if any required
   /// compile-time value is absent.
