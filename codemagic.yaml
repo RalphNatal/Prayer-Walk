@@ -1,0 +1,20 @@
+workflows:
+  ios-smoke:
+    name: iOS unsigned smoke build
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: 3.44.8
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Flutter dependencies
+        working_directory: prayer_walk
+        script: flutter pub get
+      - name: Build unsigned iOS
+        working_directory: prayer_walk
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - prayer_walk/ios/Podfile
+      - prayer_walk/ios/Podfile.lock
+      - prayer_walk/build/ios/iphoneos/*.app
