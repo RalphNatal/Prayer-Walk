@@ -24,6 +24,11 @@
 		<string>????</string>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<!-- The app talks to its backend over standard HTTPS and ships no
+	     encryption of its own, which is exempt from export compliance.
+	     Declaring it here stops App Store Connect asking on every upload. -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<!-- RECORDING IN A POCKET
@@ -134,8 +139,12 @@
 				     of env.json's GOOGLE_IOS_CLIENT_ID). -->
 					<string>com.googleusercontent.apps.406468739083-r1bbd8lsetaa4rk3pqnda7jafstk6h90</string>
 					<!-- Supabase deep link for email confirmation / password reset.
-				     Equals the bundle id; must match the Supabase Redirect URL
-				     com.calledpresentations.prayer_walk://login-callback -->
+				     The underscore is deliberate. This scheme is *not* the bundle
+				     id — that is com.calledpresentations.prayerwalk, because Apple
+				     forbids underscores in bundle ids. It must stay exactly as
+				     written to match the Supabase Redirect URL
+				     com.calledpresentations.prayer_walk://login-callback, so do
+				     not "fix" it to line up with the bundle id. -->
 					<string>com.calledpresentations.prayer_walk</string>
 				</array>
 			</dict>
