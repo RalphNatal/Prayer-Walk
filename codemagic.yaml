@@ -18,7 +18,7 @@ workflows:
       - prayer_walk/ios/Podfile
       - prayer_walk/ios/Podfile.lock
       - prayer_walk/build/ios/iphoneos/*.app
-      
+
   ios-sim:
     name: iOS simulator for screenshots
     instance_type: mac_mini_m2
@@ -53,3 +53,71 @@ workflows:
       - name: Build for simulator
         working_directory: prayer_walk
         script: flutter build ios --debug --simulator --dart-define-from-file=env.json
+
+  ios-release:
+    name: iOS TestFlight release
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    integrations:
+      app_store_connect: prayer_walk_appstore
+    environment:
+      flutter: 3.44.8
+      xcode: latest
+      cocoapods: default
+      groups:
+        - prayer_walk_env
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.calledpresentations.prayerwalk
+    scripts:
+      - name: Write env.json
+        working_directory: prayer_walk
+        script: |
+          cat > env.json <<EOF
+          {
+            "SUPABASE_URL": "$SUPABASE_URL",
+            "SUPABASE_PUBLISHABLE_KEY": "$SUPABASE_PUBLISHABLE_KEY",
+            "GOOGLE_WEB_CLIENT_ID": "$GOOGLE_WEB_CLIENT_ID",
+            "GOOGLE_IOS_CLIENT_ID": "$GOOGLE_IOS_CLIENT_ID",
+            "MAPBOX_ACCESS_TOKEN": "$MAPBOX_ACCESS_TOKEN",
+            "SCRIPTURE_TRANSLATION": "$SCRIPTURE_TRANSLATION"
+          }
+          EOF
+      - name: Verify env.json
+        working_directory: prayer_walk
+        script: |
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open('env.json'))
+          print({k: ('SET' if v else 'EMPTY') for k, v in d.items()})
+          t = d.get('SCRIPTURE_TRANSLATION') or 'WEBBE (defaulted)'
+          print(f'SCRIPTURE_TRANSLATION = {t}')
+          if not d.get('MAPBOX_ACCESS_TOKEN'):
+              sys.exit('MAPBOX_ACCESS_TOKEN is empty — the build would fall back '
+                       'to OSM tiles, which are not licensed for app traffic.')
+          PY
+      - name: Flutter dependencies
+        working_directory: prayer_walk
+        script: flutter pub get
+      - name: Analyze
+        working_directory: prayer_walk
+        script: flutter analyze
+      - name: Test
+        working_directory: prayer_walk
+        script: flutter test
+      - name: Set up code signing
+        working_directory: prayer_walk
+        script: xcode-project use-profiles
+      - name: Build IPA
+        working_directory: prayer_walk
+        script: |
+          flutter build ipa --release \
+            --dart-define-from-file=env.json \
+            --export-options-plist=$HOME/export_options.plist
+    artifacts:
+      - prayer_walk/build/ios/ipa/*.ipa
+      - prayer_walk/build/ios/ipa/*.app.dSYM.zip
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
