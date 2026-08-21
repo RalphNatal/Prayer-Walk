@@ -56,3 +56,6 @@ supabase/.temp/
 android/key.properties
 *.jks
 *.keystore
+
+# Apple App Store Connect API key — uploaded to CI, never committed.
+*.p8

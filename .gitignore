@@ -1,0 +1,5 @@
+# Apple App Store Connect API key — uploaded to CI, never committed.
+*.p8
+
+# Claude Code scratch worktrees.
+.claude/worktrees/
