@@ -67,10 +67,6 @@ workflows:
       groups:
         - prayer_walk_env
       ios_signing:
-        provisioning_profiles:
-          - auto
-        certificates:
-          - auto
         distribution_type: app_store
         bundle_identifier: com.calledpresentations.prayerwalk
     scripts:
