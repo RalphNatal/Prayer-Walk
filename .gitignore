@@ -3,3 +3,10 @@
 
 # Claude Code scratch worktrees.
 .claude/worktrees/
+
+# iOS signing material — private keys and certificates, never committed.
+*.key
+*.csr
+*.cer
+*.p12
+*.mobileprovision

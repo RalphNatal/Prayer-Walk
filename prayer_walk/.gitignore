@@ -59,3 +59,10 @@ android/key.properties
 
 # Apple App Store Connect API key — uploaded to CI, never committed.
 *.p8
+
+# iOS signing material — private keys and certificates, never committed.
+*.key
+*.csr
+*.cer
+*.p12
+*.mobileprovision
