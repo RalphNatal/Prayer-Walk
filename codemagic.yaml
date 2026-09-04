@@ -67,8 +67,10 @@ workflows:
       groups:
         - prayer_walk_env
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.calledpresentations.prayerwalk
+        provisioning_profiles:
+          - prayer_walk_app_store
+        certificates:
+          - prayer_walk_distribution
     scripts:
       - name: Write env.json
         working_directory: prayer_walk
