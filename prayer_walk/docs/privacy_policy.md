@@ -1,15 +1,6 @@
 # Prayer Walk — Privacy Policy
 
-> **⚠️ DRAFT — this document has not been reviewed by a lawyer.** It is
-> written directly from the app's actual code and database schema so that
-> nothing here is generic boilerplate, but a draft written by an engineer is
-> not legal advice and must not be published as-is. Have it reviewed before
-> it is hosted anywhere a store listing links to.
->
-> Wherever you see **[MAINTAINER: ...]**, that is a value this document
-> cannot know from the codebase alone — fill it in before publishing.
-
-**Last updated:** [MAINTAINER: date of publication]
+**Last updated:** 29 September 2026
 
 ## Who this is
 
@@ -18,8 +9,9 @@ gratitude — and, if you choose, sharing them with people who follow you or
 with the wider community of members. This policy explains what the app
 collects, why, where it lives, who can see it, and how to have it deleted.
 
-**Contact:** [MAINTAINER: a real email address or postal address a member or
-a regulator can reach you at]
+Prayer Walk is published by CALLED Presentations.
+
+**Contact:** calledpresentations@gmail.com
 
 ## What is collected, and why
 
@@ -95,16 +87,14 @@ roughly a 100-metre grid before the request is made.
 
 There is no advertising SDK and no analytics SDK anywhere in this app. There
 is no tracking of you across other apps or websites, and no data is sold or
-rented to anyone. See `docs/store_disclosures.md` for the complete,
-line-by-line accounting the app stores provide to their users.
+rented to anyone.
 
 ## Where your data is stored
 
 All of the data described above — your profile, your walks, your comments,
-your scripture history — is stored in [MAINTAINER: confirm your Supabase
-project's storage region from the Supabase dashboard, e.g. "a Supabase
-project hosted in the United States"], using Supabase (Supabase, Inc.) as the
-database and file storage provider. Your profile photo is stored in
+your scripture history — is stored in a Supabase project hosted in the
+United States (US West, Northern California), using Supabase (Supabase, Inc.)
+as the database and file storage provider. Your profile photo is stored in
 Supabase's file storage, in a bucket keyed to your account.
 
 ## Who can see what
@@ -147,11 +137,13 @@ Only the services this app actually integrates with, nothing more:
 
 ## Children's data
 
-Prayer Walk does not currently have an age gate or any age-verification step
-at sign-up. **[MAINTAINER: this is a real gap, not a stylistic omission —
-decide and state your actual policy here before publishing: a minimum age,
-how it's enforced if at all, and what happens if a report reveals a member is
-under that age.]**
+Prayer Walk is rated 13+ on the App Store and is not intended for children
+under 13. We do not knowingly collect personal information from anyone under
+13.
+
+If we become aware that a member is under 13, we will delete their account
+and the data associated with it. If you believe a child under 13 has created
+an account, contact us at calledpresentations@gmail.com and we will remove it.
 
 ## How long data is kept
 
@@ -181,11 +173,15 @@ before you delete.
 
 ## Changes to this policy
 
-**[MAINTAINER: state how you'll notify members of material changes — e.g. an
-in-app notice, or an updated "Last updated" date plus an email for
-significant changes.]**
+When this policy changes, we update the "Last updated" date at the top of
+this page. If a change materially affects how your data is collected, used,
+or shared, we will also show a notice inside the app before the change takes
+effect, so you see it without having to check this page.
 
 ## Contact
 
-**[MAINTAINER: your contact details, repeated here for the reader who
-skipped to the end.]**
+Questions about this policy, or requests about your data:
+
+**CALLED Presentations**
+Email: calledpresentations@gmail.com
+Web: https://calledpresentations.com
