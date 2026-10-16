@@ -92,7 +92,10 @@ abstract interface class ChurchGroupRepository {
 
   Future<ScripturePrompt> saveGroupPrompt(GroupScriptureDraft draft);
 
-  Future<void> setGroupPromptPublished(String promptId, {required bool published});
+  Future<void> setGroupPromptPublished(
+    String promptId, {
+    required bool published,
+  });
 
   Future<void> deleteGroupPrompt(String promptId);
 }

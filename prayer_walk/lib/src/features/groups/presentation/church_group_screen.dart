@@ -434,8 +434,10 @@ class _AdminPanel extends ConsumerWidget {
                 ? 'Roles, removals'
                 : '${Fmt.plural(pending, 'request')} waiting',
             highlight: pending > 0,
-            onTap: () =>
-                context.pushNamed(Routes.churchGroupMembers, pathParameters: path),
+            onTap: () => context.pushNamed(
+              Routes.churchGroupMembers,
+              pathParameters: path,
+            ),
           ),
           _AdminRow(
             icon: Icons.menu_book_outlined,
@@ -539,8 +541,12 @@ class _InviteCodeSheetState extends ConsumerState<_InviteCodeSheet> {
     if (!confirmed || !mounted) return;
     setState(() => _rotating = true);
     try {
-      await ref.read(churchGroupActionsProvider).rotateInviteCode(widget.group.id);
-      if (mounted) showAppSnackBar(context, 'New code made. The old one is off.');
+      await ref
+          .read(churchGroupActionsProvider)
+          .rotateInviteCode(widget.group.id);
+      if (mounted) {
+        showAppSnackBar(context, 'New code made. The old one is off.');
+      }
     } catch (error, stack) {
       if (mounted) {
         reportFailure(
@@ -813,7 +819,10 @@ class GroupPromptCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text(prompt.reference, style: theme.textTheme.titleSmall),
+                child: Text(
+                  prompt.reference,
+                  style: theme.textTheme.titleSmall,
+                ),
               ),
               ?trailing,
             ],

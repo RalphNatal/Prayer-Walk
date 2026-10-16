@@ -158,7 +158,8 @@ Map<String, String> groupScriptureErrors(GroupScriptureDraft draft) {
     errors['translation'] = 'Choose the translation this passage is from.';
   } else if (draft.kind == ScripturePromptKind.prayer &&
       draft.translation.isQuotation) {
-    errors['translation'] = "A prayer in your own words doesn't quote a "
+    errors['translation'] =
+        "A prayer in your own words doesn't quote a "
         'translation.';
   }
 

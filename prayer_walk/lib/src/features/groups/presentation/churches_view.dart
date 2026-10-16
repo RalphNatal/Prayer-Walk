@@ -131,7 +131,10 @@ class _Browse extends ConsumerWidget {
           errorFallback: "Your churches couldn't be loaded.",
           onRetry: () => ref.invalidate(myGroupsProvider),
           isEmpty: (items) => items.isEmpty,
-          loading: const RowListLoading(count: 2, leadingSize: AppSizes.avatarMd),
+          loading: const RowListLoading(
+            count: 2,
+            leadingSize: AppSizes.avatarMd,
+          ),
           empty: () => const _NoChurchYet(),
           data: (items) => Column(
             children: [
@@ -151,7 +154,10 @@ class _Browse extends ConsumerWidget {
           errorFallback: "Churches couldn't be loaded.",
           onRetry: () => ref.invalidate(listedGroupsProvider),
           isEmpty: (items) => items.isEmpty,
-          loading: const RowListLoading(count: 4, leadingSize: AppSizes.avatarMd),
+          loading: const RowListLoading(
+            count: 4,
+            leadingSize: AppSizes.avatarMd,
+          ),
           empty: () => EmptyState(
             compact: true,
             icon: Icons.church_outlined,

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:prayer_walk/src/core/theme/app_theme.dart';
 import 'package:prayer_walk/src/core/widgets/stat_tile.dart';
+import 'package:prayer_walk/src/core/widgets/skeletons.dart';
 import 'package:prayer_walk/src/features/activity/data/activity_providers.dart';
 import 'package:prayer_walk/src/features/activity/data/location_service.dart';
 import 'package:prayer_walk/src/features/activity/data/recording_controller.dart';
@@ -29,6 +30,13 @@ import 'package:prayer_walk/src/features/devotionals/domain/devotional.dart';
 import 'package:prayer_walk/src/features/discovery/data/discovery_providers.dart';
 import 'package:prayer_walk/src/features/discovery/domain/member_card.dart';
 import 'package:prayer_walk/src/features/discovery/presentation/discover_screen.dart';
+import 'package:prayer_walk/src/features/groups/data/church_group_providers.dart';
+import 'package:prayer_walk/src/features/groups/domain/church_group.dart';
+import 'package:prayer_walk/src/features/groups/presentation/church_group_form_screen.dart';
+import 'package:prayer_walk/src/features/groups/presentation/church_group_screen.dart';
+import 'package:prayer_walk/src/features/groups/presentation/group_members_screen.dart';
+import 'package:prayer_walk/src/features/groups/presentation/group_scripture_compose_screen.dart';
+import 'package:prayer_walk/src/features/groups/presentation/group_scripture_screen.dart';
 import 'package:prayer_walk/src/features/privacy/data/privacy_providers.dart';
 import 'package:prayer_walk/src/features/privacy/domain/privacy_zone.dart';
 import 'package:prayer_walk/src/features/privacy/presentation/privacy_zones_screen.dart';
@@ -201,8 +209,8 @@ class _StubActivityRepository implements ActivityRepository {
 
 /// The app shell every case is pumped inside: the real theme, and one text
 /// scale pinned for the whole tree.
-MaterialApp _app(Widget home, double scale) => MaterialApp(
-  theme: AppTheme.light(),
+MaterialApp _app(Widget home, double scale, {bool dark = false}) => MaterialApp(
+  theme: dark ? AppTheme.dark() : AppTheme.light(),
   builder: (context, inner) => MediaQuery.withClampedTextScaling(
     minScaleFactor: scale,
     maxScaleFactor: scale,
@@ -759,5 +767,126 @@ void main() {
       // bordered box.
       expect(find.textContaining('Licensed verses'), findsOneWidget);
     });
+  });
+
+  // ------------------------------------------------------- church groups ---
+  //
+  // Every group screen, at every width and scale, in both themes. The group
+  // name is long on purpose, and the roster carries a pending request so the
+  // members screen draws its widest row: name, handle, date and two buttons.
+  group('church groups', () {
+    const longName = 'Our Lady of Peace and Good Voyage International Shrine';
+    ChurchGroup church({GroupRole? role, MembershipStatus? status}) =>
+        ChurchGroup(
+          id: 'g-1',
+          name: longName,
+          slug: 'our-lady',
+          createdAt: DateTime(2026, 10, 1),
+          city: 'Antipolo City, Rizal',
+          description:
+              "We walk from the cathedral steps after the six o'clock Mass, "
+              'most weekdays, and on Saturdays up the old pilgrim road.',
+          joinPolicy: GroupJoinPolicy.request,
+          memberCount: 1284,
+          myRole: role,
+          myStatus: status,
+        );
+
+    GroupMember person(String id, String name, MembershipStatus status) =>
+        GroupMember(
+          profile: _profile().copyWith(displayName: name, handle: '@$id'),
+          role: GroupRole.member,
+          status: status,
+          joinedAt: DateTime(2026, 9, 1),
+        );
+
+    final admin = church(role: GroupRole.admin, status: MembershipStatus.active);
+    const prompt = ScripturePrompt(
+      id: 'p-1',
+      reference: 'Isaiah 40:31',
+      body:
+          'But those who wait for Yahweh will renew their strength. They '
+          'will mount up with wings like eagles.',
+      translation: 'WEBBE',
+      category: DevotionalCategory.stillness,
+      groupId: 'g-1',
+      groupName: longName,
+    );
+
+    final screens = <String, (Widget, ChurchGroup)>{
+      'the Churches tab': (
+        const DiscoverScreen(initialTab: DiscoverTab.churches),
+        admin,
+      ),
+      'a group page, to a visitor': (
+        const ChurchGroupScreen(groupId: 'g-1'),
+        church(),
+      ),
+      'a group page, to its admin': (
+        const ChurchGroupScreen(groupId: 'g-1'),
+        admin,
+      ),
+      'the start-a-group form': (const ChurchGroupFormScreen(), admin),
+      'the edit-group form': (
+        const ChurchGroupFormScreen(groupId: 'g-1'),
+        admin,
+      ),
+      'the members screen': (
+        const GroupMembersScreen(groupId: 'g-1'),
+        admin,
+      ),
+      'the group scripture list': (
+        const GroupScriptureScreen(groupId: 'g-1'),
+        admin,
+      ),
+      'the group scripture form': (
+        const GroupScriptureComposeScreen(groupId: 'g-1'),
+        admin,
+      ),
+    };
+
+    for (final MapEntry(key: name, value: (screen, seen)) in screens.entries) {
+      for (final dark in [false, true]) {
+        forEverySize(
+          '$name lays out without overflowing${dark ? ' (dark)' : ''}',
+          (tester, width, scale) async {
+            await pumpAt(
+              tester,
+              ProviderScope(
+                overrides: [
+                  churchGroupRepositoryProvider.overrideWithValue(
+                    FakeChurchGroupRepository(
+                      groups: [seen],
+                      roster: [
+                        person(
+                          'maria',
+                          'Maria Clara Reyes-Villanueva',
+                          MembershipStatus.active,
+                        ),
+                        person(
+                          'ben',
+                          'Benedicto Cruz Santos Jr',
+                          MembershipStatus.pending,
+                        ),
+                      ],
+                      prompts: [prompt],
+                    ),
+                  ),
+                  discoveryRepositoryProvider.overrideWithValue(
+                    const StubDiscoveryRepository(),
+                  ),
+                  currentAuthUserIdProvider.overrideWith((ref) => _viewerId),
+                ],
+                child: _app(screen, scale, dark: dark),
+              ),
+              width: width,
+            );
+            // Measured on the loaded screen, not on its skeleton — a layout
+            // test that only ever saw placeholder boxes would prove nothing.
+            expect(find.byType(ShimmerScope), findsNothing);
+          },
+        );
+      }
+    }
   });
 }

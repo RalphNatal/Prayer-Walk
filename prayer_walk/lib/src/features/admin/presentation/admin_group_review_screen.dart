@@ -7,7 +7,8 @@ import '../../../core/router/admin_shell.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../groups/data/church_group_providers.dart';
 import '../../groups/domain/church_group.dart';
-import '../../groups/presentation/church_group_screen.dart' show GroupPromptCard;
+import '../../groups/presentation/church_group_screen.dart'
+    show GroupPromptCard;
 import '../../groups/presentation/widgets/church_group_tile.dart';
 import '../../groups/presentation/widgets/group_avatar.dart';
 import '../../scripture/domain/scripture_prompt.dart';
@@ -116,9 +117,7 @@ class AdminGroupReviewScreen extends ConsumerWidget {
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.xs,
               children: [
-                StatusPill(
-                  label: loaded.isDiscoverable ? 'Listed' : 'Hidden',
-                ),
+                StatusPill(label: loaded.isDiscoverable ? 'Listed' : 'Hidden'),
                 StatusPill(label: loaded.joinPolicy.label),
               ],
             ),

@@ -190,9 +190,7 @@ class _GroupScriptureComposeScreenState
     final isScripture = _kind == ScripturePromptKind.scripture;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit' : 'Share scripture'),
-      ),
+      appBar: AppBar(title: Text(_isEdit ? 'Edit' : 'Share scripture')),
       body: ListView(
         padding: AppSpacing.listBody,
         children: [
@@ -378,65 +376,70 @@ class _RightsNotice extends StatelessWidget {
     final theme = Theme.of(context);
     final hasError = error != null;
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
+    // A Material rather than a decorated Container: the checkbox row paints
+    // its ink on the nearest Material, and under a coloured box the ripple
+    // that confirms the tap would be drawn beneath the colour and never seen.
+    return Material(
+      color: theme.colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
         borderRadius: AppRadius.control,
-        border: Border.all(
+        side: BorderSide(
           color: hasError
               ? theme.colorScheme.error
               : theme.colorScheme.outlineVariant,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.verified_user_outlined,
-                size: 20,
-                color: theme.colorScheme.secondary,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'Your right to share this',
-                  style: theme.textTheme.titleSmall,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  size: 20,
+                  color: theme.colorScheme.secondary,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Your right to share this',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Most modern Bible translations are copyrighted, and so is '
+              "someone else's prayer or reflection. Only share wording that is "
+              'in the public domain, or that you wrote or have permission to '
+              'share. Your name and the time are kept with what you share.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: confirmed,
+              onChanged: (value) => onChanged(value ?? false),
+              title: Text(
+                'I have the right to share this text.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Most modern Bible translations are copyrighted, and so is '
-            "someone else's prayer or reflection. Only share wording that is "
-            'in the public domain, or that you wrote or have permission to '
-            'share. Your name and the time are kept with what you share.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            value: confirmed,
-            onChanged: (value) => onChanged(value ?? false),
-            title: Text(
-              'I have the right to share this text.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
             ),
-          ),
-          if (hasError)
-            Text(
-              error!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
+            if (hasError)
+              Text(
+                error!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

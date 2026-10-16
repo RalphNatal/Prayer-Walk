@@ -142,19 +142,15 @@ class ChurchGroupActions {
     _afterMembershipChange(groupId);
   }
 
-  Future<void> approve(String groupId, String userId) =>
-      _memberChange(groupId, () => _repo.setMemberStatus(
-            groupId,
-            userId,
-            MembershipStatus.active,
-          ));
+  Future<void> approve(String groupId, String userId) => _memberChange(
+    groupId,
+    () => _repo.setMemberStatus(groupId, userId, MembershipStatus.active),
+  );
 
-  Future<void> ban(String groupId, String userId) =>
-      _memberChange(groupId, () => _repo.setMemberStatus(
-            groupId,
-            userId,
-            MembershipStatus.banned,
-          ));
+  Future<void> ban(String groupId, String userId) => _memberChange(
+    groupId,
+    () => _repo.setMemberStatus(groupId, userId, MembershipStatus.banned),
+  );
 
   Future<void> setRole(String groupId, String userId, GroupRole role) =>
       _memberChange(groupId, () => _repo.setMemberRole(groupId, userId, role));

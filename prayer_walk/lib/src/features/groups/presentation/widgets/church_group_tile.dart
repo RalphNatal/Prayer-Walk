@@ -95,9 +95,9 @@ class MembershipBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: foreground,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: foreground),
       ),
     );
   }
@@ -135,7 +135,10 @@ class ChurchGroupPageSkeleton extends StatelessWidget {
                 SizedBox(height: AppSpacing.sm),
                 SkeletonBox.line(width: 160),
                 SizedBox(height: AppSpacing.xl),
-                SkeletonBox(height: AppSizes.minTapTarget, radius: AppRadius.md),
+                SkeletonBox(
+                  height: AppSizes.minTapTarget,
+                  radius: AppRadius.md,
+                ),
                 SizedBox(height: AppSpacing.xl),
                 SkeletonBox.line(),
                 SizedBox(height: AppSpacing.sm),

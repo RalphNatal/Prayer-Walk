@@ -79,10 +79,7 @@ Future<AvatarUpload> prepareAvatar(Uint8List raw) =>
 /// directly and read the bytes that come out.
 @visibleForTesting
 AvatarUpload prepareAvatarSync(Uint8List raw) {
-  final decoded = img.decodeImage(raw);
-  if (decoded == null) {
-    throw const AvatarImageFailure("That file isn't an image we can read.");
-  }
+  final decoded = _decode(raw);
 
   // Before anything measures width or height: an orientation tag can mean the
   // stored pixels are 90° from how the photo looks in the camera roll, and
@@ -112,6 +109,25 @@ AvatarUpload prepareAvatarSync(Uint8List raw) {
   }
   // Unreachable: the loop returns on its last iteration whatever the size.
   throw StateError('quality ladder exhausted without encoding');
+}
+
+/// [raw] decoded, or an [AvatarImageFailure] in words.
+///
+/// `decodeImage` returns null for most bytes it does not recognise, but throws
+/// for some malformed ones — a truncated file can surface as a `RangeError`
+/// from deep inside a decoder. Either way the person holding the phone gets
+/// the same sentence rather than an exception they cannot act on.
+img.Image _decode(Uint8List raw) {
+  img.Image? decoded;
+  try {
+    decoded = img.decodeImage(raw);
+  } catch (_) {
+    decoded = null;
+  }
+  if (decoded == null) {
+    throw const AvatarImageFailure("That file isn't an image we can read.");
+  }
+  return decoded;
 }
 
 /// The square this app keeps out of a rectangular photo.
@@ -187,10 +203,7 @@ Future<CoverUpload> prepareCover(Uint8List raw) =>
 /// The cover pipeline, synchronous so a test can read what comes out.
 @visibleForTesting
 CoverUpload prepareCoverSync(Uint8List raw) {
-  final decoded = img.decodeImage(raw);
-  if (decoded == null) {
-    throw const AvatarImageFailure("That file isn't an image we can read.");
-  }
+  final decoded = _decode(raw);
 
   final upright = img.bakeOrientation(decoded);
   final banner = _bannerCrop(upright);

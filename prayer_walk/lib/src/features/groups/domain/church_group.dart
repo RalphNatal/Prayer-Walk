@@ -161,7 +161,9 @@ class ChurchGroup {
       avatarUrl: identical(avatarUrl, _keep)
           ? this.avatarUrl
           : avatarUrl as String?,
-      coverUrl: identical(coverUrl, _keep) ? this.coverUrl : coverUrl as String?,
+      coverUrl: identical(coverUrl, _keep)
+          ? this.coverUrl
+          : coverUrl as String?,
       isDiscoverable: isDiscoverable ?? this.isDiscoverable,
       joinPolicy: joinPolicy ?? this.joinPolicy,
       memberCount: memberCount ?? this.memberCount,
@@ -194,5 +196,6 @@ class GroupMember {
   /// rule promotes in when a group loses its last admin.
   final DateTime joinedAt;
 
-  bool get isAdmin => role == GroupRole.admin && status == MembershipStatus.active;
+  bool get isAdmin =>
+      role == GroupRole.admin && status == MembershipStatus.active;
 }

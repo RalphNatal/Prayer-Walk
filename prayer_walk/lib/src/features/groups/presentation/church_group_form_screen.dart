@@ -130,7 +130,10 @@ class _ChurchGroupFormScreenState extends ConsumerState<ChurchGroupFormScreen> {
       // doorstep carries the doorstep.
       if (cover) {
         final prepared = await prepareCover(raw);
-        AppLogger.info(_tag, 'cover prepared: ${prepared.sizeBytes ~/ 1024} KB');
+        AppLogger.info(
+          _tag,
+          'cover prepared: ${prepared.sizeBytes ~/ 1024} KB',
+        );
         await repo.uploadCover(groupId, prepared);
       } else {
         final prepared = await prepareAvatar(raw);
@@ -143,7 +146,12 @@ class _ChurchGroupFormScreenState extends ConsumerState<ChurchGroupFormScreen> {
         showAppSnackBar(context, cover ? 'Cover updated.' : 'Picture updated.');
       }
     } on AvatarImageFailure catch (failure, stack) {
-      AppLogger.warn(_tag, 'group image pick: ${failure.message}', failure, stack);
+      AppLogger.warn(
+        _tag,
+        'group image pick: ${failure.message}',
+        failure,
+        stack,
+      );
       if (mounted) {
         showAppSnackBar(
           context,
@@ -273,7 +281,8 @@ class _ChurchGroupFormScreenState extends ConsumerState<ChurchGroupFormScreen> {
               decoration: const InputDecoration(
                 labelText: 'Town or city (optional)',
                 hintText: 'Antipolo, Rizal',
-                helperText: 'Helps people tell your church from others of the '
+                helperText:
+                    'Helps people tell your church from others of the '
                     'same name.',
                 helperMaxLines: 2,
                 counterText: '',
@@ -321,7 +330,10 @@ class _ChurchGroupFormScreenState extends ConsumerState<ChurchGroupFormScreen> {
             const SizedBox(height: AppSpacing.sm),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: Text('Listed in Discover', style: theme.textTheme.titleSmall),
+              title: Text(
+                'Listed in Discover',
+                style: theme.textTheme.titleSmall,
+              ),
               subtitle: Text(
                 _discoverable
                     ? 'Anyone can find this group by name or town.'

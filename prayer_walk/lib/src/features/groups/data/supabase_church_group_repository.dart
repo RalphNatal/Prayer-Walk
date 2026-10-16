@@ -90,10 +90,7 @@ class SupabaseChurchGroupRepository implements ChurchGroupRepository {
   @override
   Future<List<GroupMember>> roster(String groupId) async {
     final rows =
-        await supabase.rpc(
-              'church_group_roster',
-              params: {'group_id': groupId},
-            )
+        await supabase.rpc('church_group_roster', params: {'group_id': groupId})
             as List<dynamic>;
     return groupMembersFromRows(rows);
   }
@@ -199,7 +196,10 @@ class SupabaseChurchGroupRepository implements ChurchGroupRepository {
   }
 
   @override
-  Future<ChurchGroup> updateGroup(String groupId, ChurchGroupDraft draft) async {
+  Future<ChurchGroup> updateGroup(
+    String groupId,
+    ChurchGroupDraft draft,
+  ) async {
     final rows = await supabase
         .from('church_groups')
         .update({
@@ -275,7 +275,12 @@ class SupabaseChurchGroupRepository implements ChurchGroupRepository {
       try {
         await supabase.storage.from(_bucket).remove([oldKey]);
       } catch (error, stack) {
-        AppLogger.warn(_tag, 'orphaned group image left: $oldKey', error, stack);
+        AppLogger.warn(
+          _tag,
+          'orphaned group image left: $oldKey',
+          error,
+          stack,
+        );
       }
     }
     return groupById(groupId);

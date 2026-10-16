@@ -128,14 +128,15 @@ class _ManagedPrompt extends ConsumerWidget {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Delete "${prompt.reference}"?',
-      message:
-          'It stops reaching members on their walks and is gone for good.',
+      message: 'It stops reaching members on their walks and is gone for good.',
       confirmLabel: 'Delete',
       destructive: true,
     );
     if (!confirmed || !context.mounted) return;
     try {
-      await ref.read(churchGroupActionsProvider).deletePrompt(groupId, prompt.id);
+      await ref
+          .read(churchGroupActionsProvider)
+          .deletePrompt(groupId, prompt.id);
       if (context.mounted) showAppSnackBar(context, 'Deleted.');
     } catch (error, stack) {
       if (context.mounted) {
@@ -178,9 +179,7 @@ class _ManagedPrompt extends ConsumerWidget {
           ),
         ),
         SwitchListTile.adaptive(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xs,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
           title: Text(
             prompt.isPublished ? 'Live' : 'Draft',
             style: theme.textTheme.titleSmall,

@@ -1,3 +1,4 @@
+import 'package:prayer_walk/src/core/utils/app_exception.dart';
 import 'package:prayer_walk/src/features/admin/domain/admin_models.dart';
 import 'package:prayer_walk/src/features/admin/domain/admin_repository.dart';
 import 'package:prayer_walk/src/features/devotionals/domain/devotional.dart';
@@ -6,7 +7,11 @@ import 'package:prayer_walk/src/features/discovery/domain/discovery_repository.d
 import 'package:prayer_walk/src/features/discovery/domain/member_card.dart';
 import 'package:prayer_walk/src/features/feed/domain/feed_entry.dart';
 import 'package:prayer_walk/src/features/feed/domain/feed_repository.dart';
+import 'package:prayer_walk/src/features/groups/domain/church_group.dart';
+import 'package:prayer_walk/src/features/groups/domain/church_group_fields.dart';
+import 'package:prayer_walk/src/features/groups/domain/church_group_repository.dart';
 import 'package:prayer_walk/src/features/privacy/domain/activity_visibility.dart';
+import 'package:prayer_walk/src/features/profile/data/avatar_image.dart' show CoverUpload;
 import 'package:prayer_walk/src/features/privacy/domain/privacy_repository.dart';
 import 'package:prayer_walk/src/features/privacy/domain/privacy_zone.dart';
 import 'package:prayer_walk/src/features/profile/domain/profile_fields.dart';
@@ -576,4 +581,205 @@ class StubDiscoveryRepository implements DiscoveryRepository {
   @override
   Future<List<MemberCard>> suggestedMembers({int limit = 8}) async =>
       suggestions;
+}
+
+/// Church groups in memory, enough for every group screen to render its
+/// states and for a test to see that a join or an approval went through.
+///
+/// The authorisation rules are not modelled here and must not be: they are
+/// the database's, and `supabase/tests/database/church_groups.test.sql` holds
+/// them. This only answers the shapes the screens draw.
+class FakeChurchGroupRepository implements ChurchGroupRepository {
+  FakeChurchGroupRepository({
+    List<ChurchGroup>? groups,
+    List<GroupMember>? roster,
+    List<ScripturePrompt>? prompts,
+    this.inviteCodeValue = '7F3A91C20B4E',
+  }) : groups = [...?groups],
+       rosterRows = [...?roster],
+       promptRows = [...?prompts];
+
+  final List<ChurchGroup> groups;
+  final List<GroupMember> rosterRows;
+  final List<ScripturePrompt> promptRows;
+  final String? inviteCodeValue;
+
+  final List<String> joined = [];
+  final List<String> left = [];
+  final List<(String, String, MembershipStatus)> statusChanges = [];
+  final List<GroupScriptureDraft> savedPrompts = [];
+
+  ChurchGroup _find(String id) => groups.firstWhere(
+    (g) => g.id == id,
+    orElse: () => throw AppException.notFound,
+  );
+
+  void _replace(ChurchGroup group) {
+    final i = groups.indexWhere((g) => g.id == group.id);
+    if (i >= 0) groups[i] = group;
+  }
+
+  @override
+  Future<List<ChurchGroup>> searchGroups(String query, {int limit = 30}) async {
+    final q = query.trim().toLowerCase();
+    return [
+      for (final g in groups)
+        if (g.isDiscoverable &&
+            (q.isEmpty ||
+                g.name.toLowerCase().contains(q) ||
+                g.city.toLowerCase().contains(q)))
+          g,
+    ];
+  }
+
+  @override
+  Future<List<ChurchGroup>> myGroups() async => [
+    for (final g in groups)
+      if (g.isMember || g.isPending) g,
+  ];
+
+  @override
+  Future<ChurchGroup> groupById(String id) async => _find(id);
+
+  @override
+  Future<List<ChurchGroup>> groupsForMember(String userId) async => [
+    for (final g in groups)
+      if (g.isMember) g,
+  ];
+
+  @override
+  Future<List<GroupMember>> roster(String groupId) async => rosterRows;
+
+  @override
+  Future<ChurchGroup> join(ChurchGroup group) async {
+    joined.add(group.id);
+    final updated = group.copyWith(
+      myRole: GroupRole.member,
+      myStatus: group.joinPolicy == GroupJoinPolicy.open
+          ? MembershipStatus.active
+          : MembershipStatus.pending,
+      memberCount: group.joinPolicy == GroupJoinPolicy.open
+          ? group.memberCount + 1
+          : group.memberCount,
+    );
+    _replace(updated);
+    return updated;
+  }
+
+  @override
+  Future<void> leave(String groupId) async {
+    left.add(groupId);
+    _replace(_find(groupId).copyWith(myRole: null, myStatus: null));
+  }
+
+  @override
+  Future<ChurchGroup?> previewByCode(String code) async =>
+      normaliseInviteCode(code) == inviteCodeValue ? groups.first : null;
+
+  @override
+  Future<ChurchGroup> joinWithCode(String code) async {
+    final group = await previewByCode(code);
+    if (group == null) throw const AppException("That code doesn't match.");
+    return join(group);
+  }
+
+  @override
+  Future<ChurchGroup> createGroup(ChurchGroupDraft draft) async {
+    final group = ChurchGroup(
+      id: 'g-new-${groups.length}',
+      name: draft.name.trim(),
+      slug: 'new',
+      createdAt: DateTime(2026, 10, 16),
+      city: draft.city,
+      description: draft.description,
+      isDiscoverable: draft.isDiscoverable,
+      joinPolicy: draft.joinPolicy,
+      memberCount: 1,
+      myRole: GroupRole.admin,
+      myStatus: MembershipStatus.active,
+    );
+    groups.add(group);
+    return group;
+  }
+
+  @override
+  Future<ChurchGroup> updateGroup(String groupId, ChurchGroupDraft draft) async {
+    final updated = _find(groupId).copyWith(
+      name: draft.name,
+      city: draft.city,
+      description: draft.description,
+      isDiscoverable: draft.isDiscoverable,
+      joinPolicy: draft.joinPolicy,
+    );
+    _replace(updated);
+    return updated;
+  }
+
+  @override
+  Future<void> deleteGroup(String groupId) async =>
+      groups.removeWhere((g) => g.id == groupId);
+
+  @override
+  Future<ChurchGroup> uploadAvatar(String groupId, AvatarUpload upload) async =>
+      _find(groupId);
+
+  @override
+  Future<ChurchGroup> uploadCover(String groupId, CoverUpload upload) async =>
+      _find(groupId);
+
+  @override
+  Future<String?> inviteCode(String groupId) async => inviteCodeValue;
+
+  @override
+  Future<String> rotateInviteCode(String groupId) async => 'AAAABBBBCCCC';
+
+  @override
+  Future<void> setMemberStatus(
+    String groupId,
+    String userId,
+    MembershipStatus status,
+  ) async => statusChanges.add((groupId, userId, status));
+
+  @override
+  Future<void> setMemberRole(
+    String groupId,
+    String userId,
+    GroupRole role,
+  ) async {}
+
+  @override
+  Future<void> removeMember(String groupId, String userId) async {}
+
+  @override
+  Future<List<ScripturePrompt>> groupPrompts(String groupId) async => [
+    for (final p in promptRows)
+      if (p.groupId == groupId) p,
+  ];
+
+  @override
+  Future<ScripturePrompt> saveGroupPrompt(GroupScriptureDraft draft) async {
+    savedPrompts.add(draft);
+    final saved = ScripturePrompt(
+      id: draft.id ?? 'p-new-${promptRows.length}',
+      reference: draft.reference,
+      body: draft.body,
+      translation: draft.translation.id,
+      kind: draft.kind,
+      category: draft.category,
+      isPublished: draft.isPublished,
+      groupId: draft.groupId,
+    );
+    promptRows.add(saved);
+    return saved;
+  }
+
+  @override
+  Future<void> setGroupPromptPublished(
+    String promptId, {
+    required bool published,
+  }) async {}
+
+  @override
+  Future<void> deleteGroupPrompt(String promptId) async =>
+      promptRows.removeWhere((p) => p.id == promptId);
 }
