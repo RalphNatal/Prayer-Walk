@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show AuthException, OAut
 import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/supabase/supabase_client.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/widgets/widgets.dart';
 import '../data/signing_certificate.dart';
@@ -782,8 +783,14 @@ enum _Status {
   final String glyph;
 
   Color color(ColorScheme scheme) => switch (this) {
-    _Status.pass => Colors.green,
-    _Status.warn => Colors.amber.shade800,
+    // The status tokens the console's pills use, so a pass reads the same
+    // green in both themes and clears contrast on each.
+    _Status.pass => scheme.brightness == Brightness.light
+        ? AppColors.verdantLight
+        : AppColors.verdantDark,
+    _Status.warn => scheme.brightness == Brightness.light
+        ? AppColors.ochreLight
+        : AppColors.ochreDark,
     _Status.fail => scheme.error,
     _Status.unknown => scheme.onSurfaceVariant,
     _Status.checking => scheme.onSurfaceVariant,

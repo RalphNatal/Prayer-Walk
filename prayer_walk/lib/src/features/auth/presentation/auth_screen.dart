@@ -418,7 +418,9 @@ class _GoogleButton extends StatelessWidget {
       width: double.infinity,
       child: OutlinedButton(
         onPressed: busy ? null : onPressed,
-        style: OutlinedButton.styleFrom(minimumSize: const Size(0, 56)),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, AppSizes.largeButton),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

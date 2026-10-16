@@ -412,7 +412,7 @@ class _MiniActivityCard extends StatelessWidget {
                 height: 100,
                 strokeWidth: 3,
                 showGlow: false,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 semanticLabel: '${activity.title}, traced route',
               ),
               Padding(
