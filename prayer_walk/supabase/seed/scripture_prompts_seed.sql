@@ -40,7 +40,7 @@
 -- transcribed for this library rather than pulled programmatically from a
 -- source file. Public domain means nobody is owed a fee, not that a
 -- transcription error is acceptable in somebody's prayer. Diff this file
--- against https://ebible.org/webbe/ before seeding a parish, and treat any
+-- against https://ebible.org/webbe/ before seeding a production database, and treat any
 -- mismatch as this file being wrong.
 --
 -- Rows with kind = 'prayer' carry no translation: they are either ancient

@@ -35,7 +35,7 @@ enum SubmissionStatus {
 ///
 /// Tyndale permit up to 500 NLT verses without written permission. A curated
 /// admin set of about fifty sits comfortably inside that; an open submissions
-/// form does not, and a parish pasting NLT passages would pass the ceiling in a
+/// form does not, and a church pasting NLT passages would pass the ceiling in a
 /// season with nobody counting. So a member does not paste scripture.
 ///
 /// [reference] names a passage. [reflection] is the member's own prayer or
@@ -113,7 +113,7 @@ class ScriptureSubmissionDraft {
 /// approved submission renders its contributor beside the verse, alongside the
 /// translation mark the quotation already carries. Provenance is not decoration
 /// in a member-contributed library — it is half of what makes it read as a
-/// parish rather than as a content feed.
+/// church rather than as a content feed.
 class ScriptureSubmission {
   const ScriptureSubmission({
     required this.prompt,

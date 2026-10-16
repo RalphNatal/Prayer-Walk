@@ -89,7 +89,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               onSubmitted: (value) =>
                   ref.read(memberSearchQueryProvider.notifier).set(value),
               decoration: InputDecoration(
-                hintText: 'Name, handle or parish',
+                hintText: 'Name, handle or church',
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: searching
                     ? IconButton(
@@ -127,7 +127,7 @@ class _BeforeSearching extends StatelessWidget {
         const SuggestedMembersStrip(),
         const SizedBox(height: AppSpacing.xl),
         Text(
-          'Search by name, by handle, or by parish. People who have chosen to '
+          'Search by name, by handle, or by church. People who have chosen to '
           'walk publicly appear above.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,

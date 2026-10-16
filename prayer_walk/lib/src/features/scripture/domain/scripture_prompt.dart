@@ -60,11 +60,11 @@ class ScripturePrompt {
 
   /// C3 · Who proposed this, when a member did.
   ///
-  /// Empty for the admin-curated library, which is the parish speaking rather
+  /// Empty for the admin-curated library, which is the church speaking rather
   /// than a person and is not attributed to one. Present for anything that came
   /// through the submissions queue, and it keeps travelling: the arrival card
   /// on a walk credits the contributor beside the same quotation that carries
-  /// the translation mark. Losing provenance would turn a parish's own
+  /// the translation mark. Losing provenance would turn a church's own
   /// contributions back into anonymous content.
   final String contributorName;
 

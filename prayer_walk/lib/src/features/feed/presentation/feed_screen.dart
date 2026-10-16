@@ -17,7 +17,7 @@ import '../domain/feed_entry.dart';
 /// tab, walks from members who have chosen to share publicly.
 ///
 /// Following is the default and stays the default. Explore is the door out of
-/// an empty feed rather than the front page: a member's own parish comes first,
+/// an empty feed rather than the front page: a member's own church comes first,
 /// and a stream of strangers should be something they walk towards.
 class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
@@ -50,7 +50,7 @@ class FeedScreen extends ConsumerWidget {
       ),
       // The banner and the tabs sit outside the RefreshIndicator so they are
       // present on the empty and loading states too — the first thing a brand
-      // new member sees is an empty feed, which is exactly when a parish
+      // new member sees is an empty feed, which is exactly when a church
       // announcement matters most, and exactly when the way out of it does.
       body: Column(
         children: [
@@ -218,7 +218,7 @@ class _EmptyExplore extends StatelessWidget {
 /// worse problem, which was a table an admin wrote to that nobody could read.
 ///
 /// It renders nothing at all while loading, on failure, or when there is
-/// nothing addressed to this person. A parish broadcast is not worth a skeleton
+/// nothing addressed to this person. A church broadcast is not worth a skeleton
 /// or an error banner above someone's feed.
 class _AnnouncementBanner extends ConsumerWidget {
   const _AnnouncementBanner();

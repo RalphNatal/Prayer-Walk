@@ -54,7 +54,7 @@ class UserProfile {
     required this.accentIndex,
     this.avatarUrl,
     this.bio = '',
-    this.parish = '',
+    this.church = '',
     this.pronouns = '',
     this.location = '',
     this.links = '',
@@ -69,7 +69,7 @@ class UserProfile {
   /// Public handle, stored with the leading `@`.
   final String handle;
   final String bio;
-  final String parish;
+  final String church;
 
   /// Short, member-supplied: "she/her", "they/them". Public, like everything
   /// else on this row.
@@ -125,7 +125,7 @@ class UserProfile {
     String? displayName,
     String? handle,
     String? bio,
-    String? parish,
+    String? church,
     String? pronouns,
     String? location,
     String? links,
@@ -148,7 +148,7 @@ class UserProfile {
           ? this.avatarUrl
           : avatarUrl as String?,
       bio: bio ?? this.bio,
-      parish: parish ?? this.parish,
+      church: church ?? this.church,
       pronouns: pronouns ?? this.pronouns,
       location: location ?? this.location,
       links: links ?? this.links,

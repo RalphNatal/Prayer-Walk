@@ -80,6 +80,9 @@ final List<String> kMigrationOrder = <String>{
   // `scripture_prompts`, which already exists — so it names no new object and
   // would otherwise be missing from the order.
   '20260728110000_scripture_submissions.sql',
+  // Adds `profiles.church` beside the column it replaces, and the bridge that
+  // keeps them equal until 1.2 — a column and a trigger, no named object.
+  '20261016000000_parish_to_church.sql',
 }.toList()..sort();
 
 /// The migration that creates [object], or null if the name is not one of ours.

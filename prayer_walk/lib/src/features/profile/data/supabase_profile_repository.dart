@@ -64,24 +64,7 @@ class SupabaseProfileRepository implements ProfileRepository {
     try {
       await supabase
           .from('profiles')
-          .update({
-            // Clamped to the same lengths the columns declare, so a pasted
-            // paragraph lands as a short field rather than as a failed save.
-            // `role` and `status` are absent, and this map is the reason the
-            // app has never had cause to send them.
-            'full_name': clampField(edit.displayName, ProfileLimits.displayName),
-            'handle': canonicalHandle(edit.handle),
-            'bio': clampField(edit.bio, ProfileLimits.bio),
-            'parish': clampField(edit.parish, ProfileLimits.parish),
-            'pronouns': clampField(edit.pronouns, ProfileLimits.pronouns),
-            'location': clampField(edit.location, ProfileLimits.location),
-            // Normalised through the same validator the form used, not stored
-            // as typed: what goes in the column is what was actually checked.
-            // An unusable link is stored as empty rather than rejected — the
-            // form has already said so, and losing a name change over a typo in
-            // an optional field would be the wrong trade.
-            'links': profileLink(edit.links) ?? '',
-          })
+          .update(profileUpdatePayload(edit))
           .eq('id', id);
     } on PostgrestException catch (error) {
       // 23505 = unique_violation. `handle` is the only unique column the app
@@ -220,3 +203,28 @@ class SupabaseProfileRepository implements ProfileRepository {
     );
   }
 }
+
+/// The columns Edit profile writes, as they reach Postgres.
+///
+/// Top level rather than inline in [SupabaseProfileRepository.updateProfile] so
+/// the shape of a write can be held by a test without a database. The keys here
+/// and the names in [profileColumns] have to agree: a field renamed on one side
+/// only is a member's church quietly coming back empty.
+Map<String, Object> profileUpdatePayload(ProfileEdit edit) => {
+  // Clamped to the same lengths the columns declare, so a pasted paragraph
+  // lands as a short field rather than as a failed save. `role` and `status`
+  // are absent, and this map is the reason the app has never had cause to send
+  // them.
+  'full_name': clampField(edit.displayName, ProfileLimits.displayName),
+  'handle': canonicalHandle(edit.handle),
+  'bio': clampField(edit.bio, ProfileLimits.bio),
+  'church': clampField(edit.church, ProfileLimits.church),
+  'pronouns': clampField(edit.pronouns, ProfileLimits.pronouns),
+  'location': clampField(edit.location, ProfileLimits.location),
+  // Normalised through the same validator the form used, not stored as typed:
+  // what goes in the column is what was actually checked. An unusable link is
+  // stored as empty rather than rejected — the form has already said so, and
+  // losing a name change over a typo in an optional field would be the wrong
+  // trade.
+  'links': profileLink(edit.links) ?? '',
+};

@@ -27,7 +27,7 @@ UserProfile userProfileFromRow(
     handle: handle.isEmpty ? fallbackHandle(fullName) : normaliseHandle(handle),
     avatarUrl: ownAvatarUrl(row['avatar_url'] as String?),
     bio: (row['bio'] as String?) ?? '',
-    parish: (row['parish'] as String?) ?? '',
+    church: (row['church'] as String?) ?? '',
     // Absent rather than empty on most rows: the `author` object the feed and
     // discovery functions build carries the byline fields only, and nothing
     // draws pronouns on a byline. An empty string is the honest answer for a
@@ -129,7 +129,7 @@ int accentIndexFor(String id) {
 /// feed a profile screen that reads this list directly anyway.
 /// [userProfileFromRow] treats them as absent-means-empty, so both shapes map.
 const profileColumns =
-    'id, full_name, avatar_url, role, status, created_at, handle, bio, parish, '
+    'id, full_name, avatar_url, role, status, created_at, handle, bio, church, '
     'pronouns, location, links';
 
 /// One row of `member_stats`, or [LifetimeStats.empty] when there is nothing to

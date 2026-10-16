@@ -15,7 +15,7 @@ library;
 abstract final class ProfileLimits {
   static const displayName = 60;
   static const bio = 160;
-  static const parish = 80;
+  static const church = 80;
   static const pronouns = 40;
   static const location = 80;
   static const links = 200;
@@ -73,7 +73,7 @@ String? displayNameError(String value) {
 /// Only `https` and `http`. Not `javascript:`, not `data:`, not `file:`, and
 /// not an app scheme that would hand a tap to whatever happens to be installed.
 /// A bare `example.org` is read as `https://example.org`, because that is what
-/// someone typing their parish's address means and refusing it teaches nothing.
+/// someone typing their church's address means and refusing it teaches nothing.
 ///
 /// Returns the normalised string so the caller stores what it validated rather
 /// than storing the raw text and hoping the two agree.

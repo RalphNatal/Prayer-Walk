@@ -12,7 +12,7 @@ final feedRepositoryProvider = Provider<FeedRepository>(
 /// Which half of the feed screen is showing.
 ///
 /// Following is the default and stays the default. Explore is the door out of
-/// an empty feed, not the front page — a member's own parish comes first, and a
+/// an empty feed, not the front page — a member's own church comes first, and a
 /// stream of strangers should be something they walk towards.
 enum FeedTab {
   following('Following'),

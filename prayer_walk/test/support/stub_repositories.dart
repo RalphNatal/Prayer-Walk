@@ -318,7 +318,7 @@ class StubProfileRepository implements ProfileRepository {
       displayName: edit.displayName.trim(),
       handle: canonicalHandle(edit.handle),
       bio: edit.bio.trim(),
-      parish: edit.parish.trim(),
+      church: edit.church.trim(),
       pronouns: edit.pronouns.trim(),
       location: edit.location.trim(),
       links: profileLink(edit.links) ?? '',
@@ -468,7 +468,7 @@ class StubScriptureRepository implements ScriptureRepository {
       contributorId: 'b6f3e1a2-0000-4000-8000-00000000000a',
       contributorName: 'Maria Reyes',
       reflection:
-          'I read this on the hill behind the parish the week my father was '
+          'I read this on the hill behind the church the week my father was '
           'in hospital, and it is the only thing I could hold on to for a '
           'while. It belongs on a gratitude walk.',
       submittedAt: DateTime(2026, 7, 27),

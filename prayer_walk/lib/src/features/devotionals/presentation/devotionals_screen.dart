@@ -40,8 +40,8 @@ class DevotionalsScreen extends ConsumerWidget {
               // there and nobody has published to it yet. The not-set-up state
               // in [ErrorStateView] is the one that means something is wrong.
               message:
-                  'Nothing has been published yet. Check back after your '
-                  'parish adds the first devotional.',
+                  'Nothing has been published yet. Check back once the '
+                  'first devotional is added.',
             ),
           ),
           data: (items) {

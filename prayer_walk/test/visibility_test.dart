@@ -25,7 +25,7 @@ Map<String, dynamic> _authorRow() => {
   'avatar_url': null,
   'handle': 'anav',
   'bio': '',
-  'parish': 'Our Lady of Peace, Antipolo',
+  'church': 'Our Lady of Peace, Antipolo',
   'role': 'member',
   'status': 'active',
   'created_at': '2026-01-04T09:15:00+00:00',
@@ -80,7 +80,7 @@ void main() {
       // later migration adds a fourth value and an older build reads it: a
       // build guessing at a setting it does not know must guess in the
       // direction that shows a walk to fewer people, never more.
-      expect(ActivityVisibility.fromWire('parish'), ActivityVisibility.private);
+      expect(ActivityVisibility.fromWire('church'), ActivityVisibility.private);
       expect(ActivityVisibility.fromWire(null), ActivityVisibility.private);
       expect(ActivityVisibility.fromWire(''), ActivityVisibility.private);
     });

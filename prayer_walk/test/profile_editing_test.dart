@@ -30,7 +30,7 @@ UserProfile _profile({String? avatarUrl}) => UserProfile(
   joinedAt: DateTime(2026, 1, 4),
   accentIndex: 1,
   avatarUrl: avatarUrl,
-  parish: 'Our Lady of Peace, Antipolo',
+  church: 'Our Lady of Peace, Antipolo',
   bio: 'Walking the same four streets, most mornings.',
 );
 
@@ -38,7 +38,7 @@ ProfileEdit _fullEdit() => const ProfileEdit(
   displayName: '  Maria Reyes-Santos  ',
   handle: 'Maria.Reyes',
   bio: 'Nurse. Night shift, morning hills.',
-  parish: 'San Roque, Antipolo',
+  church: 'San Roque, Antipolo',
   pronouns: 'she/her',
   location: 'Antipolo, Rizal',
   links: 'prayerwalk.org/maria',
@@ -56,7 +56,7 @@ void main() {
 
       expect(saved.displayName, 'Maria Reyes-Santos');
       expect(saved.bio, 'Nurse. Night shift, morning hills.');
-      expect(saved.parish, 'San Roque, Antipolo');
+      expect(saved.church, 'San Roque, Antipolo');
       expect(saved.pronouns, 'she/her');
       expect(saved.location, 'Antipolo, Rizal');
     });
@@ -87,7 +87,7 @@ void main() {
         'avatar_url': _storedAvatar,
         'handle': '@mariareyes',
         'bio': 'Walking.',
-        'parish': 'San Roque',
+        'church': 'San Roque',
         'pronouns': 'she/her',
         'location': 'Antipolo, Rizal',
         'links': 'https://prayerwalk.org/maria',
@@ -111,7 +111,7 @@ void main() {
         'avatar_url': null,
         'handle': '@mariareyes',
         'bio': '',
-        'parish': '',
+        'church': '',
         'role': 'member',
         'status': 'active',
         'created_at': '2026-01-04T09:15:00+00:00',
@@ -319,7 +319,7 @@ void main() {
 
     test('a link must be http or https', () {
       expect(profileLink('https://prayerwalk.org'), 'https://prayerwalk.org');
-      expect(profileLink('http://parish.example.org'), 'http://parish.example.org');
+      expect(profileLink('http://church.example.org'), 'http://church.example.org');
       // Typed the way people type it.
       expect(profileLink('prayerwalk.org'), 'https://prayerwalk.org');
     });

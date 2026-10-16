@@ -100,7 +100,7 @@ UserProfile _profile() => UserProfile(
   status: MemberStatus.active,
   joinedAt: DateTime(2026, 1, 4),
   accentIndex: 1,
-  parish: 'Our Lady of Peace and Good Voyage, Antipolo',
+  church: 'Our Lady of Peace and Good Voyage, Antipolo',
   bio: 'Walking the same four streets, most mornings.',
   followerCount: 1284,
   followingCount: 317,
@@ -495,7 +495,7 @@ void main() {
       status: MemberStatus.suspended,
       joinedAt: DateTime(2024, 3, 14),
       accentIndex: 0,
-      parish: 'San Roque Parish, Mandaluyong',
+      church: 'San Roque Church, Mandaluyong',
       bio: 'Out before the jeepneys. Six laps of the village, then coffee.',
     ),
     UserProfile(
@@ -706,7 +706,7 @@ void main() {
     forEverySize('lays out without overflowing', (tester, width, scale) async {
       await pumpAt(tester, member(const DiscoverScreen(), scale), width: width);
       // The suggestion cards, which are fixed-width tiles in a horizontal
-      // strip — the one place in the member app where a long parish name has
+      // strip — the one place in the member app where a long church name has
       // nowhere to wrap to.
       expect(find.text('People to follow'), findsOneWidget);
     });

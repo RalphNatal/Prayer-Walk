@@ -13,7 +13,7 @@ import 'scripture_quotation.dart';
 /// What a member sent, and what became of it.
 ///
 /// Rejections appear here with their reason. A queue that swallows submissions
-/// without saying so teaches people to stop sending them, and a parish that
+/// without saying so teaches people to stop sending them, and a church that
 /// stops contributing is a worse outcome than an awkward sentence.
 class MySubmissionsScreen extends ConsumerWidget {
   const MySubmissionsScreen({super.key});

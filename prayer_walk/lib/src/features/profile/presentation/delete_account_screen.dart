@@ -123,7 +123,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'A devotional or announcement you published for your parish '
+            'A devotional or announcement you published for your church '
             'keeps its byline text — the way an article outlives its '
             'author — but is no longer linked to your account in any way.',
             style: theme.textTheme.bodySmall?.copyWith(

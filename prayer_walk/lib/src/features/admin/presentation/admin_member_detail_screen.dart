@@ -215,7 +215,7 @@ class AdminMemberDetailScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xl),
             _DetailTable(
               rows: [
-                ('Parish', item.parish.isEmpty ? '—' : item.parish),
+                ('Church', item.church.isEmpty ? '—' : item.church),
                 ('Joined', Fmt.dayMonthYear(item.joinedAt)),
                 (
                   'Activities logged',
@@ -339,7 +339,7 @@ class _DetailTable extends StatelessWidget {
               ),
               // Label left, value right — until they no longer fit, at which
               // point the value drops to its own line rather than running off
-              // the card. "San Roque Parish, Mandaluyong" beside "Parish" is
+              // the card. "San Roque Church, Mandaluyong" beside "Church" is
               // wider than a 320dp phone before the text scale is touched.
               child: Wrap(
                 alignment: WrapAlignment.spaceBetween,

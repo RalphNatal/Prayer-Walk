@@ -57,9 +57,9 @@ into your profile.
 
 ### Profile information you type in
 
-Display name, handle (@username), a short bio, your parish or community,
+Display name, handle (@username), a short bio, your church or community,
 pronouns, a typed location ("Antipolo, Rizal" — a place you type, never a
-GPS reading), and a personal or parish link. All of these are optional except
+GPS reading), and a personal or church link. All of these are optional except
 your display name, and all are visible to any other signed-in member — the
 app tells you this on the edit screen itself.
 
@@ -162,7 +162,7 @@ recorded, your follows and followers, anyone you blocked, every comment and
 encouragement you left (and comments left on your walks), your privacy
 zones, your scripture delivery history, and your profile photo.
 
-A devotional or announcement you published for your parish keeps its byline
+A devotional or announcement you published for your church keeps its byline
 text — the way a newspaper article outlives its author leaving the paper —
 but the moment your account is deleted, that content is no longer linked to
 you in any way; nothing about it can be traced back to your account.

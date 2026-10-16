@@ -34,7 +34,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     (
       title: 'Walk it with other people',
       body:
-          'Follow your parish, send encouragement, and read devotionals written '
+          'Join your church, send encouragement, and read devotionals written '
           'for the streets you are actually on.',
     ),
   ];

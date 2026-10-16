@@ -168,7 +168,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           _SettingSwitch(
             title: 'New devotionals',
-            subtitle: 'When your parish publishes something.',
+            subtitle: 'When a new devotional is published.',
             value: _newDevotionals,
             onChanged: (v) => setState(() => _newDevotionals = v),
           ),

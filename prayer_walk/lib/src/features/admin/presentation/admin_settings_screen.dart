@@ -103,7 +103,7 @@ class AdminSettingsScreen extends ConsumerWidget {
           ),
           const _PlaceholderRow(
             icon: Icons.workspace_premium_outlined,
-            title: 'Parish directory',
+            title: 'Church directory',
             subtitle: 'Which communities members can join.',
           ),
           const _PlaceholderRow(
