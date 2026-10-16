@@ -1,6 +1,6 @@
 # Prayer Walk — Privacy Policy
 
-**Last updated:** 29 September 2026
+**Last updated:** 17 October 2026
 
 ## Who this is
 
@@ -69,6 +69,23 @@ Comments on other members' walks, and "encouragements" (a lightweight
 acknowledgement, like a blessing) on a walk. Both are tied to your account
 and visible to anyone who can see the walk they're attached to.
 
+### Church groups
+
+If you join a church group, the app stores which group, whether you are a
+member or one of its admins, whether your request to join is waiting, and when
+you joined. Your membership is visible to the group's other members. If the
+group is listed in Discover, it also appears on your profile, so other members
+can see which churches you belong to; a hidden group appears there only to
+people who are in it too.
+
+If you start or look after a group, what you add to it — its name, town,
+description, pictures, and any verses or prayers you share with its members —
+is visible to everyone who can see the group. Group pictures have every EXIF
+tag, including GPS location, stripped on your device before they upload, as
+profile photos do. When you share a verse or a prayer, the app records your
+name and the time alongside your confirmation that you have the right to share
+it.
+
 ### Scripture delivered to you
 
 Which scripture passages and prayers have been delivered to you on past
@@ -119,7 +136,15 @@ followed the other, that follow ends immediately.
 moderation reports and take action on reported content (suspending an
 account, removing content) as part of keeping the community safe. Your
 privacy zones are never visible to an administrator, and an administrator
-does not have a general ability to browse private ("Only me") walks.
+does not have a general ability to browse private ("Only me") walks. If a
+church group is reported, an administrator can see the group and what it has
+shared, take its verses off members' walks, or remove the group.
+
+**Church group admins.** A member who looks after a church group can see that
+group's members and requests to join, approve or remove people, and share
+scripture with the group. That is the whole of it: a group admin has no
+access to anything outside their own group, and no administrator powers over
+the app.
 
 ## Third parties actually used
 
@@ -160,7 +185,13 @@ in-app action — no email or support request is required.
 Deleting your account removes: your profile and your sign-in, every walk you
 recorded, your follows and followers, anyone you blocked, every comment and
 encouragement you left (and comments left on your walks), your privacy
-zones, your scripture delivery history, and your profile photo.
+zones, your scripture delivery history, your profile photo, and your place
+in any church group.
+
+If you look after a church group, it is not left without anyone: its
+longest-standing member becomes its admin, or, if nobody else is in it, the
+group is closed. Verses you shared with a group stay with the group, without
+your name on them.
 
 A devotional or announcement you published for your church keeps its byline
 text — the way a newspaper article outlives its author leaving the paper —
@@ -168,7 +199,8 @@ but the moment your account is deleted, that content is no longer linked to
 you in any way; nothing about it can be traced back to your account.
 
 The app also offers a data export (a JSON copy of your profile, walks,
-comments, and encouragements) from the same screen, so you can keep a copy
+comments, encouragements, scripture delivery history, church group
+memberships, and anything you shared with a group) from the same screen, so you can keep a copy
 before you delete.
 
 ## Changes to this policy

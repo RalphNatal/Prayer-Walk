@@ -160,6 +160,20 @@ void main() {
       },
     );
 
+    test("the diagnostic still reports one library edition", () async {
+      // An NLT build carrying a church's WEBBE verse must not read as
+      // "Delivering: NLT, WEBBE" — the readout docs/scripture_translation.md
+      // calls a filter bug. Church verses are counted on their own line.
+      final library = await _deliveredFromCache([
+        _global('1-nlt', translation: 'NLT'),
+        _fromGroup('g1'),
+      ], translation: 'NLT');
+
+      expect(library.deliveredTranslations, {BibleTranslation.nlt});
+      expect(library.countsByTranslation['WEBBE'], isNull);
+      expect(library.fromGroups, 1);
+    });
+
     test('a group prayer is delivered under every edition', () async {
       for (final translation in ['WEBBE', 'NLT']) {
         final library = await _deliveredFromCache([

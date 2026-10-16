@@ -117,6 +117,8 @@ linked). They are written to be re-runnable.
 | `20260731000000_avatar_storage` | The `avatars` Storage bucket and its policies; signup stops copying the Google avatar URL. |
 | `20260731010000_profile_public_fields` | `pronouns`, `location`, `links` on `profiles`. |
 | `20261016000000_parish_to_church` | `church` on `profiles`, kept equal to the old column by a trigger, and both JSON keys from every profile-shaped read. **Expand step of a two-release rename** — see below. |
+| `20261016010000_church_groups` | `church_groups`, `church_group_members`, `church_group_invites`, the membership helpers and guards, last-admin succession, the `church-groups` Storage bucket, and groups as a moderation target. Additive. |
+| `20261016020000_group_scripture` | ⚠️ **Narrows two `scripture_prompts` policies** to `group_id is null`. `group_id` and attestation columns, group policies, the public-domain constraint, and `walk_scripture_library()`. |
 
 Apply them in that order. Two need reading before they are run:
 
@@ -148,6 +150,51 @@ apply while 1.0 is live, and it **must** be applied before 1.1 is released.
 The drop is written and waiting in `supabase/deferred/1.2.0_drop_parish.sql`,
 outside `migrations/` so `db push` cannot apply it early. Move it in (with a
 fresh timestamp) only once 1.0 is out of use — its header says how to check.
+
+### Church groups (1.1)
+
+A church has a group; members join it; the group's admins share scripture that
+only its members receive on their walks. Three things about the design are
+worth knowing before touching it:
+
+* **Two kinds of admin, never interchangeable.** `profiles.role = 'admin'` runs
+  the app. A *group* admin (`church_group_members.role = 'admin'`) looks after
+  one group and nothing else — no console, no global library, no moderation
+  queue, no other group. App admins can read and remove any group (group
+  content is user-generated, and a report has to be actionable), granted policy
+  by policy rather than inherited.
+* **The membership helpers are `security definer`.** `is_group_member()` and
+  `is_group_admin()` are used inside the policies on `church_group_members`
+  itself, so an invoker helper would recurse — the trap the `is_admin()`
+  comment describes. They answer only about the caller, or to someone already
+  entitled to the row, and are coalesced so they never return null.
+* **Every rule is server-side.** The founder becomes admin by trigger; a
+  self-join's status comes from the group's policy; nobody changes their own
+  role or standing; `joined_at` is set by the server; a banned member cannot
+  leave to shed the ban; hidden groups are joined only by invite code through a
+  narrow definer RPC.
+
+**When the last admin goes** — by leaving, being removed, or deleting their
+account — the `pw_group_succession` trigger promotes the longest-standing active
+member. If nobody active is left, the group is soft-deleted (`deleted_at`):
+hidden from everyone but app admins, its scripture no longer delivered, its
+rows kept so a mistake can be undone by hand.
+
+### Testing the policies
+
+The rules above are asserted against a real Postgres, as signed-in members, in
+`supabase/tests/database/*.test.sql` (pgTAP; 70 assertions at the time of
+writing):
+
+```bash
+npx supabase init       # once, if supabase/config.toml is missing
+npx supabase start      # needs Docker; applies supabase/migrations/
+npx supabase test db
+```
+
+`flutter test` cannot reach RLS — it has no database — so these are the tests
+that say a non-member cannot read a hidden group's scripture, a member cannot
+promote themselves, and one group's admin cannot touch another group.
 
 ### What each viewer sees
 
@@ -310,6 +357,16 @@ this. It stays as the fallback and the licence-free baseline.
 
 `20260728070000_devotional_translation.sql` adds `devotionals.translation` and
 must be applied before the devotionals template will run.
+
+### Church group prompts
+
+A church group's admins can share prompts with their own members (see
+`docs/scripture_translation.md` → *Church group scripture*). They are **public
+domain or a prayer, enforced by a check constraint** that binds every writer,
+app admins included, so group scripture costs nothing against the ceiling below
+and cannot introduce a translation this app holds no licence for. The admin
+chooses the translation explicitly and confirms their right to share the text;
+both are recorded on the row.
 
 ### Member-contributed prompts, and the ceiling
 

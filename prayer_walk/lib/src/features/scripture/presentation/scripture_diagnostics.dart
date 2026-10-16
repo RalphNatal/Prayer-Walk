@@ -84,6 +84,13 @@ class ScriptureDiagnostics extends ConsumerWidget {
                 // whether the filter narrowed to them.
                 _Line(label: 'Available', value: _counts(loaded)),
                 _Line(label: 'Delivering', value: _delivering(loaded)),
+                // Outside the edition filter by design — see
+                // ScriptureLibrary.fromGroups.
+                if (loaded.fromGroups > 0)
+                  _Line(
+                    label: 'From churches',
+                    value: '${loaded.fromGroups} prompts, public domain',
+                  ),
                 if (loaded.fellBack) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(

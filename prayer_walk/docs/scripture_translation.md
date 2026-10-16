@@ -12,14 +12,15 @@ trace through five files to answer, and it should take one glance.
 ## The one-glance answer
 
 Run a debug build, open **Settings → Scripture on the trail**, and read the
-**Translation diagnostic** panel at the bottom. It reports three things:
+**Translation diagnostic** panel at the bottom. It reports:
 
 | Line | What it tells you |
 | --- | --- |
 | **Configured default** | What `SCRIPTURE_TRANSLATION` is set to. |
 | **Loaded from** | `network`, `cache`, or `bundled asset`. |
-| **Available** | How many prompts of each edition the source held — *before* the edition filter. `NLT 0` means the licensed rows are not there. |
-| **Delivering** | What a walk is actually handing out. Not always the configured default. |
+| **Available** | How many prompts of each edition the app's library held — *before* the edition filter. `NLT 0` means the licensed rows are not there. Church group verses are not counted here. |
+| **Delivering** | What the app's library is actually handing out. Not always the configured default. |
+| **From churches** | Shown only when the walker is in a church group that has shared scripture: how many of its prompts are in the pool. Always public domain or prayer, and outside the edition filter — see below. |
 
 The panel is `kDebugMode`-only and builds to nothing in release. The honest half
 of it — the edition named under every passage — ships to walkers instead.
@@ -33,6 +34,10 @@ an edition they did not choose.
 ## Where the decision is actually made
 
 ```
+walk_scripture_library()                      (global library + walker's groups)
+  └─ SupabaseScriptureRepository._fetch
+      └─ cache  →  bundled asset              (when the network fails)
+
 env.json  SCRIPTURE_TRANSLATION
   └─ AppConfig.scriptureTranslation           (compile-time, defaults 'WEBBE')
       └─ appTranslationProvider               → BibleTranslation
@@ -47,6 +52,49 @@ quotes nobody (a prayer belongs to every edition). If that leaves no scripture
 at all, it delivers the whole library instead and logs a `[PW-SCRIP][WARN]`
 naming both editions. A walk with the wrong edition is a disappointment; a walk
 with nothing to read is the failure the feature exists to avoid.
+
+## Church group scripture
+
+From 1.1 a church group's admins can share verses and prayers with their
+members. The resolution order, from the server down:
+
+1. **`walk_scripture_library()`** returns the global library **plus** the
+   published prompts of every group the walker is an *active* member of —
+   not a pending request, not a group they were removed from, not a group
+   that has been closed. It is one round trip, as the table select it replaced
+   was. (It replaced that select because an app admin's policies can read every
+   group's rows, and a walk should carry the walker's own churches only.)
+2. **The cache** holds the whole set, group verses included, so a member who
+   loses signal keeps their church's verses as well as the library. A group
+   they have left drops out at the next successful sync.
+3. **The bundled asset** cannot hold group scripture — it ships in the binary,
+   and no church's verses belong in everybody's install. A member with no
+   connection and no cache still gets the WEBBE floor, never silence.
+4. **`_inTranslation`** sets group prompts aside, applies the edition rule to
+   the library exactly as before, and adds the group prompts back. A group's
+   prompts are therefore delivered under **every** configured edition, and they
+   play **no part** in deciding whether the library fell back — an NLT build
+   with no NLT rows still falls back to the whole library, rather than
+   mistaking one church's WEBBE verse for "something in the configured edition".
+5. **The cooldown** (`SCRIPTURE_COOLDOWN_DAYS`) applies to the combined pool.
+   History is keyed by prompt id with no notion of source, so a church verse
+   received yesterday rests exactly as a library verse does, and an unseen one
+   from either source comes first.
+
+Group scripture is **public domain (WEBBE) or a prayer quoting nobody**, and
+that is a check constraint on the table
+(`scripture_prompts_group_rows_public_domain`) — it binds every writer, app
+admins included. The reasoning is the member-submissions reasoning with more
+force: Tyndale's 500-verse allowance is CALLED Presentations' to spend, and a
+group pasting NLT, ESV or NIV text would spend an allowance nobody was counting
+or one that does not exist. The group admin chooses the translation explicitly
+on the compose screen (never a silent default), and confirms they have the right
+to share the text; who confirmed and when is stored on the row, and any later
+change to the text needs a fresh confirmation from whoever makes it.
+
+Every group verse is credited **"Shared by <church>"** under the quotation, on
+the arrival card and in the full reading, whatever the walker's credit setting —
+provenance, not a courtesy label.
 
 ## Why every verse names its edition
 
@@ -197,7 +245,7 @@ To go back, set it to `WEBBE`. No content is rewritten either way.
 | --- | --- | --- |
 | Licensed rows never seeded | `Available: WEBBE n · NLT 0` | Steps 1–5 above |
 | Default never switched | `Configured default: WEBBE` | Step 6 |
-| Filter not filtering | `Delivering: NLT, WEBBE` | A bug in `_inTranslation` — it should never report two editions |
+| Filter not filtering | `Delivering: NLT, WEBBE` | A bug in `_inTranslation` — it should never report two editions. Church verses are counted under **From churches**, never here |
 | Device is offline / sync failed | `Loaded from: bundled asset` or `cache` | Expected. The asset is WEBBE by design |
 | Rows are right, walker cannot tell | — | Fixed: every surface names its edition |
 
