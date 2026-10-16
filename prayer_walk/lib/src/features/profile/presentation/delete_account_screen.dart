@@ -119,13 +119,16 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   'walks.',
               'Your privacy zones and scripture delivery history.',
               'Your profile photo.',
+              'Your church group memberships.',
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             'A devotional or announcement you published for your church '
             'keeps its byline text — the way an article outlives its '
-            'author — but is no longer linked to your account in any way.',
+            'author — but is no longer linked to your account in any way. '
+            'A group you look after passes to its longest-standing member, '
+            'or closes if nobody else is in it.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

@@ -21,7 +21,11 @@ const scripturePromptColumns =
     // second request on a trail. The constraint is named because
     // `scripture_prompts` now reaches `profiles` twice — contributor and
     // reviewer — and PostgREST cannot tell them apart without being told.
-    'contributor:profiles!scripture_prompts_submitted_by_fkey(full_name)';
+    'contributor:profiles!scripture_prompts_submitted_by_fkey(full_name), '
+    // The church group a prompt belongs to, if any — null for the global
+    // library. Aliased to the same key `walk_scripture_library()` returns, so
+    // the table select and the walk's RPC map through one function.
+    'group_id, church_group:church_groups(id, name)';
 
 ScripturePrompt scripturePromptFromRow(Map<String, dynamic> row) {
   return ScripturePrompt(
@@ -37,7 +41,25 @@ ScripturePrompt scripturePromptFromRow(Map<String, dynamic> row) {
     // missing key reads as true rather than hiding the offline library.
     isPublished: row['is_published'] != false,
     contributorName: contributorNameFrom(row),
+    groupId: _groupIdFrom(row),
+    groupName: groupNameFrom(row),
   );
+}
+
+String? _groupIdFrom(Map<String, dynamic> row) {
+  final id = (row['group_id'] as String?)?.trim();
+  return (id == null || id.isEmpty) ? null : id;
+}
+
+/// The group's name, from either row shape — the nested `church_group` the
+/// network sends, or the flattened `group_name` the cache keeps. The same
+/// arrangement as [contributorNameFrom], for the same reason.
+String groupNameFrom(Map<String, dynamic> row) {
+  final embedded = row['church_group'];
+  if (embedded is Map) {
+    return (embedded['name'] as String?)?.trim() ?? '';
+  }
+  return (row['group_name'] as String?)?.trim() ?? '';
 }
 
 /// The contributor's name, from either row shape.
@@ -80,6 +102,10 @@ Map<String, dynamic> scripturePromptToRow(ScripturePrompt prompt) => {
   // that has already resolved the join, and a walk offline should still credit
   // the person who contributed the verse it is reading.
   'contributor_name': prompt.contributorName,
+  // A group's verse cached on the device stays a group's verse offline: it
+  // keeps its credit, and it keeps its exemption from the edition filter.
+  if (prompt.isFromGroup) 'group_id': prompt.groupId,
+  if (prompt.isFromGroup) 'group_name': prompt.groupName,
 };
 
 /// A queue row → [ScriptureSubmission]: the prompt, plus everything the review

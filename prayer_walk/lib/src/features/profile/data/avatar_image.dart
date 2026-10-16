@@ -140,3 +140,96 @@ img.Image _squareCrop(img.Image source) {
 
   return img.copyCrop(source, x: x, y: y, width: edge, height: edge);
 }
+
+// ----------------------------------------------------------------- covers ---
+
+/// A wide banner photo — a church group's cover — after the same treatment an
+/// avatar gets: upright, cropped, resized, re-encoded, and stripped of every
+/// EXIF tag.
+///
+/// Its own type rather than an [AvatarUpload] with a second dimension, for the
+/// reason [AvatarUpload] is a type at all: the group repository takes only
+/// this, so there is no signature in the app that accepts a raw camera file
+/// for a cover either. A photo of a church taken from its doorstep carries the
+/// doorstep's coordinates, and a cover is shown to everyone who finds the
+/// group.
+class CoverUpload {
+  const CoverUpload({
+    required this.bytes,
+    required this.width,
+    required this.height,
+  });
+
+  /// JPEG, no EXIF, no GPS.
+  final Uint8List bytes;
+  final int width;
+  final int height;
+
+  int get sizeBytes => bytes.length;
+}
+
+/// Width of a stored cover. Drawn full-bleed on a phone — 412dp at 3x is about
+/// 1240px — so 1200 is sharp where it matters without shipping a print file.
+const _coverWidth = 1200;
+
+/// 3:1, the shape of the header it fills. Decided here once, for the same
+/// reason the avatar is squared here: pixels nobody will see are pixels
+/// somebody pays to download.
+const _coverAspect = 3.0;
+
+/// The bucket's ceiling is 1 MB; this is the target well under it.
+const _coverMaxBytes = 320 * 1024;
+
+/// [prepareCoverSync], off the UI isolate.
+Future<CoverUpload> prepareCover(Uint8List raw) =>
+    compute(prepareCoverSync, raw);
+
+/// The cover pipeline, synchronous so a test can read what comes out.
+@visibleForTesting
+CoverUpload prepareCoverSync(Uint8List raw) {
+  final decoded = img.decodeImage(raw);
+  if (decoded == null) {
+    throw const AvatarImageFailure("That file isn't an image we can read.");
+  }
+
+  final upright = img.bakeOrientation(decoded);
+  final banner = _bannerCrop(upright);
+  final sized = banner.width > _coverWidth
+      ? img.copyResize(
+          banner,
+          width: _coverWidth,
+          height: (_coverWidth / _coverAspect).round(),
+          interpolation: img.Interpolation.average,
+        )
+      : banner;
+
+  // The same line as the avatar pipeline, for the same reason.
+  sized.exif = img.ExifData();
+
+  for (final quality in _qualityLadder) {
+    final bytes = img.encodeJpg(sized, quality: quality);
+    if (bytes.length <= _coverMaxBytes || quality == _qualityLadder.last) {
+      return CoverUpload(bytes: bytes, width: sized.width, height: sized.height);
+    }
+  }
+  throw StateError('quality ladder exhausted without encoding');
+}
+
+/// The widest 3:1 band the photo holds, centred — a church front is nearly
+/// always in the middle of the frame, and there is no face to bias towards.
+img.Image _bannerCrop(img.Image source) {
+  final fullWidthHeight = (source.width / _coverAspect).round();
+  if (fullWidthHeight <= source.height) {
+    final y = ((source.height - fullWidthHeight) / 2).round();
+    return img.copyCrop(
+      source,
+      x: 0,
+      y: y,
+      width: source.width,
+      height: fullWidthHeight,
+    );
+  }
+  final width = (source.height * _coverAspect).round();
+  final x = ((source.width - width) / 2).round();
+  return img.copyCrop(source, x: x, y: 0, width: width, height: source.height);
+}

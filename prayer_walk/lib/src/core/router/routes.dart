@@ -67,10 +67,50 @@ abstract final class Routes {
   static const deleteAccount = 'deleteAccount';
   static const deleteAccountPath = '/delete-account';
 
-  /// Finding people. Pushed above the shell rather than given a tab: it is a
-  /// door out of an empty feed, not a fifth place to live.
+  /// Finding people and churches. Pushed above the shell rather than given a
+  /// tab: it is a door out of an empty feed, not a sixth place to live.
   static const discover = 'discover';
   static const discoverPath = '/discover';
+
+  /// `?tab=churches` opens Discover on its Churches tab — the door the profile
+  /// and the empty states use when what somebody wants is their church.
+  static const discoverTabParam = 'tab';
+  static const discoverChurchesTab = 'churches';
+
+  // ------------------------------------------------------------ churches ---
+  //
+  // Church groups live inside Discover rather than in a tab of their own: the
+  // bottom bar already has five destinations, and a church is somewhere you
+  // join once and then mostly meet through its scripture on your walks — it is
+  // a door, like Discover, not a place you go back to every day.
+
+  /// Starting a group. Registered before [churchGroupPath] so the literal
+  /// segment wins: `/churches/new` must not be read as a group id.
+  static const createChurchGroup = 'createChurchGroup';
+  static const createChurchGroupPath = '/churches/new';
+
+  /// One church's group. Pushed above whichever shell is showing, like a
+  /// member's profile.
+  static const churchGroup = 'churchGroup';
+  static const churchGroupPath = '/churches/:groupId';
+
+  static const editChurchGroup = 'editChurchGroup';
+  static const editChurchGroupPath = 'edit';
+
+  static const churchGroupMembers = 'churchGroupMembers';
+  static const churchGroupMembersPath = 'members';
+
+  /// A group admin's own scripture for their group. Nothing under here reaches
+  /// the global library or the console — see the header of
+  /// `20261016010000_church_groups.sql`.
+  static const churchGroupScripture = 'churchGroupScripture';
+  static const churchGroupScripturePath = 'scripture';
+
+  static const churchGroupScriptureCompose = 'churchGroupScriptureCompose';
+  static const churchGroupScriptureComposePath = 'new';
+
+  static const churchGroupScriptureEdit = 'churchGroupScriptureEdit';
+  static const churchGroupScriptureEditPath = ':promptId/edit';
 
   /// A member proposing a scripture prompt for review.
   static const submitScripture = 'submitScripture';
@@ -129,6 +169,12 @@ abstract final class Routes {
 
   static const adminModeration = 'adminModeration';
   static const adminModerationPath = '/admin/moderation';
+
+  /// A reported church group, opened from the queue: what it is, what it has
+  /// published, and the controls to unpublish or remove it. Under Moderation
+  /// because the only reason the console looks inside a group is a report.
+  static const adminGroupReview = 'adminGroupReview';
+  static const adminGroupReviewPath = 'group/:groupId';
 
   static const adminAnnouncements = 'adminAnnouncements';
   static const adminAnnouncementsPath = '/admin/announcements';

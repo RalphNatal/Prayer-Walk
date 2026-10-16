@@ -12,6 +12,7 @@ import '../../features/admin/presentation/admin_announcements_screen.dart';
 import '../../features/admin/presentation/admin_content_form_screen.dart';
 import '../../features/admin/presentation/admin_content_screen.dart';
 import '../../features/admin/presentation/admin_dashboard_screen.dart';
+import '../../features/admin/presentation/admin_group_review_screen.dart';
 import '../../features/admin/presentation/admin_member_detail_screen.dart';
 import '../../features/admin/presentation/admin_members_screen.dart';
 import '../../features/admin/presentation/admin_moderation_screen.dart';
@@ -28,6 +29,11 @@ import '../../features/devotionals/presentation/devotional_reader_screen.dart';
 import '../../features/devotionals/presentation/devotionals_screen.dart';
 import '../../features/discovery/presentation/discover_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
+import '../../features/groups/presentation/church_group_form_screen.dart';
+import '../../features/groups/presentation/church_group_screen.dart';
+import '../../features/groups/presentation/group_members_screen.dart';
+import '../../features/groups/presentation/group_scripture_compose_screen.dart';
+import '../../features/groups/presentation/group_scripture_screen.dart';
 import '../../features/privacy/presentation/blocked_members_screen.dart';
 import '../../features/privacy/presentation/privacy_zones_screen.dart';
 import '../../features/privacy/presentation/safety_screen.dart';
@@ -155,8 +161,90 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.discoverPath,
         name: Routes.discover,
+        pageBuilder: (context, state) => fadeThroughPage(
+          context,
+          state,
+          DiscoverScreen(
+            initialTab:
+                state.uri.queryParameters[Routes.discoverTabParam] ==
+                    Routes.discoverChurchesTab
+                ? DiscoverTab.churches
+                : DiscoverTab.people,
+          ),
+        ),
+      ),
+
+      // Church groups, above the shell like a profile. The literal `new` is
+      // registered before `:groupId` so it is never read as an id.
+      GoRoute(
+        path: Routes.createChurchGroupPath,
+        name: Routes.createChurchGroup,
         pageBuilder: (context, state) =>
-            fadeThroughPage(context, state, const DiscoverScreen()),
+            fadeThroughPage(context, state, const ChurchGroupFormScreen()),
+      ),
+      GoRoute(
+        path: Routes.churchGroupPath,
+        name: Routes.churchGroup,
+        pageBuilder: (context, state) => fadeThroughPage(
+          context,
+          state,
+          ChurchGroupScreen(groupId: state.pathParameters['groupId']!),
+        ),
+        routes: [
+          GoRoute(
+            path: Routes.editChurchGroupPath,
+            name: Routes.editChurchGroup,
+            pageBuilder: (context, state) => fadeThroughPage(
+              context,
+              state,
+              ChurchGroupFormScreen(groupId: state.pathParameters['groupId']),
+            ),
+          ),
+          GoRoute(
+            path: Routes.churchGroupMembersPath,
+            name: Routes.churchGroupMembers,
+            pageBuilder: (context, state) => fadeThroughPage(
+              context,
+              state,
+              GroupMembersScreen(groupId: state.pathParameters['groupId']!),
+            ),
+          ),
+          GoRoute(
+            path: Routes.churchGroupScripturePath,
+            name: Routes.churchGroupScripture,
+            pageBuilder: (context, state) => fadeThroughPage(
+              context,
+              state,
+              GroupScriptureScreen(groupId: state.pathParameters['groupId']!),
+            ),
+            routes: [
+              // Before `:promptId/edit`, for the same reason as above.
+              GoRoute(
+                path: Routes.churchGroupScriptureComposePath,
+                name: Routes.churchGroupScriptureCompose,
+                pageBuilder: (context, state) => fadeThroughPage(
+                  context,
+                  state,
+                  GroupScriptureComposeScreen(
+                    groupId: state.pathParameters['groupId']!,
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: Routes.churchGroupScriptureEditPath,
+                name: Routes.churchGroupScriptureEdit,
+                pageBuilder: (context, state) => fadeThroughPage(
+                  context,
+                  state,
+                  GroupScriptureComposeScreen(
+                    groupId: state.pathParameters['groupId']!,
+                    promptId: state.pathParameters['promptId'],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: Routes.privacyZonesPath,
@@ -423,6 +511,19 @@ final _adminShell = StatefulShellRoute.indexedStack(
           path: Routes.adminModerationPath,
           name: Routes.adminModeration,
           builder: (context, state) => const AdminModerationScreen(),
+          routes: [
+            GoRoute(
+              path: Routes.adminGroupReviewPath,
+              name: Routes.adminGroupReview,
+              pageBuilder: (context, state) => fadeThroughPage(
+                context,
+                state,
+                AdminGroupReviewScreen(
+                  groupId: state.pathParameters['groupId']!,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     ),

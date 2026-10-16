@@ -34,6 +34,9 @@ const Map<String, String> kSchemaTables = {
   'privacy_zones': '20260728080000_visibility_zones_blocks.sql',
   'blocks': '20260728080000_visibility_zones_blocks.sql',
   'scripture_deliveries': '20260729000000_scripture_deliveries.sql',
+  'church_groups': '20261016010000_church_groups.sql',
+  'church_group_members': '20261016010000_church_groups.sql',
+  'church_group_invites': '20261016010000_church_groups.sql',
 };
 
 /// RPCs the app calls, and the migration that creates each.
@@ -57,6 +60,18 @@ const Map<String, String> kSchemaFunctions = {
   'pw_can_view_activity': '20260728090000_visibility_rls_and_reads.sql',
   'search_members': '20260728100000_discovery.sql',
   'suggested_members': '20260728100000_discovery.sql',
+  'search_church_groups': '20261016010000_church_groups.sql',
+  'my_church_groups': '20261016010000_church_groups.sql',
+  'church_group_detail': '20261016010000_church_groups.sql',
+  'church_groups_for_member': '20261016010000_church_groups.sql',
+  'church_group_roster': '20261016010000_church_groups.sql',
+  'preview_church_group': '20261016010000_church_groups.sql',
+  'join_church_group_with_code': '20261016010000_church_groups.sql',
+  'create_church_group': '20261016010000_church_groups.sql',
+  'rotate_church_group_invite': '20261016010000_church_groups.sql',
+  // Every walk reads scripture through this. Missing, a walk falls back to the
+  // cached or bundled library and says nothing — this is what names the file.
+  'walk_scripture_library': '20261016020000_group_scripture.sql',
 };
 
 /// Every migration, in the order it must be applied.

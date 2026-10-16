@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/admin_shell.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../data/admin_providers.dart';
@@ -12,13 +14,18 @@ import 'widgets/status_pill.dart';
 /// Log tag for this screen's failures.
 const _tag = 'PW-MODERATION';
 
-/// Reported activities and comments, newest concern first.
+/// Reported walks, comments and church groups, newest concern first.
 ///
 /// Closing a report records a decision; it does not touch the content. Nothing
 /// in this console can delete another member's walk or comment yet — the
 /// delete policies on those tables belong to their author and, for a comment,
 /// the owner of the walk. The copy below says so rather than implying a takedown
 /// that does not happen.
+///
+/// A church group is the exception, and deliberately: it is content many
+/// people receive on their walks, run by a member rather than written by one,
+/// so the console can open it, take its verses off walks, or remove it — from
+/// [AdminGroupReviewScreen], reached by "Review group" on the report.
 class AdminModerationScreen extends ConsumerWidget {
   const AdminModerationScreen({super.key});
 
@@ -34,10 +41,14 @@ class AdminModerationScreen extends ConsumerWidget {
       context,
       title: upheld ? 'Uphold this report?' : 'Dismiss this report?',
       message: upheld
-          ? 'The report is closed as upheld against '
-                '${report.targetAuthorName}, with your name and the time on '
-                'it. The $target itself stays up — take it down with its '
-                'author, or suspend them from their member page.'
+          ? report.targetType == ReportTargetType.group
+                ? 'The report is closed as upheld, with your name and the time '
+                      'on it. The group itself stays up — open Review group to '
+                      "take its scripture off members' walks or remove it."
+                : 'The report is closed as upheld against '
+                      '${report.targetAuthorName}, with your name and the time '
+                      'on it. The $target itself stays up — take it down with '
+                      'its author, or suspend them from their member page.'
           : 'The $target stays up and the report is closed with no action '
                 'against ${report.targetAuthorName}.',
       confirmLabel: upheld ? 'Uphold' : 'Dismiss',
@@ -77,7 +88,7 @@ class AdminModerationScreen extends ConsumerWidget {
 
     return AdminPage(
       title: 'Moderation',
-      subtitle: 'Reported activities and comments',
+      subtitle: 'Reported walks, comments and groups',
       body: Column(
         children: [
           Padding(
@@ -196,6 +207,9 @@ class _ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isPending = report.status == ReportStatus.pending;
+    // A group can be opened from here; a walk or a comment cannot yet.
+    final reviewable =
+        report.targetType == ReportTargetType.group && !report.targetRemoved;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -271,14 +285,25 @@ class _ReportCard extends StatelessWidget {
                       '${Fmt.relativeTime(report.createdAt)}',
             style: theme.textTheme.labelSmall,
           ),
-          if (isPending) ...[
+          if (isPending || reviewable) ...[
             const SizedBox(height: AppSpacing.md),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
-                SecondaryButton(label: 'Dismiss', onPressed: onDismiss),
-                PrimaryButton(label: 'Uphold', onPressed: onUphold),
+                if (reviewable)
+                  SecondaryButton(
+                    label: 'Review group',
+                    icon: Icons.church_outlined,
+                    onPressed: () => context.pushNamed(
+                      Routes.adminGroupReview,
+                      pathParameters: {'groupId': report.targetId},
+                    ),
+                  ),
+                if (isPending) ...[
+                  SecondaryButton(label: 'Dismiss', onPressed: onDismiss),
+                  PrimaryButton(label: 'Uphold', onPressed: onUphold),
+                ],
               ],
             ),
           ],

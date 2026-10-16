@@ -113,6 +113,13 @@ abstract final class SchemaPreflight {
     'admin_members': {'limit_count': 1},
     'admin_reports': <String, dynamic>{},
     'audience_size': {'audience': 'everyone'},
+    // Read-only group probes. The writing RPCs (create, join, rotate) share
+    // their migration with these and are left out for the reason
+    // `admin_resolve_report` is.
+    'walk_scripture_library': <String, dynamic>{},
+    'my_church_groups': <String, dynamic>{},
+    'church_group_detail': {'group_id': _nilUuid},
+    'search_church_groups': {'query': '', 'limit_count': 1},
   };
 
   /// A UUID that is syntactically valid and refers to nobody.

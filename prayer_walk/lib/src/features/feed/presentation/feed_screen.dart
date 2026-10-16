@@ -36,7 +36,7 @@ class FeedScreen extends ConsumerWidget {
         title: const Text('Prayer Walk'),
         actions: [
           IconButton(
-            tooltip: 'Find people',
+            tooltip: 'Find people and churches',
             icon: const Icon(Icons.person_search_outlined),
             onPressed: () => context.pushNamed(Routes.discover),
           ),
@@ -173,10 +173,10 @@ class _EmptyFollowing extends StatelessWidget {
             icon: Icons.route_outlined,
             title: 'Your trail starts here',
             message:
-                'Follow someone and their walks appear here. You can find '
-                'people by name, look through public walks, or simply record '
-                'your first.',
-            actionLabel: 'Find people',
+                'Follow someone and their walks appear here. Find people by '
+                'name, join your church, look through public walks, or simply '
+                'record your first.',
+            actionLabel: 'Find people and churches',
             onAction: () => context.pushNamed(Routes.discover),
             secondaryLabel: 'Record a walk',
             onSecondary: () => context.goNamed(Routes.record),

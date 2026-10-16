@@ -8,7 +8,8 @@ Two functions, both invoked by the app from `AuthRepository`
   (see the comment at the top of `delete-account/index.ts` for exactly what
   cascades and what deliberately doesn't).
 - **`export-data`** — returns the caller's own profile, activities, comments,
-  encouragements and scripture delivery history as one JSON object.
+  encouragements, scripture delivery history, church group memberships and
+  any verses they posted to a group as one JSON object.
 
 Both derive the caller's id from their verified JWT (`_shared/auth.ts`),
 never from the request body, and both need the service-role key for the

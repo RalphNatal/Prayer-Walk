@@ -28,7 +28,12 @@ class AdminMetrics {
 
 enum ReportTargetType {
   activity('Activity'),
-  comment('Comment');
+  comment('Comment'),
+
+  /// A church group as a whole — its name, picture, description, or what it
+  /// publishes. `moderation_reports.target_type` accepts it from
+  /// `20261016010000_church_groups.sql` on.
+  group('Church group');
 
   const ReportTargetType(this.label);
   final String label;

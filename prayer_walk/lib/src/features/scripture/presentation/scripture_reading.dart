@@ -68,7 +68,50 @@ class ScriptureBody extends StatelessWidget {
             style: theme.textTheme.labelSmall?.copyWith(color: muted),
           ),
         ],
+        // Where it came from, when that is a church group rather than the
+        // app's library. Not governed by [showTranslation]: that switch is
+        // about an edition's courtesy label, and this is provenance — a walker
+        // should always be able to tell their church's voice from the app's.
+        if (prompt.isFromGroup && prompt.groupName.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xs),
+          GroupCredit(
+            groupName: prompt.groupName,
+            style: theme.textTheme.labelSmall?.copyWith(color: muted),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+/// "Shared by St Anne", with the church mark the profile uses for a church.
+class GroupCredit extends StatelessWidget {
+  const GroupCredit({super.key, required this.groupName, this.style});
+
+  final String groupName;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = style ?? Theme.of(context).textTheme.labelSmall;
+    return Semantics(
+      label: 'Shared by $groupName',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.church_outlined, size: 14, color: resolved?.color),
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              'Shared by $groupName',
+              style: resolved,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

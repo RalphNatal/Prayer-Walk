@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../groups/presentation/member_groups_section.dart';
 import '../data/profile_providers.dart';
 import '../domain/user_profile.dart';
 import 'widgets/profile_pieces.dart';
@@ -83,6 +84,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: AppSpacing.xxl),
+              MemberGroupsSection(userId: item.id, isSelf: true),
               SectionHeader(
                 title: 'Recent walks',
                 actionLabel: 'See all',

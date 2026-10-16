@@ -35,6 +35,8 @@ class ScripturePrompt {
     this.sortOrder = 0,
     this.isPublished = true,
     this.contributorName = '',
+    this.groupId,
+    this.groupName = '',
   });
 
   final String id;
@@ -69,6 +71,22 @@ class ScripturePrompt {
   final String contributorName;
 
   bool get hasContributor => contributorName.trim().isNotEmpty;
+
+  /// The church group this came from, or null for the global library.
+  ///
+  /// A group's prompts reach only its active members, and only ever in the
+  /// public domain or as a prayer — the database holds that line
+  /// (`scripture_prompts_group_rows_public_domain`). They are delivered
+  /// whatever edition the build is configured for: the group chose them, and
+  /// there is no licensed version of a group's own verse to prefer.
+  final String? groupId;
+
+  /// "St Anne" — credited under the verse, so a walker knows it came from
+  /// their church rather than from the app. Empty for the global library, and
+  /// for a group the cache did not know the name of.
+  final String groupName;
+
+  bool get isFromGroup => groupId != null && groupId!.isNotEmpty;
 
   /// Whether there is any text at all behind the reference.
   ///
