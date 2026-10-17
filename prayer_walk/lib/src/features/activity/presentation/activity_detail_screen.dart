@@ -545,10 +545,10 @@ class _IntentionRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: AppSpacing.xxs),
             child: Icon(
               Icons.local_fire_department_rounded,
-              size: 18,
+              size: 16,
               color: theme.colorScheme.tertiary,
             ),
           ),

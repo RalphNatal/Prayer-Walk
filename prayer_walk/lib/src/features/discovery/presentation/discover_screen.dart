@@ -4,11 +4,58 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/utils/app_haptics.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../groups/presentation/churches_view.dart';
 import '../data/discovery_providers.dart';
 import '../domain/member_card.dart';
 import 'member_tile.dart';
 import 'suggested_members_strip.dart';
+
+/// Which half of Discover is showing.
+enum DiscoverTab { people, churches }
+
+/// Finding people, and finding your church.
+///
+/// Two tabs under one door. Churches live here rather than in a bottom-bar tab
+/// of their own: the bar already carries five destinations, and a church is
+/// something you join once and then meet mostly through its scripture on your
+/// walks — the same "a door, not a place to live" reasoning that keeps
+/// Discover itself off the bar. See the note above `Routes.churchGroup`.
+class DiscoverScreen extends StatelessWidget {
+  const DiscoverScreen({super.key, this.initialTab = DiscoverTab.people});
+
+  final DiscoverTab initialTab;
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: DiscoverTab.values.length,
+      initialIndex: initialTab.index,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Discover'),
+          bottom: TabBar(
+            onTap: (_) => AppHaptics.selection(),
+            tabs: const [
+              Tab(text: 'People'),
+              Tab(text: 'Churches'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Focus the field only on the tab somebody came for: a keyboard
+            // springing up over the Churches tab would hide the list of
+            // churches it opens on.
+            PeopleSearchView(autofocus: initialTab == DiscoverTab.people),
+            const ChurchesView(),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// A1 · Finding people.
 ///
@@ -21,14 +68,16 @@ import 'suggested_members_strip.dart';
 /// empty. Nothing is listed until somebody types: a directory that shows the
 /// whole membership on focus has published a membership roll, which is a
 /// different feature and not one this app has.
-class DiscoverScreen extends ConsumerStatefulWidget {
-  const DiscoverScreen({super.key});
+class PeopleSearchView extends ConsumerStatefulWidget {
+  const PeopleSearchView({super.key, this.autofocus = true});
+
+  final bool autofocus;
 
   @override
-  ConsumerState<DiscoverScreen> createState() => _DiscoverScreenState();
+  ConsumerState<PeopleSearchView> createState() => _PeopleSearchViewState();
 }
 
-class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
+class _PeopleSearchViewState extends ConsumerState<PeopleSearchView> {
   final _field = TextEditingController();
   Timer? _debounce;
 
@@ -70,45 +119,42 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final results = ref.watch(memberSearchProvider);
     final searching = query.trim().isNotEmpty;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Find people')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.md,
-            ),
-            child: TextField(
-              controller: _field,
-              autofocus: true,
-              textInputAction: TextInputAction.search,
-              onChanged: _onChanged,
-              onSubmitted: (value) =>
-                  ref.read(memberSearchQueryProvider.notifier).set(value),
-              decoration: InputDecoration(
-                hintText: 'Name, handle or parish',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: searching
-                    ? IconButton(
-                        tooltip: 'Clear',
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: _clear,
-                      )
-                    : null,
-              ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.md,
+          ),
+          child: TextField(
+            controller: _field,
+            autofocus: widget.autofocus,
+            textInputAction: TextInputAction.search,
+            onChanged: _onChanged,
+            onSubmitted: (value) =>
+                ref.read(memberSearchQueryProvider.notifier).set(value),
+            decoration: InputDecoration(
+              hintText: 'Name, handle or church',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: searching
+                  ? IconButton(
+                      tooltip: 'Clear',
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: _clear,
+                    )
+                  : null,
             ),
           ),
-          const Divider(height: 1),
-          Expanded(
-            child: searching
-                ? _Results(results: results, query: query)
-                : const _BeforeSearching(),
-          ),
-        ],
-      ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: searching
+              ? _Results(results: results, query: query)
+              : const _BeforeSearching(),
+        ),
+      ],
     );
   }
 }
@@ -127,7 +173,7 @@ class _BeforeSearching extends StatelessWidget {
         const SuggestedMembersStrip(),
         const SizedBox(height: AppSpacing.xl),
         Text(
-          'Search by name, by handle, or by parish. People who have chosen to '
+          'Search by name, by handle, or by church. People who have chosen to '
           'walk publicly appear above.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,

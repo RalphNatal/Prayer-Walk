@@ -76,9 +76,15 @@ class ScriptureLibrary {
   /// How many prompts of each edition the source held, keyed by the edition's
   /// short code. Prayers, which quote nobody, are counted under an empty key
   /// so they are visible without being mistaken for a translation.
+  ///
+  /// The app's library only. A church group's verses are counted by
+  /// [fromGroups] instead: they are public domain by construction and outside
+  /// the edition question, and folding them in here would make "WEBBE 1" on an
+  /// NLT build look like a library that had fallen back when it had not.
   Map<String, int> get countsByTranslation {
     final counts = <String, int>{};
     for (final prompt in available) {
+      if (prompt.isFromGroup) continue;
       final key = prompt.translationInfo.isQuotation
           ? prompt.translationInfo.shortCode
           : '';
@@ -90,8 +96,16 @@ class ScriptureLibrary {
   /// What is actually being delivered, once the filter and the fallback have
   /// both had their say. This is the honest answer to "which translation am I
   /// reading", and it is not always [requested].
+  ///
+  /// The app's library only, for the reason [countsByTranslation] gives — so
+  /// "it should never report two editions" stays true of the library, and a
+  /// church's WEBBE verse on an NLT build is reported by [fromGroups] instead.
   Set<BibleTranslation> get deliveredTranslations => {
     for (final prompt in prompts)
-      if (prompt.translationInfo.isQuotation) prompt.translationInfo,
+      if (!prompt.isFromGroup && prompt.translationInfo.isQuotation)
+        prompt.translationInfo,
   };
+
+  /// How many of [prompts] came from the walker's church groups.
+  int get fromGroups => prompts.where((p) => p.isFromGroup).length;
 }

@@ -29,7 +29,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _name = TextEditingController();
   final _handle = TextEditingController();
   final _bio = TextEditingController();
-  final _parish = TextEditingController();
+  final _church = TextEditingController();
   final _pronouns = TextEditingController();
   final _location = TextEditingController();
   final _links = TextEditingController();
@@ -49,7 +49,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _name.dispose();
     _handle.dispose();
     _bio.dispose();
-    _parish.dispose();
+    _church.dispose();
     _pronouns.dispose();
     _location.dispose();
     _links.dispose();
@@ -211,7 +211,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               displayName: _name.text,
               handle: _handle.text,
               bio: _bio.text,
-              parish: _parish.text,
+              church: _church.text,
               pronouns: _pronouns.text,
               location: _location.text,
               links: _links.text,
@@ -288,7 +288,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             // Stored with the leading '@'; the field draws its own prefix.
             _handle.text = item.handle.replaceFirst('@', '');
             _bio.text = item.bio;
-            _parish.text = item.parish;
+            _church.text = item.church;
             _pronouns.text = item.pronouns;
             _location.text = item.location;
             _links.text = item.links;
@@ -344,11 +344,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 const SizedBox(height: AppSpacing.lg),
 
                 TextFormField(
-                  controller: _parish,
+                  controller: _church,
                   textCapitalization: TextCapitalization.words,
-                  maxLength: ProfileLimits.parish,
+                  maxLength: ProfileLimits.church,
                   decoration: const InputDecoration(
-                    labelText: 'Parish or community',
+                    labelText: 'Church or community',
                     counterText: '',
                   ),
                 ),
@@ -380,7 +380,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Link (optional)',
                     hintText: 'prayerwalk.org',
-                    helperText: 'A personal or parish page.',
+                    helperText: 'A personal or church page.',
                     counterText: '',
                   ),
                   validator: (value) => linkError(value ?? ''),

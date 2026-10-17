@@ -14,7 +14,7 @@ import '../../../activity/presentation/trail_mapping.dart';
 import '../../domain/profile_fields.dart';
 import '../../domain/user_profile.dart';
 
-/// Avatar, name, parish, bio, and the follow counts.
+/// Avatar, name, church, bio, and the follow counts.
 class ProfileHeader extends StatelessWidget {
   const ProfileHeader({super.key, required this.profile, this.isSelf = false});
 
@@ -62,10 +62,10 @@ class ProfileHeader extends StatelessWidget {
                         ),
                     ],
                   ),
-                  if (profile.parish.isNotEmpty)
+                  if (profile.church.isNotEmpty)
                     _HeaderDetail(
                       icon: Icons.church_outlined,
-                      text: profile.parish,
+                      text: profile.church,
                     ),
                   if (profile.location.isNotEmpty)
                     _HeaderDetail(
@@ -115,7 +115,7 @@ class ProfileHeader extends StatelessWidget {
   }
 }
 
-/// One icon-and-text line under the name — parish, or location.
+/// One icon-and-text line under the name — church, or location.
 class _HeaderDetail extends StatelessWidget {
   const _HeaderDetail({required this.icon, required this.text});
 
@@ -412,7 +412,7 @@ class _MiniActivityCard extends StatelessWidget {
                 height: 100,
                 strokeWidth: 3,
                 showGlow: false,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 semanticLabel: '${activity.title}, traced route',
               ),
               Padding(

@@ -128,7 +128,7 @@ InterruptedRecording _walk({
   intentions: [
     PrayerIntention(
       id: 'i0',
-      text: 'For the parish',
+      text: 'For the church',
       category: PrayerCategory.community,
       createdAt: DateTime.now(),
     ),
@@ -269,7 +269,7 @@ void main() {
       expect(read.route.first.latitude, closeTo(_lat, 0.000001));
       expect(read.waypoints.single.kind, WaypointKind.gratitude);
       expect(read.waypoints.single.note, 'by the river');
-      expect(read.intentions.single.text, 'For the parish');
+      expect(read.intentions.single.text, 'For the church');
       expect(read.devotionalTitle, 'A quiet mile');
       expect(read.devotionalCategory, DevotionalCategory.lament);
     });
@@ -361,7 +361,7 @@ void main() {
       expect(state().route, hasLength(2));
       expect(state().waypoints, hasLength(1));
       expect(state().deliveredPrompts, hasLength(1));
-      expect(state().intentions.single.text, 'For the parish');
+      expect(state().intentions.single.text, 'For the church');
     });
 
     test('a walk paused when the app died resumes paused', () async {

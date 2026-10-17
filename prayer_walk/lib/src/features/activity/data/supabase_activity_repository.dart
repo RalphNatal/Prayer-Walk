@@ -139,7 +139,7 @@ class SupabaseActivityRepository implements ActivityRepository {
     final now = DateTime.now();
     const prompts = <(String, PrayerCategory)>[
       ('For my family', PrayerCategory.family),
-      ('For our parish', PrayerCategory.community),
+      ('For our church', PrayerCategory.community),
       ('For someone who is ill', PrayerCategory.healing),
       ('In thanksgiving', PrayerCategory.gratitude),
       ('For a decision I am facing', PrayerCategory.guidance),

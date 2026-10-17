@@ -35,6 +35,8 @@ class ScripturePrompt {
     this.sortOrder = 0,
     this.isPublished = true,
     this.contributorName = '',
+    this.groupId,
+    this.groupName = '',
   });
 
   final String id;
@@ -60,15 +62,31 @@ class ScripturePrompt {
 
   /// C3 · Who proposed this, when a member did.
   ///
-  /// Empty for the admin-curated library, which is the parish speaking rather
+  /// Empty for the admin-curated library, which is the church speaking rather
   /// than a person and is not attributed to one. Present for anything that came
   /// through the submissions queue, and it keeps travelling: the arrival card
   /// on a walk credits the contributor beside the same quotation that carries
-  /// the translation mark. Losing provenance would turn a parish's own
+  /// the translation mark. Losing provenance would turn a church's own
   /// contributions back into anonymous content.
   final String contributorName;
 
   bool get hasContributor => contributorName.trim().isNotEmpty;
+
+  /// The church group this came from, or null for the global library.
+  ///
+  /// A group's prompts reach only its active members, and only ever in the
+  /// public domain or as a prayer — the database holds that line
+  /// (`scripture_prompts_group_rows_public_domain`). They are delivered
+  /// whatever edition the build is configured for: the group chose them, and
+  /// there is no licensed version of a group's own verse to prefer.
+  final String? groupId;
+
+  /// "St Anne" — credited under the verse, so a walker knows it came from
+  /// their church rather than from the app. Empty for the global library, and
+  /// for a group the cache did not know the name of.
+  final String groupName;
+
+  bool get isFromGroup => groupId != null && groupId!.isNotEmpty;
 
   /// Whether there is any text at all behind the reference.
   ///

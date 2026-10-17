@@ -34,7 +34,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     (
       title: 'Walk it with other people',
       body:
-          'Follow your parish, send encouragement, and read devotionals written '
+          'Join your church, send encouragement, and read devotionals written '
           'for the streets you are actually on.',
     ),
   ];
@@ -59,7 +59,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _controller.jumpToPage(_page + 1);
     } else {
       _controller.nextPage(
-        duration: AppDurations.medium,
+        duration: AppMotion.standard,
         curve: Curves.easeOutCubic,
       );
     }
@@ -129,7 +129,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           AnimatedContainer(
                             duration: context.reduceMotion
                                 ? Duration.zero
-                                : AppDurations.fast,
+                                : AppMotion.quick,
                             margin: const EdgeInsets.symmetric(
                               horizontal: AppSpacing.xs,
                             ),

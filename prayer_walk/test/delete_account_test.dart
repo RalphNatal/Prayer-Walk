@@ -94,6 +94,17 @@ void main() {
       ),
     );
     await tester.pump();
+    // The confirmation sits below the list of what is deleted, and that list
+    // grew with church groups in 1.1. Scroll to it the way a person on a
+    // shorter phone always has had to — the ListView does not build what is
+    // off screen, so without this there is no field to type into.
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Delete my account'),
+      120,
+      // The page's list, not the text field's own internal scrollable.
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
     return repository;
   }
 

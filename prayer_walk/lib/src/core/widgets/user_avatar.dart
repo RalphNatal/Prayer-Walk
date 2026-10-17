@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../constants/app_spacing.dart';
+import 'motion.dart';
 
 /// A member's photo, or their initials on a theme-derived tint.
 ///
@@ -109,8 +110,8 @@ class UserAvatar extends StatelessWidget {
                     if (wasSynchronous) return child;
                     return AnimatedOpacity(
                       opacity: frame == null ? 0 : 1,
-                      duration: const Duration(milliseconds: 180),
-                      curve: Curves.easeOut,
+                      duration: AppMotion.quick,
+                      curve: AppMotion.enter,
                       child: child,
                     );
                   },

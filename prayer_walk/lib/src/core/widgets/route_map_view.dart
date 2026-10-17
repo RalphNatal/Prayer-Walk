@@ -228,7 +228,7 @@ class _RouteMapViewState extends State<RouteMapView> {
           maxNativeZoom: tiles.maxNativeZoom,
           retinaMode: tiles.retina,
           tileDisplay: const TileDisplay.fadeIn(
-            duration: AppDurations.fast,
+            duration: AppMotion.quick,
           ),
         ),
         if (hasRoute) ...[

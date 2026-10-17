@@ -42,7 +42,7 @@ class PrimaryButton extends StatelessWidget {
       onPressed: busy ? null : onPressed,
       style: large
           ? FilledButton.styleFrom(
-              minimumSize: const Size(0, 60),
+              minimumSize: const Size(0, AppSizes.largeButton),
               textStyle: Theme.of(context).textTheme.titleMedium,
             )
           : null,

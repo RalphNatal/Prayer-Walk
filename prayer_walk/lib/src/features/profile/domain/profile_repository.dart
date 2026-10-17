@@ -22,7 +22,7 @@ class ProfileEdit {
     required this.displayName,
     required this.handle,
     required this.bio,
-    required this.parish,
+    required this.church,
     this.pronouns = '',
     this.location = '',
     this.links = '',
@@ -31,7 +31,7 @@ class ProfileEdit {
   final String displayName;
   final String handle;
   final String bio;
-  final String parish;
+  final String church;
 
   /// Short and free — "she/her", "they/them".
   final String pronouns;

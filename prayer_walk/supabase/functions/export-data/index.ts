@@ -34,14 +34,38 @@ Deno.serve(async (req) => {
 
   const admin = serviceRoleClient();
 
-  const [profile, activities, comments, encouragements, scriptureDeliveries] =
-    await Promise.all([
-      admin.from("profiles").select("*").eq("id", uid).maybeSingle(),
-      admin.from("activities").select("*").eq("user_id", uid),
-      admin.from("comments").select("*").eq("author_id", uid),
-      admin.from("encouragements").select("*").eq("from_user_id", uid),
-      admin.from("scripture_deliveries").select("*").eq("user_id", uid),
-    ]);
+  const [
+    profile,
+    activities,
+    comments,
+    encouragements,
+    scriptureDeliveries,
+    groupMemberships,
+    groupScripture,
+  ] = await Promise.all([
+    admin.from("profiles").select("*").eq("id", uid).maybeSingle(),
+    admin.from("activities").select("*").eq("user_id", uid),
+    admin.from("comments").select("*").eq("author_id", uid),
+    admin.from("encouragements").select("*").eq("from_user_id", uid),
+    admin.from("scripture_deliveries").select("*").eq("user_id", uid),
+    // Which church groups the member is in, waiting on or was removed from,
+    // and as what. The group's name and city come with each row so the
+    // export reads on its own; the rest of the roster does not — other
+    // members' memberships are their data, not this member's.
+    admin
+      .from("church_group_members")
+      .select("role, status, joined_at, group:church_groups(id, name, city)")
+      .eq("user_id", uid),
+    // Verses and prayers this member posted to a group as its admin.
+    admin
+      .from("scripture_prompts")
+      .select(
+        "id, group_id, reference, body, translation, kind, is_published, " +
+          "rights_attested_at, created_at",
+      )
+      .eq("published_by", uid)
+      .not("group_id", "is", null),
+  ]);
 
   const firstError = [
     profile,
@@ -49,6 +73,8 @@ Deno.serve(async (req) => {
     comments,
     encouragements,
     scriptureDeliveries,
+    groupMemberships,
+    groupScripture,
   ].find((r) => r.error)?.error;
   if (firstError) {
     console.error(`export-data: query failed for ${uid}`, firstError);
@@ -62,5 +88,7 @@ Deno.serve(async (req) => {
     comments: comments.data,
     encouragements: encouragements.data,
     scripture_deliveries: scriptureDeliveries.data,
+    church_group_memberships: groupMemberships.data,
+    church_group_scripture: groupScripture.data,
   });
 });

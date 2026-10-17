@@ -71,7 +71,7 @@ abstract final class AppConfig {
   /// preference, not a bar — a walk long enough to exhaust everything else
   /// falls back to oldest-first rather than going quiet.
   ///
-  /// Configurable so a parish with a small library can shorten it rather than
+  /// Configurable so a church with a small library can shorten it rather than
   /// spend the whole pool at once, and so a very large library can lengthen it.
   /// Thirty days is the default because it is longer than the interval at which
   /// anybody remembers a short passage, and short enough that a 300-prompt

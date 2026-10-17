@@ -41,7 +41,7 @@ class MockSeed {
         joinedAt: daysAgo(412),
         accentIndex: 0,
         bio: 'Out before the jeepneys. Six laps of the village, then coffee.',
-        parish: 'San Roque Parish, Mandaluyong',
+        church: 'San Roque Church, Mandaluyong',
         followerCount: 3,
         followingCount: 5,
         stats: const LifetimeStats(
@@ -60,8 +60,8 @@ class MockSeed {
         status: MemberStatus.active,
         joinedAt: daysAgo(520),
         accentIndex: 3,
-        bio: 'Parish priest. Keeper of the devotional shelf.',
-        parish: 'San Roque Parish, Mandaluyong',
+        bio: 'Church priest. Keeper of the devotional shelf.',
+        church: 'San Roque Church, Mandaluyong',
         followerCount: 5,
         followingCount: 2,
         stats: const LifetimeStats(
@@ -81,7 +81,7 @@ class MockSeed {
         joinedAt: daysAgo(288),
         accentIndex: 1,
         bio: 'Marathon in November. Praying the whole way there.',
-        parish: 'Christ the King, Quezon City',
+        church: 'Christ the King, Quezon City',
         followerCount: 4,
         followingCount: 3,
         stats: const LifetimeStats(
@@ -101,7 +101,7 @@ class MockSeed {
         joinedAt: daysAgo(151),
         accentIndex: 2,
         bio: 'Nurse. Night shift, morning hills.',
-        parish: 'Our Lady of Peace, Antipolo',
+        church: 'Our Lady of Peace, Antipolo',
         followerCount: 6,
         followingCount: 4,
         stats: const LifetimeStats(
@@ -121,7 +121,7 @@ class MockSeed {
         joinedAt: daysAgo(96),
         accentIndex: 4,
         bio: 'Two wheels, one rosary.',
-        parish: 'Sto. Niño, Pasig',
+        church: 'Sto. Niño, Pasig',
         followerCount: 2,
         followingCount: 5,
         stats: const LifetimeStats(
@@ -141,7 +141,7 @@ class MockSeed {
         joinedAt: daysAgo(63),
         accentIndex: 5,
         bio: 'Novena walker. Day 3 of 9.',
-        parish: 'San Roque Parish, Mandaluyong',
+        church: 'San Roque Church, Mandaluyong',
         followerCount: 3,
         followingCount: 6,
         stats: const LifetimeStats(
@@ -161,7 +161,7 @@ class MockSeed {
         joinedAt: daysAgo(38),
         accentIndex: 1,
         bio: '',
-        parish: '',
+        church: '',
         followerCount: 0,
         followingCount: 1,
         stats: const LifetimeStats(
@@ -181,7 +181,7 @@ class MockSeed {
         joinedAt: daysAgo(4),
         accentIndex: 4,
         bio: 'Just started. Be gentle.',
-        parish: 'Christ the King, Quezon City',
+        church: 'Christ the King, Quezon City',
         followerCount: 1,
         followingCount: 2,
         stats: const LifetimeStats(

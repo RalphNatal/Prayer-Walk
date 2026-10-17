@@ -3,6 +3,9 @@ import 'package:prayer_walk/src/features/activity/data/activity_row_mapper.dart'
 import 'package:prayer_walk/src/features/activity/domain/activity.dart';
 import 'package:prayer_walk/src/features/feed/data/supabase_feed_repository.dart';
 import 'package:prayer_walk/src/features/profile/data/profile_row_mapper.dart';
+import 'package:prayer_walk/src/features/profile/data/supabase_profile_repository.dart';
+import 'package:prayer_walk/src/features/profile/domain/profile_fields.dart';
+import 'package:prayer_walk/src/features/profile/domain/profile_repository.dart';
 
 /// The mapping between a Postgres row and the domain, tested without a
 /// Postgres. Everything below is the shape the SQL functions actually return —
@@ -14,7 +17,7 @@ Map<String, dynamic> _authorRow({String? fullName, String? handle}) => {
   'avatar_url': null,
   'handle': handle,
   'bio': 'Nurse. Night shift, morning hills.',
-  'parish': 'Our Lady of Peace, Antipolo',
+  'church': 'Our Lady of Peace, Antipolo',
   'role': 'member',
   'status': 'active',
   'created_at': '2026-01-04T09:15:00+00:00',
@@ -60,6 +63,63 @@ Map<String, dynamic> _cardRow({
 };
 
 void main() {
+  // `profiles.church` replaced the old field name in 1.1 (see
+  // 20261016000000_parish_to_church.sql). The column, the JSON key the SQL
+  // functions build, the select list and the write payload all have to change
+  // together, or a member's church silently comes back empty.
+  group('the church field, end to end', () {
+    test('the select list names church exactly once', () {
+      final columns = profileColumns.split(',').map((c) => c.trim()).toList();
+      expect(columns.where((c) => c == 'church'), hasLength(1));
+      expect(
+        columns,
+        unorderedEquals(const [
+          'id', 'full_name', 'avatar_url', 'role', 'status', 'created_at', //
+          'handle', 'bio', 'church', 'pronouns', 'location', 'links',
+        ]),
+      );
+    });
+
+    test('a row read back from the write payload keeps its church', () {
+      const edit = ProfileEdit(
+        displayName: 'Ana Villanueva',
+        handle: 'anav',
+        bio: '',
+        church: '  San Roque, Antipolo  ',
+      );
+      final written = profileUpdatePayload(edit);
+      expect(written['church'], 'San Roque, Antipolo');
+
+      final readBack = userProfileFromRow({
+        ..._authorRow(fullName: 'Ana Villanueva', handle: 'anav'),
+        ...written,
+      });
+      expect(readBack.church, 'San Roque, Antipolo');
+    });
+
+    test('an over-long church is clamped on the way in, not refused', () {
+      final edit = ProfileEdit(
+        displayName: 'Ana',
+        handle: 'anav',
+        bio: '',
+        church: 'x' * (ProfileLimits.church + 20),
+      );
+      final church = profileUpdatePayload(edit)['church']! as String;
+      expect(church.length, ProfileLimits.church);
+    });
+
+    test('a row with no church key maps to empty rather than throwing', () {
+      final row = _authorRow(fullName: 'Ana', handle: 'anav')..remove('church');
+      expect(userProfileFromRow(row).church, '');
+    });
+
+    test('copyWith carries church through, and replaces it when asked', () {
+      final profile = userProfileFromRow(_authorRow(fullName: 'A', handle: 'a'));
+      expect(profile.copyWith(bio: 'new').church, profile.church);
+      expect(profile.copyWith(church: 'St Joseph').church, 'St Joseph');
+    });
+  });
+
   group('userProfileFromRow', () {
     test('maps the row a profile select and a feed author both return', () {
       final profile = userProfileFromRow(
@@ -68,7 +128,7 @@ void main() {
 
       expect(profile.displayName, 'Ana Villanueva');
       expect(profile.handle, '@anav');
-      expect(profile.parish, 'Our Lady of Peace, Antipolo');
+      expect(profile.church, 'Our Lady of Peace, Antipolo');
       expect(profile.initials, 'AV');
     });
 

@@ -443,10 +443,10 @@ class _IntentionsEditor extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 3),
+                      padding: const EdgeInsets.only(top: AppSpacing.xxs),
                       child: Icon(
                         Icons.local_fire_department_rounded,
-                        size: 15,
+                        size: 16,
                         color: theme.colorScheme.tertiary,
                       ),
                     ),

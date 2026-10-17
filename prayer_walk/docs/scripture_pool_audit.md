@@ -371,5 +371,5 @@ The 274 added WEBBE passages were selected and transcribed for this library
 rather than pulled programmatically from a source file. Public domain means no
 fee is owed, not that a transcription error is acceptable in somebody's prayer.
 **Diff `supabase/seed/scripture_prompts_seed.sql` against
-<https://ebible.org/webbe/> before seeding a parish**, and treat any mismatch as
+<https://ebible.org/webbe/> before seeding a production database**, and treat any mismatch as
 this repository being wrong. The seed header carries the same warning.

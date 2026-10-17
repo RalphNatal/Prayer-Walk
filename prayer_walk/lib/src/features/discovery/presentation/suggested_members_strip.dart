@@ -104,9 +104,9 @@ class _SuggestionCard extends ConsumerWidget {
                   style: theme.textTheme.titleSmall,
                 ),
                 Text(
-                  person.parish.trim().isEmpty
+                  person.church.trim().isEmpty
                       ? person.handle
-                      : person.parish.trim(),
+                      : person.church.trim(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,

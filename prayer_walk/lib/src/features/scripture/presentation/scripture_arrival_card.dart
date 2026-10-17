@@ -45,7 +45,7 @@ class _ScriptureArrivalCardState extends State<ScriptureArrivalCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entry = AnimationController(
     vsync: this,
-    duration: AppDurations.medium,
+    duration: AppMotion.standard,
   );
   Timer? _dismissTimer;
 

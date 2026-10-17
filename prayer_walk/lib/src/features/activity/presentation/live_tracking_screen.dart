@@ -455,7 +455,7 @@ class _LivePanel extends StatelessWidget {
                       ),
                       label: Text(isPaused ? 'Resume' : 'Pause'),
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 56),
+                        minimumSize: const Size(0, AppSizes.largeButton),
                         foregroundColor: onDark,
                         side: BorderSide(color: onDark.withValues(alpha: 0.4)),
                       ),
@@ -468,7 +468,7 @@ class _LivePanel extends StatelessWidget {
                       icon: const Icon(Icons.flag_rounded),
                       label: const Text('Finish'),
                       style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 56),
+                        minimumSize: const Size(0, AppSizes.largeButton),
                       ),
                     ),
                   ),

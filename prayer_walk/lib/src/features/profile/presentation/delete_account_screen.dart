@@ -119,29 +119,27 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   'walks.',
               'Your privacy zones and scripture delivery history.',
               'Your profile photo.',
+              'Your church group memberships.',
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'A devotional or announcement you published for your parish '
+            'A devotional or announcement you published for your church '
             'keeps its byline text — the way an article outlives its '
-            'author — but is no longer linked to your account in any way.',
+            'author — but is no longer linked to your account in any way. '
+            'A group you look after passes to its longest-standing member, '
+            'or closes if nobody else is in it.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
 
-          OutlinedButton.icon(
+          SecondaryButton(
+            label: 'Export your data first',
+            icon: Icons.download_outlined,
+            busy: _exporting,
             onPressed: busy ? null : _exportData,
-            icon: _exporting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.download_outlined),
-            label: Text(_exporting ? 'Preparing…' : 'Export your data first'),
           ),
           const SizedBox(height: AppSpacing.xxl),
 
@@ -157,7 +155,6 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
               hintText: _confirmWord,
-              border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -169,7 +166,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: theme.colorScheme.error,
                 foregroundColor: theme.colorScheme.onError,
-                minimumSize: const Size(0, 52),
+                minimumSize: const Size(0, AppSizes.largeButton),
               ),
               child: _deleting
                   ? SizedBox(

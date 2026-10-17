@@ -13,7 +13,7 @@ enum FollowListMode {
   following(
     'Following',
     'Not following anyone yet',
-    'Find someone from your parish and follow their walks.',
+    'Find someone from your church and follow their walks.',
   );
 
   const FollowListMode(this.title, this.emptyTitle, this.emptyMessage);
@@ -98,7 +98,7 @@ class FollowListScreen extends ConsumerWidget {
                 ),
                 title: Text(person.displayName),
                 subtitle: Text(
-                  person.parish.isEmpty ? person.handle : person.parish,
+                  person.church.isEmpty ? person.handle : person.church,
                 ),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.pushNamed(

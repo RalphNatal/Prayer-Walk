@@ -1,10 +1,8 @@
-import 'dart:math';
-import 'dart:typed_data';
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/utils/secure_id.dart';
 import '../domain/profile_fields.dart';
 import '../domain/profile_repository.dart';
 import '../domain/user_profile.dart';
@@ -12,10 +10,6 @@ import 'profile_row_mapper.dart';
 
 /// The Storage bucket created by `20260731000000_avatar_storage.sql`.
 const _avatarBucket = 'avatars';
-
-/// Seeded from the platform's secure entropy source rather than the clock, so
-/// an object key cannot be guessed from one that was seen. See [_uuid].
-final _random = Random.secure();
 
 /// A profile problem worth showing the person, phrased in the app's voice.
 ///
@@ -64,24 +58,7 @@ class SupabaseProfileRepository implements ProfileRepository {
     try {
       await supabase
           .from('profiles')
-          .update({
-            // Clamped to the same lengths the columns declare, so a pasted
-            // paragraph lands as a short field rather than as a failed save.
-            // `role` and `status` are absent, and this map is the reason the
-            // app has never had cause to send them.
-            'full_name': clampField(edit.displayName, ProfileLimits.displayName),
-            'handle': canonicalHandle(edit.handle),
-            'bio': clampField(edit.bio, ProfileLimits.bio),
-            'parish': clampField(edit.parish, ProfileLimits.parish),
-            'pronouns': clampField(edit.pronouns, ProfileLimits.pronouns),
-            'location': clampField(edit.location, ProfileLimits.location),
-            // Normalised through the same validator the form used, not stored
-            // as typed: what goes in the column is what was actually checked.
-            // An unusable link is stored as empty rather than rejected — the
-            // form has already said so, and losing a name change over a typo in
-            // an optional field would be the wrong trade.
-            'links': profileLink(edit.links) ?? '',
-          })
+          .update(profileUpdatePayload(edit))
           .eq('id', id);
     } on PostgrestException catch (error) {
       // 23505 = unique_violation. `handle` is the only unique column the app
@@ -114,7 +91,7 @@ class SupabaseProfileRepository implements ProfileRepository {
   @override
   Future<UserProfile> uploadAvatar(String id, AvatarUpload upload) async {
     final previous = await _currentAvatarUrl(id);
-    final key = '$id/${_uuid()}.jpg';
+    final key = '$id/${secureUuidV4()}.jpg';
 
     await supabase.storage
         .from(_avatarBucket)
@@ -188,22 +165,6 @@ class SupabaseProfileRepository implements ProfileRepository {
     }
   }
 
-  /// v4, from the platform's secure RNG. `crypto.getRandomValues` on web,
-  /// `/dev/urandom` on mobile — not `Random()`, whose sequence is guessable and
-  /// which would make a public URL predictable from a neighbouring one.
-  String _uuid() {
-    final bytes = Uint8List.fromList(
-      List<int>.generate(16, (_) => _random.nextInt(256)),
-    );
-    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
-    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
-    String hex(int start, int end) => bytes
-        .sublist(start, end)
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
-    return '${hex(0, 4)}-${hex(4, 6)}-${hex(6, 8)}-${hex(8, 10)}-${hex(10, 16)}';
-  }
-
   /// Joins a `profiles` row to its `member_stats` row. An absent stats row —
   /// which should not happen, but is cheap to survive — leaves the honest
   /// zeros in place rather than failing the whole profile.
@@ -220,3 +181,28 @@ class SupabaseProfileRepository implements ProfileRepository {
     );
   }
 }
+
+/// The columns Edit profile writes, as they reach Postgres.
+///
+/// Top level rather than inline in [SupabaseProfileRepository.updateProfile] so
+/// the shape of a write can be held by a test without a database. The keys here
+/// and the names in [profileColumns] have to agree: a field renamed on one side
+/// only is a member's church quietly coming back empty.
+Map<String, Object> profileUpdatePayload(ProfileEdit edit) => {
+  // Clamped to the same lengths the columns declare, so a pasted paragraph
+  // lands as a short field rather than as a failed save. `role` and `status`
+  // are absent, and this map is the reason the app has never had cause to send
+  // them.
+  'full_name': clampField(edit.displayName, ProfileLimits.displayName),
+  'handle': canonicalHandle(edit.handle),
+  'bio': clampField(edit.bio, ProfileLimits.bio),
+  'church': clampField(edit.church, ProfileLimits.church),
+  'pronouns': clampField(edit.pronouns, ProfileLimits.pronouns),
+  'location': clampField(edit.location, ProfileLimits.location),
+  // Normalised through the same validator the form used, not stored as typed:
+  // what goes in the column is what was actually checked. An unusable link is
+  // stored as empty rather than rejected — the form has already said so, and
+  // losing a name change over a typo in an optional field would be the wrong
+  // trade.
+  'links': profileLink(edit.links) ?? '',
+};

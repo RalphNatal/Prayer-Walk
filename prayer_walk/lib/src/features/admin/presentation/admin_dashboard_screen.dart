@@ -208,7 +208,7 @@ class _ActivityChart extends StatelessWidget {
                   for (final day in series)
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [

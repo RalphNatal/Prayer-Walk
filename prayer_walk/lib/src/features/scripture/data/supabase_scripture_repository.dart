@@ -116,29 +116,46 @@ class SupabaseScriptureRepository implements ScriptureRepository {
   /// the failure this feature exists to avoid. It is logged with both editions
   /// named, because a walker asking "why isn't this the NLT" deserves an answer
   /// that does not require reading the source.
+  ///
+  /// A church group's own prompts stand outside all of this. They are public
+  /// domain or a prayer by construction (the database refuses anything else),
+  /// the group chose them for its members, and there is no licensed edition
+  /// of a group's verse to prefer — so they are delivered under every
+  /// configured edition, and they play no part in deciding whether the global
+  /// library fell back. An NLT build with no NLT rows yet still falls back to
+  /// the WEBBE library, rather than mistaking one church's WEBBE verse for a
+  /// library that has nothing to deliver.
   ScriptureLibrary _inTranslation(
     List<ScripturePrompt> prompts,
     ScriptureLibrarySource source,
   ) {
     final wanted = _translation;
-    final selected = [
+    final fromGroups = [
       for (final prompt in prompts)
+        if (prompt.isFromGroup) prompt,
+    ];
+    final library = [
+      for (final prompt in prompts)
+        if (!prompt.isFromGroup) prompt,
+    ];
+    final selected = [
+      for (final prompt in library)
         if (!prompt.translationInfo.isQuotation ||
             prompt.translationInfo == wanted)
           prompt,
     ];
     if (selected.any((p) => p.translationInfo.isQuotation)) {
       return ScriptureLibrary(
-        prompts: selected,
+        prompts: [...selected, ...fromGroups],
         source: source,
         requested: wanted,
         available: prompts,
       );
     }
 
-    if (prompts.any((p) => p.translationInfo.isQuotation)) {
+    if (library.any((p) => p.translationInfo.isQuotation)) {
       final falling = {
-        for (final p in prompts)
+        for (final p in library)
           if (p.translationInfo.isQuotation) p.translationInfo.id,
       }.join(', ');
       AppLogger.warn(
@@ -160,14 +177,21 @@ class SupabaseScriptureRepository implements ScriptureRepository {
 
   /// Supabase, or an empty list. Deliberately swallows: every failure here has
   /// the same answer — read locally — and the walk is not told about any of it.
+  ///
+  /// `walk_scripture_library()` is the global library plus every church group
+  /// the walker is an active member of, in one round trip. It replaced a plain
+  /// table select because the table's policies are a superset for one kind of
+  /// caller — an app admin may read every group's rows — and a walk should
+  /// carry the walker's own churches, not every church the account can see.
+  ///
+  /// The whole set is cached, group verses included, so a member who loses
+  /// signal keeps their church's verses as well as the library. A group they
+  /// have since left drops out of the cache at the next successful sync.
   Future<List<ScripturePrompt>> _fetch() async {
     try {
-      final rows = await supabase
-          .from('scripture_prompts')
-          .select(scripturePromptColumns)
-          .eq('is_published', true)
-          .order('sort_order')
-          .timeout(_timeout);
+      final rows =
+          await supabase.rpc('walk_scripture_library').timeout(_timeout)
+              as List<dynamic>;
       return scripturePromptsFromRows(rows);
     } catch (error) {
       AppLogger.info(
@@ -202,10 +226,16 @@ class SupabaseScriptureRepository implements ScriptureRepository {
     // here would put a Publish button on a row that answers with a 23514. It
     // belongs in the submissions queue, which is where the decision that makes
     // it publishable is taken.
+    //
+    // Church groups' own prompts are excluded too. The admin policy can read
+    // them — that is the moderation half of group scripture — but they are not
+    // part of the library this screen curates, and listing them here would put
+    // one church's verses among everybody's.
     final rows = await supabase
         .from('scripture_prompts')
         .select(scripturePromptColumns)
         .eq('status', 'approved')
+        .isFilter('group_id', null)
         .order('sort_order');
     return scripturePromptsFromRows(rows);
   }

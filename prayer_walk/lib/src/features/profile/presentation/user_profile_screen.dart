@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/data/auth_providers.dart';
+import '../../groups/presentation/member_groups_section.dart';
 import '../../privacy/data/privacy_providers.dart';
 import '../../privacy/presentation/block_action.dart';
 import '../../social/data/social_actions.dart';
@@ -66,6 +67,7 @@ class UserProfileScreen extends ConsumerWidget {
               ],
               LifetimeStatsPanel(stats: item.stats),
               const SizedBox(height: AppSpacing.xxl),
+              MemberGroupsSection(userId: userId, isSelf: isSelf),
               const SectionHeader(title: 'Recent walks'),
               RecentActivitiesStrip(userId: userId, isSelf: isSelf),
             ],

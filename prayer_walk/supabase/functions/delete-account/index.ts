@@ -6,7 +6,30 @@
 //
 //   profiles, activities, follows (both directions), encouragements,
 //   comments, privacy_zones, blocks (both directions), scripture_deliveries,
-//   moderation_reports.reported_by
+//   moderation_reports.reported_by, church_group_members
+//
+// Church groups need one more sentence, because a membership row is not the
+// only thing at stake: a group whose last admin deletes their account must not
+// be left with nobody able to approve a request or answer a report. That is
+// handled in the database, not here — the `pw_group_succession` trigger in
+// 20261016010000_church_groups.sql fires on the cascading delete of each
+// membership row and:
+//
+//   * promotes the group's longest-standing active member (by `joined_at`,
+//     which only the server sets) if no active admin is left; or
+//   * soft-deletes the group (`deleted_at`) if no active member is left at
+//     all — hidden from everyone but app admins, its scripture no longer
+//     delivered, its rows kept so a mistake can be undone by hand.
+//
+// Putting it in a trigger rather than in this function is deliberate: a
+// member leaving a group, or being removed from it, raises the same question,
+// and there should be one answer to it rather than two.
+//
+// What is set null rather than deleted, alongside devotionals and
+// announcements below: church_groups.created_by (the group outlives its
+// founder), and scripture_prompts.published_by / rights_attested_by on a
+// group's verses (the verse stays with the group; the record of who vouched
+// for it keeps the date and loses the name).
 //
 // What deliberately does NOT cascade, by existing design (see
 // 20260728020000_devotionals.sql and 20260728040000_announcements.sql):

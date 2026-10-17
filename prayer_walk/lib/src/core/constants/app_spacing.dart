@@ -35,11 +35,12 @@ abstract final class AppRadius {
   );
 }
 
-/// Motion durations. All flourishes are additionally gated on reduced motion.
+/// Looping timings — a pulse, a splash — which are rhythms rather than
+/// transitions. Transitions and state changes take their durations from
+/// `AppMotion` in `core/widgets/motion.dart`, which is the app's one motion
+/// vocabulary; this class used to carry a second, slightly different set of
+/// fast/medium/slow values, and screens mixed the two.
 abstract final class AppDurations {
-  static const Duration fast = Duration(milliseconds: 150);
-  static const Duration medium = Duration(milliseconds: 260);
-  static const Duration slow = Duration(milliseconds: 480);
   static const Duration pulse = Duration(milliseconds: 1800);
   static const Duration splash = Duration(milliseconds: 1300);
 }
@@ -55,6 +56,13 @@ abstract final class AppBreakpoints {
 /// Minimum interactive size, per platform accessibility guidance.
 abstract final class AppSizes {
   static const double minTapTarget = 48;
+
+  /// The height of a screen's main action — the large [PrimaryButton], and
+  /// any hand-built button doing the same job beside or instead of one (the
+  /// Google sign-in button, the delete-account button, the live screen's
+  /// pause and finish). One number, so two buttons stacked for the same
+  /// decision are never two different heights.
+  static const double largeButton = 60;
   static const double avatarSm = 32;
   static const double avatarMd = 44;
   static const double avatarLg = 72;

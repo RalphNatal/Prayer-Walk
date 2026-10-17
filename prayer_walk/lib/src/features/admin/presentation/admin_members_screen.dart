@@ -57,7 +57,7 @@ class _AdminMembersScreenState extends ConsumerState<AdminMembersScreen> {
                   onChanged: controller.search,
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
-                    hintText: 'Search name, handle or parish',
+                    hintText: 'Search name, handle or church',
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: query.search.isEmpty
                         ? null

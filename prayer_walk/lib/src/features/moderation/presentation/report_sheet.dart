@@ -104,7 +104,14 @@ class _ReportSheetState extends State<_ReportSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Report this $target', style: theme.textTheme.titleLarge),
+            // The same heading every sheet and dialog in the app uses.
+            Semantics(
+              header: true,
+              child: Text(
+                'Report this $target',
+                style: theme.textTheme.headlineSmall,
+              ),
+            ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'This goes to an admin. Nobody else sees that you reported it, '

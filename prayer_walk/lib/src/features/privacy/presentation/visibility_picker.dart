@@ -105,7 +105,8 @@ class VisibilityPicker extends ConsumerWidget {
               subtitle: dense
                   ? null
                   : Padding(
-                      padding: const EdgeInsets.only(left: 26),
+                      // Under the label, not under the icon: the icon's 18 and its gap.
+                      padding: const EdgeInsets.only(left: 18 + AppSpacing.sm),
                       child: Text(
                         option.description,
                         style: theme.textTheme.bodySmall,

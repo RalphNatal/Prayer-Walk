@@ -176,6 +176,46 @@ void main() {
       );
     });
   });
+
+  // A church group's cover is shown to everyone who finds the group, and a
+  // photo of a church taken from its doorstep carries the doorstep. Same
+  // guarantee, same fixture.
+  group('prepareCover', () {
+    test('no GPS, camera make or EXIF segment survives', () {
+      final prepared = prepareCoverSync(_photoWithGps());
+      final decoded = img.decodeImage(prepared.bytes)!;
+
+      expect(decoded.exif.gpsIfd.isEmpty, isTrue);
+      expect(_containsAscii(prepared.bytes, 'Prayer Walk Test Camera'), isFalse);
+      expect(_containsAscii(prepared.bytes, 'Exif'), isFalse);
+    });
+
+    test('comes back as a 3:1 band, whatever shape went in', () {
+      for (final (w, h) in [(1200, 800), (800, 1200), (3000, 600)]) {
+        final prepared = prepareCoverSync(_photoWithGps(width: w, height: h));
+        expect(
+          (prepared.width / prepared.height - 3).abs(),
+          lessThan(0.02),
+          reason: '${w}x$h became ${prepared.width}x${prepared.height}',
+        );
+      }
+    });
+
+    test('a large photo is capped at 1200 wide and kept under its budget', () {
+      final prepared = prepareCoverSync(
+        _photoWithGps(width: 4000, height: 2000),
+      );
+      expect(prepared.width, 1200);
+      expect(prepared.sizeBytes, lessThanOrEqualTo(1024 * 1024));
+    });
+
+    test('a file that is not an image is refused in words', () {
+      expect(
+        () => prepareCoverSync(Uint8List.fromList([1, 2, 3, 4])),
+        throwsA(isA<AvatarImageFailure>()),
+      );
+    });
+  });
 }
 
 /// Whether [bytes] contains [needle] as a run of ASCII. Enough to find an EXIF

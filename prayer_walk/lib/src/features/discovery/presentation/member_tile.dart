@@ -48,13 +48,13 @@ class MemberTile extends ConsumerWidget {
     );
   }
 
-  /// Parish, then handle, then when they were last out — in that order,
+  /// Church, then handle, then when they were last out — in that order,
   /// because "Our Lady of Peace, Antipolo" is what makes a stranger placeable
   /// and a handle is only a name with an @ in front of it.
   String _subtitle() {
     final person = card.profile;
     final parts = <String>[
-      if (person.parish.trim().isNotEmpty) person.parish.trim() else person.handle,
+      if (person.church.trim().isNotEmpty) person.church.trim() else person.handle,
       if (card.lastWalkedAt != null)
         'walked ${Fmt.relativeTime(card.lastWalkedAt!)}',
     ];
