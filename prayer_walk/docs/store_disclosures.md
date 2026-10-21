@@ -15,7 +15,7 @@ against `pubspec.yaml`: every dependency is either a Flutter/Dart core
 package, a UI package (`flutter_map`, `image`, `flutter_tts`,
 `audioplayers`), a device-capability package (`geolocator`, `pedometer`,
 `permission_handler`, `image_picker`), or `supabase_flutter` /
-`google_sign_in`. None of these report usage analytics or ad identifiers
+`google_sign_in` / `sign_in_with_apple`. None of these report usage analytics or ad identifiers
 anywhere. So for every data type below: **used for tracking across other
 apps/websites: No**, and there is no "third-party advertising" purpose to
 declare anywhere in either form.
@@ -32,12 +32,13 @@ declare anywhere in either form.
 | Scripture delivery history | Yes | Yes | App functionality (not repeating a passage you've recently read) | No — inherent to using the scripture feature | App activity → App interactions | User Content → Other User Content |
 | Walk metadata (distance, duration, elevation, intentions, notes) | Yes | Yes | App functionality, and social content if shared | Sharing is optional; recording metadata is inherent to using the feature | App activity → App interactions | Fitness → Other Fitness Data |
 | Approximate location for place name (Mapbox geocoding) | Yes, transient | Yes (tied to the walk being saved) | App functionality (a readable place name instead of coordinates) | No — automatic when a walk ends and Mapbox is configured | Location → Approximate location | Location → Coarse Location |
-| Account credentials (email/password, or Google sign-in) | Yes | Yes | Account creation and authentication | You choose the method | Account info | Contact Info / Identifiers |
+| Account credentials (email/password, Google sign-in, or Sign in with Apple on iOS) | Yes | Yes | Account creation and authentication | You choose the method | Account info | Contact Info / Identifiers |
 
 Every row above: **used for tracking: No. Shared with third parties for
 their own purposes: No.** Data reaches Supabase (processor, storing app data
 on the developer's behalf), Mapbox (processor, for map tiles and the
-place-name lookup), and Google (only if you choose Google Sign-In, for
+place-name lookup), Google (only if you choose Google Sign-In, for
+authentication), and Apple (only if you choose Sign in with Apple, for
 authentication) — all as service providers performing a function of the app,
 not as recipients using the data for their own purposes.
 

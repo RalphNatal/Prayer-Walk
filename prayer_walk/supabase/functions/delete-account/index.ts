@@ -16,83 +16,76 @@
 // newspaper doesn't unpublish an article because its author moved on. This
 // function does not touch those rows.
 //
-// What has no foreign key at all, and is the one thing this function must
-// clean up by hand: the avatar object in the `avatars` Storage bucket.
-// Ownership there is derived from the object path (`avatars/{user_id}/...`),
-// not a column `on delete cascade` can see.
+// What has no foreign key at all, and is the one thing in this project this
+// function must clean up by hand: the avatar object in the `avatars` Storage
+// bucket. Ownership there is derived from the object path
+// (`avatars/{user_id}/...`), not a column `on delete cascade` can see.
 //
-// Order matters for safety, not just tidiness: storage cleanup runs BEFORE
-// the account is deleted. If this function dies partway through, the account
-// (and the caller's JWT) is still valid and a retry behaves identically. Once
+// And one thing that is not in this project at all: for a member who signed
+// in with Apple, the app's authorization on their Apple ID. Apple requires an
+// app offering Sign in with Apple to revoke it when the account is deleted
+// (App Store Guideline 5.1.1(v)). Revocation takes a refresh or access token,
+// and native sign-in never leaves one anywhere this project can reach — the
+// app hands Supabase the identity token only — so the app asks Apple for one
+// fresh authorization code at deletion and sends it here as
+// `apple_authorization_code`, and `_shared/apple.ts` trades it for a token and
+// revokes that. Nothing is stored. It needs the Sign in with Apple key, which
+// reaches this function as environment variables (see ../README.md). Without
+// them, without a code, or if Apple refuses, the account is still deleted and
+// the log says loudly that the token was NOT revoked: a misconfigured project
+// must not keep a member who has asked to leave.
+//
+// Order matters for safety, not just tidiness: Apple revocation, then storage
+// cleanup, run BEFORE the account is deleted. Revocation needs the account to
+// still exist — its Apple identity is what the code is checked against, so a
+// code for some other Apple ID is never revoked — and if this function dies
+// partway through, the account (and the caller's JWT) is still valid and a
+// retry behaves identically: the app asks Apple for a fresh code, since a code
+// is single-use, and revoking an authorization twice is harmless. Once
 // `auth.admin.deleteUser` succeeds, the JWT stops resolving to anyone on the
 // next call — which is exactly "already done," not a new failure.
+//
+// The order and the failure policy live in handler.ts, where ../tests/ can
+// drive them; this file wires each step to Supabase and Apple.
 
-import {
-  handleCorsPreflight,
-  jsonResponse,
-} from "../_shared/cors.ts";
-import {
-  serviceRoleClient,
-  UnauthorizedError,
-  verifiedCallerId,
-} from "../_shared/auth.ts";
+import { serviceRoleClient, verifiedCallerId } from "../_shared/auth.ts";
+import { appleRevokerFromEnv, appleSubjectOf } from "../_shared/apple.ts";
+import { handleDeleteAccount } from "./handler.ts";
 
-Deno.serve(async (req) => {
-  const preflight = handleCorsPreflight(req);
-  if (preflight) return preflight;
+Deno.serve((req) => {
+  // Built only once a step needs it, so a preflight or a rejected caller
+  // never creates a service-role client.
+  let client: ReturnType<typeof serviceRoleClient> | undefined;
+  const admin = () => (client ??= serviceRoleClient());
 
-  if (req.method !== "POST") {
-    return jsonResponse({ error: "method_not_allowed" }, { status: 405 });
-  }
+  return handleDeleteAccount(req, {
+    callerId: verifiedCallerId,
 
-  let uid: string;
-  try {
-    uid = await verifiedCallerId(req);
-  } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      return jsonResponse({ error: "unauthorized" }, { status: 401 });
-    }
-    console.error("delete-account: auth verification failed", error);
-    return jsonResponse({ error: "auth_check_failed" }, { status: 500 });
-  }
+    async appleSubject(uid) {
+      const { data, error } = await admin().auth.admin.getUserById(uid);
+      if (error) throw error;
+      return appleSubjectOf(data.user);
+    },
 
-  const admin = serviceRoleClient();
-
-  // Best-effort. A failure here is logged but must not block the deletion
-  // itself — an orphaned ~40-80 KB avatar object is a cheap, documented trade
-  // against blocking someone's deletion on a storage hiccup.
-  try {
-    const { data: files, error: listError } = await admin.storage
-      .from("avatars")
-      .list(uid);
-    if (listError) throw listError;
-    if (files && files.length > 0) {
-      const paths = files.map((f) => `${uid}/${f.name}`);
-      const { error: removeError } = await admin.storage
+    async removeAvatars(uid) {
+      const { data: files, error: listError } = await admin().storage
         .from("avatars")
-        .remove(paths);
-      if (removeError) throw removeError;
-    }
-  } catch (error) {
-    console.error(
-      `delete-account: avatar cleanup failed for ${uid}, continuing`,
-      error,
-    );
-  }
+        .list(uid);
+      if (listError) throw listError;
+      if (files && files.length > 0) {
+        const paths = files.map((f) => `${uid}/${f.name}`);
+        const { error: removeError } = await admin().storage
+          .from("avatars")
+          .remove(paths);
+        if (removeError) throw removeError;
+      }
+    },
 
-  const { error: deleteError } = await admin.auth.admin.deleteUser(uid);
-  if (deleteError) {
-    // GoTrue's "user not found" is the idempotent-retry case: a previous call
-    // already deleted this account (e.g. the client retried after losing the
-    // response to a network drop). That is success, not a new failure.
-    const alreadyGone =
-      deleteError.status === 404 ||
-      /not.?found/i.test(deleteError.message ?? "");
-    if (!alreadyGone) {
-      console.error(`delete-account: deleteUser failed for ${uid}`, deleteError);
-      return jsonResponse({ error: "delete_failed" }, { status: 500 });
-    }
-  }
+    async deleteUser(uid) {
+      const { error } = await admin().auth.admin.deleteUser(uid);
+      return error;
+    },
 
-  return jsonResponse({ ok: true });
+    apple: appleRevokerFromEnv((name) => Deno.env.get(name)),
+  });
 });

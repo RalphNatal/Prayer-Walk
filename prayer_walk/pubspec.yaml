@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+10
+version: 1.0.0+11
 
 environment:
   sdk: ^3.12.2
@@ -55,6 +55,12 @@ dependencies:
   # Runtime package name / applicationId, read for the debug-only Google
   # sign-in config diagnostic — see auth_diagnostics_screen.dart.
   package_info_plus: ^10.2.1
+  # Sign in with Apple, iOS only — App Store Guideline 4.8. See
+  # AuthRepository.signInWithApple.
+  sign_in_with_apple: ^8.2.0
+  # SHA-256 of the Sign in with Apple nonce. Already in the lock as a
+  # transitive dependency at this version; listed because the app imports it.
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

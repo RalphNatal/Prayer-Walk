@@ -80,6 +80,11 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       // Success falls through without touching state: the auth-state
       // redirect takes the screen away as soon as the sign-out above lands,
       // and a `setState` on an about-to-unmount widget is not needed.
+    } on AuthCancelled {
+      // An Apple member dismissed Apple's confirmation sheet. Nothing was
+      // deleted and nothing went wrong — release the button and say nothing,
+      // the same as a dismissed sheet on the sign-in screen.
+      if (mounted) setState(() => _deleting = false);
     } catch (error, stack) {
       if (!mounted) return;
       reportFailure(
@@ -98,6 +103,11 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final busy = _deleting || _exporting;
+    // Said before the tap rather than sprung on them after it: the sheet that
+    // appears is Apple's, and AuthRepository.deleteAccount explains why.
+    final asksApple =
+        AuthRepository.offersAppleSignIn &&
+        ref.watch(authRepositoryProvider).isAppleAccount;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Delete account')),
@@ -130,6 +140,17 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          if (asksApple) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'You signed in with Apple, so Apple will ask you to confirm '
+              'once more. That also removes Prayer Walk from the apps using '
+              'your Apple ID.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.xl),
 
           OutlinedButton.icon(

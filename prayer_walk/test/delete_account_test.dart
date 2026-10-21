@@ -13,11 +13,20 @@ import 'package:supabase_flutter/supabase_flutter.dart'
 /// `save_failure_test.dart`: only what this screen actually calls is real,
 /// everything else is an `UnimplementedError` nobody here should ever reach.
 class _FakeAuthRepository implements AuthRepository {
-  _FakeAuthRepository({this.deleteError, this.exportError, this.exportResult});
+  _FakeAuthRepository({
+    this.deleteError,
+    this.exportError,
+    this.exportResult,
+    this.appleAccount = false,
+  });
 
   final Object? deleteError;
   final Object? exportError;
   final Map<String, dynamic>? exportResult;
+  final bool appleAccount;
+
+  @override
+  bool get isAppleAccount => appleAccount;
 
   int deleteCalls = 0;
   int exportCalls = 0;
@@ -66,6 +75,9 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<AuthResponse> signInWithGoogle() async => throw UnimplementedError();
+
+  @override
+  Future<AuthResponse> signInWithApple() async => throw UnimplementedError();
 }
 
 void main() {
@@ -74,11 +86,13 @@ void main() {
     Object? deleteError,
     Object? exportError,
     Map<String, dynamic>? exportResult,
+    bool appleAccount = false,
   }) async {
     final repository = _FakeAuthRepository(
       deleteError: deleteError,
       exportError: exportError,
       exportResult: exportResult,
+      appleAccount: appleAccount,
     );
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(412, 900);
@@ -183,4 +197,51 @@ void main() {
     expect(find.textContaining('u_walker'), findsOneWidget);
     expect(find.text('Copy'), findsOneWidget);
   });
+
+  testWidgets('dismissing Apple\'s confirmation shows nothing and leaves the '
+      'button ready', (tester) async {
+    final repository = await pumpScreen(
+      tester,
+      deleteError: const AuthCancelled(),
+      appleAccount: true,
+    );
+
+    await tester.enterText(find.byType(TextField), 'DELETE');
+    await tester.pump();
+    // The Apple note puts the button just below the fold at this size.
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Delete my account'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete my account'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(repository.deleteCalls, 1);
+    // Not a failure: no dialog, no "wasn't deleted", no Retry.
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Retry'), findsNothing);
+    expect(find.textContaining("wasn't deleted"), findsNothing);
+    expect(deleteButton(tester).onPressed, isNotNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+  testWidgets('an Apple member is told Apple will ask them to confirm', (
+    tester,
+  ) async {
+    await pumpScreen(tester, appleAccount: true);
+
+    expect(find.textContaining('Apple will ask you to confirm'), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+  testWidgets('anyone else is not', (tester) async {
+    await pumpScreen(tester);
+
+    expect(find.textContaining('Apple will ask you to confirm'), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 }

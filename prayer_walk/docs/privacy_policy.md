@@ -1,6 +1,6 @@
 # Prayer Walk — Privacy Policy
 
-**Last updated:** 29 September 2026
+**Last updated:** 21 October 2026
 
 ## Who this is
 
@@ -128,6 +128,12 @@ Only the services this app actually integrates with, nothing more:
 - **Supabase** — database, authentication, and file storage.
 - **Google Sign-In** — if you choose to sign in with Google, Google handles
   that authentication; the app never sees or stores your Google password.
+- **Sign in with Apple** (iPhone) — if you choose to sign in with Apple,
+  Apple handles that authentication; the app never sees your Apple ID
+  password. If you choose **Hide My Email**, Apple gives the app a private
+  relay address that forwards to you, and the app never learns your real
+  address. If you choose to share your name, it becomes your display name,
+  which you can change at any time.
 - **Mapbox** — draws the map you see when reviewing a route, and provides the
   one-time place-name lookup described above. Loading a map tile is, like any
   map in any app, a request from your device to Mapbox for the tiles covering
@@ -161,6 +167,13 @@ Deleting your account removes: your profile and your sign-in, every walk you
 recorded, your follows and followers, anyone you blocked, every comment and
 encouragement you left (and comments left on your walks), your privacy
 zones, your scripture delivery history, and your profile photo.
+
+If you signed in with Apple, Apple asks you to confirm once more, and
+deleting your account also asks Apple to revoke Prayer Walk's access to your
+Apple ID, so the app no longer appears among the apps using it. If that
+request to Apple fails, your account is still deleted, and you can remove
+Prayer Walk yourself in your iPhone's Settings → your name → Sign in with
+Apple.
 
 A devotional or announcement you published for your parish keeps its byline
 text — the way a newspaper article outlives its author leaving the paper —

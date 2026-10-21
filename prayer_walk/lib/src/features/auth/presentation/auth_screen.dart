@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart'
+    show SignInWithAppleButton, SignInWithAppleButtonStyle;
 
 import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -30,9 +32,10 @@ enum _AuthMode {
 
 /// Sign in or create an account.
 ///
-/// Talks to [AuthRepository] — real Supabase email/password and native Google.
-/// On success the router's redirect takes over; failures show inline in the
-/// app's voice, and a deliberately-dismissed Google sheet shows nothing at all.
+/// Talks to [AuthRepository] — real Supabase email/password, native Google,
+/// and on iOS native Apple. On success the router's redirect takes over;
+/// failures show inline in the app's voice, and a deliberately-dismissed
+/// Google or Apple sheet shows nothing at all.
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
@@ -68,8 +71,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       await action();
       // On success the router's redirect takes over; nothing to do here.
     } on AuthCancelled {
-      // The person dismissed the Google sheet. Not a failure — say nothing and
-      // just release the button.
+      // The person dismissed the Google or Apple sheet. Not a failure — say
+      // nothing and just release the button.
       AppLogger.info(_tag, 'Cancelled by the person; releasing the button.');
     } on AuthFailure catch (error, stack) {
       AppLogger.warn(
@@ -295,6 +298,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       const SizedBox(height: AppSpacing.lg),
                       const _OrDivider(),
                       const SizedBox(height: AppSpacing.lg),
+                      // iOS only (Guideline 4.8), and above Google: Apple
+                      // requires it to be no less prominent than any other
+                      // third-party sign-in on the screen.
+                      if (AuthRepository.offersAppleSignIn) ...[
+                        _AppleButton(
+                          busy: _busy,
+                          onPressed: () => _run(
+                            ref.read(authRepositoryProvider).signInWithApple,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
                       _GoogleButton(
                         busy: _busy,
                         onPressed: () => _run(
@@ -401,6 +416,66 @@ class _OrDivider extends StatelessWidget {
         ),
         const Expanded(child: Divider()),
       ],
+    );
+  }
+}
+
+/// Sign in with Apple, drawn by the package's own [SignInWithAppleButton] —
+/// Apple's logo, Apple's wording, Apple's proportions — at the same width,
+/// height and corner radius as [_GoogleButton] below it. Apple's guidelines
+/// allow the corner radius to follow the app's other buttons; they do not
+/// allow the button to be smaller or lower than another third-party option.
+///
+/// Black on the light canvas and white on the dark one, as the guidelines
+/// ask.
+///
+/// Two things the package's widget doesn't do for itself:
+///
+/// * **Busy.** A null `onPressed` makes its CupertinoButton paint the system
+///   disabled grey under a label that stays white — illegible, and not a
+///   style Apple defines. So it keeps its colours, fades the way a disabled
+///   control does, and ignores taps while another sign-in is running.
+/// * **Text size.** Its label is sized from its height (43%, per Apple) —
+///   24pt here — and, like Apple's own native button, does not follow
+///   Dynamic Type. Scaled further it stops fitting on one line and is
+///   clipped, so text scaling is held at 1.0 for this one control. Screen
+///   readers get the words from the [Semantics] label regardless.
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.busy, required this.onPressed});
+
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Semantics(
+      button: true,
+      enabled: !busy,
+      label: 'Sign in with Apple',
+      onTap: busy ? null : onPressed,
+      excludeSemantics: true,
+      child: IgnorePointer(
+        ignoring: busy,
+        child: Opacity(
+          opacity: busy ? 0.38 : 1,
+          child: MediaQuery.withNoTextScaling(
+            child: SizedBox(
+              width: double.infinity,
+              child: SignInWithAppleButton(
+                onPressed: onPressed,
+                // Matches [_GoogleButton]'s minimum height; the auth screen
+                // test holds the two to the same size.
+                height: 56,
+                borderRadius: AppRadius.control,
+                style: dark
+                    ? SignInWithAppleButtonStyle.white
+                    : SignInWithAppleButtonStyle.black,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
